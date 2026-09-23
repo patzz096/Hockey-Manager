@@ -20,6 +20,17 @@ function FileButton({ label, accept, multiple, directory, onFiles, color = "var(
   );
 }
 
+// Bouton à confirmation intégrée (deux clics) : les fenêtres confirm() sont bloquées dans
+// certains lecteurs (artefacts Claude).
+function ConfirmButton({ label, confirmLabel, color, onConfirm }) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <button onClick={() => { if (armed) { setArmed(false); onConfirm(); } else setArmed(true); }} onBlur={() => setArmed(false)} style={{ ...btnStyle(armed ? "var(--red)" : color), fontSize: 12 }}>
+      {armed ? confirmLabel : label}
+    </button>
+  );
+}
+
 function download(filename, data) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
   const a = document.createElement("a");
@@ -75,8 +86,14 @@ export function CustomizationPanel({ teams, inGame, onNewGame }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <FileButton label="Importer une base (.json / .csv)" accept=".json,.csv,application/json,text/csv" onFiles={importDb} color="var(--red)" />
           <button onClick={() => download("hockey-gm-base.json", exportLeagueDb(teams))} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Exporter la base actuelle</button>
+          <button onClick={() => {
+            const text = JSON.stringify(exportLeagueDb(teams), null, 1);
+            navigator.clipboard?.writeText(text).then(() => setStatus({ ok: true, text: "Base copiée dans le presse-papiers : colle-la dans un fichier .json." }), () => setStatus({ ok: false, text: "Copie refusée par le navigateur : utilise « Exporter la base actuelle »." }));
+          }} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Copier la base (JSON)</button>
           {c.rosterDb && <button onClick={() => { c.saveRosterDb(null); setStatus({ ok: true, text: `Base par défaut rétablie.${inGame ? " Lance une nouvelle partie pour l'appliquer." : ""}` }); }} style={{ ...btnStyle("var(--loss)"), fontSize: 12 }}>Revenir à la base par défaut</button>}
-          {onNewGame && <button onClick={() => { if (!inGame || window.confirm("Commencer une nouvelle partie ? La partie en cours sera perdue.")) onNewGame(); }} style={{ ...btnStyle("var(--win)"), fontSize: 12 }}>{inGame ? "Nouvelle partie avec cette base" : "Appliquer la base"}</button>}
+          {onNewGame && (inGame
+            ? <ConfirmButton label="Nouvelle partie avec cette base" confirmLabel="Confirmer : la partie en cours sera perdue" color="var(--win)" onConfirm={onNewGame} />
+            : <button onClick={onNewGame} style={{ ...btnStyle("var(--win)"), fontSize: 12 }}>Appliquer la base</button>)}
         </div>
       </div>
 
@@ -90,7 +107,7 @@ export function CustomizationPanel({ teams, inGame, onNewGame }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <FileButton label="Ajouter des photos" accept="image/*" multiple onFiles={async (f) => { const n = await c.importFaces(f, (i, t) => setProgress(`${i}/${t}`)); setProgress(null); setStatus({ ok: true, text: `${n} photos ajoutées au facepack.` }); }} color="var(--red)" />
           <FileButton label="Choisir un dossier" directory multiple onFiles={async (f) => { const n = await c.importFaces(f, (i, t) => setProgress(`${i}/${t}`)); setProgress(null); setStatus({ ok: true, text: `${n} photos ajoutées au facepack.` }); }} />
-          {Object.keys(c.faces).length > 0 && <button onClick={() => window.confirm("Supprimer tout le facepack ?") && c.clearFaces()} style={{ ...btnStyle("var(--loss)"), fontSize: 12 }}>Vider le facepack</button>}
+          {Object.keys(c.faces).length > 0 && <ConfirmButton label="Vider le facepack" confirmLabel="Confirmer la suppression" color="var(--loss)" onConfirm={c.clearFaces} />}
         </div>
         <div style={{ ...hint, marginTop: 8 }}>Une photo peut aussi être choisie joueur par joueur, depuis son profil.</div>
       </div>
@@ -100,7 +117,7 @@ export function CustomizationPanel({ teams, inGame, onNewGame }) {
         <div style={{ ...hint, marginBottom: 10 }}>Nom, ville et couleur s'appliquent tout de suite. Pour importer plusieurs logos d'un coup, nomme les fichiers d'après l'identifiant de l'équipe (<code>MTL.png</code>, <code>TOR.svg</code>).</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
           <FileButton label="Importer des logos" accept="image/*" multiple onFiles={async (f) => { const ids = await c.importLogos(f, teamIds); setStatus({ ok: ids.length > 0, text: ids.length ? `Logos ajoutés : ${ids.join(", ")}.` : "Aucun fichier ne correspond à un identifiant d'équipe (ex. MTL.png)." }); }} color="var(--red)" />
-          {Object.keys(c.logos).length > 0 && <button onClick={() => window.confirm("Supprimer tous les logos ?") && c.clearLogos()} style={{ ...btnStyle("var(--loss)"), fontSize: 12 }}>Retirer tous les logos</button>}
+          {Object.keys(c.logos).length > 0 && <ConfirmButton label="Retirer tous les logos" confirmLabel="Confirmer le retrait" color="var(--loss)" onConfirm={c.clearLogos} />}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 8 }}>
           {teams.map((t) => (

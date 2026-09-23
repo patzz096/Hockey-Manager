@@ -4,8 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hockey GM</title>
+    <meta name="description" content="Jeu de gestion de hockey façon Football Manager" />
     <style>
-      html, body { margin: 0; background: #0B1B2E; }
+      :root { color-scheme: dark; }
+      html, body { margin: 0; background: #0B1B2E; color: #F0F4F8; }
+      /* Téléphone : la barre latérale passe au-dessus, le contenu défile seul. */
+      @media (max-width: 760px) {
+        #root > div { flex-direction: column !important; }
+        #root > div > div:first-of-type { width: auto !important; flex-direction: row !important; flex-wrap: wrap; border-right: none !important; }
+        #root > div > div:nth-of-type(2) { padding: 16px !important; overflow-x: auto; }
+        #root table { display: block; overflow-x: auto; }
+      }
     </style>
   </head>
   <body>
