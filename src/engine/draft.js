@@ -53,7 +53,7 @@ export function makePick(draft, playerId) {
   const p = draft.pool.find((x) => x.id === playerId);
   if (!pick || !p) return { draft, player: null };
   const picks = draft.picks.map((k, i) => (i === draft.current ? { ...k, playerId } : k));
-  const player = { ...p, draftProspect: false, draftPick: pick.overall, draftYear: draft.year + 1, contract: { ...ENTRY_CONTRACT }, level: "LAH", id: `${p.id}-${pick.teamId}` };
+  const player = { ...p, draftProspect: false, draftPick: pick.overall, draftYear: draft.year + 1, contract: { ...ENTRY_CONTRACT }, signedAge: p.age, signedYear: draft.year + 1, level: "LAH", id: `${p.id}-${pick.teamId}` };
   return { draft: { ...draft, picks, current: draft.current + 1 }, player, pick };
 }
 

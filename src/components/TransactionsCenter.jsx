@@ -14,7 +14,8 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
 
   function toggle(setFn, list, id) { setFn(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]); }
   function changePartner(id) { setPartnerId(id); setMyIds([]); setTheirIds([]); }
-  function confirmTrade() { onTrade(partner.id, myIds, theirIds); setMyIds([]); setTheirIds([]); }
+  const [retention, setRetention] = useState({});
+  function confirmTrade() { onTrade(partner.id, myIds, theirIds, retention); setMyIds([]); setTheirIds([]); setRetention({}); }
 
   const benchmark = teamOvrBenchmark(myTeam);
   function RosterPicker({ team, selected, onToggle }) {
@@ -57,6 +58,19 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
           {partner && <RosterPicker team={partner} selected={theirIds} onToggle={(id) => toggle(setTheirIds, theirIds, id)} />}
         </div>
       </div>
+      {myIds.length > 0 && (
+        <div style={{ background: "var(--navy2)", border: "1px solid #ffffff1a", borderRadius: 6, padding: 10, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>Rétention de salaire (optionnelle) : tu gardes une part du salaire jusqu'à la fin du contrat (cap mort), l'autre équipe reçoit le joueur moins cher. Maximum 50 %, 3 contrats retenus à la fois.</div>
+          {myTeam.roster.filter((p) => myIds.includes(p.id)).map((p) => (
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "3px 0" }}>
+              <span style={{ flex: 1 }}>{p.name} <span style={{ color: "var(--iceMuted)" }}>({(p.contract?.salary || 0).toLocaleString()}k$ × {p.contract?.years ?? "?"} an{(p.contract?.years ?? 1) > 1 ? "s" : ""})</span></span>
+              <select aria-label={`Rétention ${p.name}`} value={retention[p.id] || 0} onChange={(e) => setRetention({ ...retention, [p.id]: Number(e.target.value) })} style={{ ...inputStyle, width: "auto" }}>
+                {[0, 0.25, 0.5].map((r) => <option key={r} value={r}>{r === 0 ? "Aucune" : `${r * 100} % retenu (${Math.round((p.contract?.salary || 0) * r).toLocaleString()}k$)`}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
       {!txWindow.open && <div style={{ fontSize: 13, color: "var(--loss)", marginBottom: 8 }}>{txWindow.reason}</div>}
       <button onClick={confirmTrade} disabled={!txWindow.open || (myIds.length === 0 && theirIds.length === 0)} style={{ ...btnStyle("var(--red)"), opacity: txWindow.open ? 1 : 0.5 }}>Conclure l'échange</button>
     </div>

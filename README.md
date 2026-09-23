@@ -129,7 +129,8 @@ tests/engine.test.js       tests du moteur
 - Repêchage (`engine/draft.js`) : 7 rondes, ordre selon le classement (hors séries d'abord,
   puis par ronde d'élimination, champion en dernier). Loterie LNH (`runDraftLottery`) :
   16 équipes, 2 tirages, chances de 18,5 % à 0,5 %, montée maximale de 10 rangs (une équipe
-  tirée trop loin monte de 10 rangs et le choix revient au pire dossier restant). Classement des
+  tirée trop loin monte de 10 rangs et le choix revient au pire dossier restant). Une équipe
+  qui a gagné 2 loteries en 5 ans est exclue des tirages. Classement des
   espoirs selon ton dépisteur, rapport de dépistage possible sur chaque espoir, choix
   automatiques des autres équipes. Les repêchés vont au club-école (contrat 3 ans, 950 k$)
 - 1er juillet (`engine/offseason.js`) : contrats avancés d'une saison, contrats échus →
@@ -144,8 +145,21 @@ tests/engine.test.js       tests du moteur
   (des deux côtés), offres, prolongations et rappels refusés s'ils font dépasser le plafond
   (une équipe au-dessus peut seulement réduire). Maximum 23 joueurs dans l'alignement.
   L'ordinateur signe ses agents libres sous le plafond
-- Ballottage (`engine/waivers.js`, règles simplifiées) : renvoyer au club-école un joueur de
-  23 ans et plus (ou 160 matchs LNH) le place au ballottage 24 heures ; les équipes peuvent le
+- Rachats de contrat (entre la fin des séries et le 1er juillet) : 2/3 du salaire restant
+  (1/3 avant 26 ans), étalé sur le double des années restantes ; le joueur devient agent
+  libre et le paiement annuel compte en cap mort (`buyoutTerms`)
+- Rétention de salaire dans les échanges : jusqu'à 50 %, 3 contrats retenus à la fois ; la
+  part retenue reste en cap mort jusqu'à la fin du contrat. Le cap mort est aussi payé dans
+  les finances. Liste du cap mort dans l'onglet Contrats
+- Blessures (`engine/injuries.js`) : environ 1 blessure par équipe tous les 6 matchs, surtout
+  au jour le jour, parfois des semaines ou des mois ; les blessés sont remplacés dans les
+  trios par le meilleur disponible (saison, séries et direct). Infirmerie dans Profondeur
+- LTIR : un joueur absent 24 jours et plus peut y être placé ; sa place est libérée et son
+  salaire devient un allègement qui permet de dépasser le plafond jusqu'à son retour
+- Ballottage (`engine/waivers.js`) : l'exemption suit la table de la convention LNH selon
+  l'âge à la signature du premier contrat (ex. signé à 18-20 ans : 3 saisons ou 160 matchs ;
+  25 ans et plus : aucune exemption en pratique). Un joueur non exempté renvoyé au
+  club-école passe 24 heures au ballottage ; les équipes peuvent le
   réclamer avec son contrat, priorité au pire classement. L'ordinateur place ses joueurs en
   trop (au-delà de 23) et fait des mouvements d'effectif chaque mois ; tu peux les réclamer
   (onglet Transactions)
@@ -174,9 +188,9 @@ tests/engine.test.js       tests du moteur
 ## Ce qui reste incomplet ou en cours
 
 1. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
-2. **Règles simplifiées** : pas de clause de rachat, de LTIR, de rétention de salaire dans
-   les échanges, ni de limite de 2 loteries gagnées en 5 ans ; l'exemption du ballottage
-   est approximée par l'âge et les matchs joués.
+2. **Règles simplifiées** : rachats calculés pour des salaires constants ; l'âge de
+   signature des joueurs des alignements de départ est estimé ; pas de joueurs blessés
+   en séries remis en LTIR hors saison, ni de clauses de non-mouvement ou de primes.
 3. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.

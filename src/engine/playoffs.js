@@ -99,14 +99,22 @@ export function draftOrder(standings, playoffs) {
 // l'équipe restante qui a les meilleures chances (le pire dossier). Une équipe ne gagne qu'une fois.
 export const LOTTERY_ODDS = [18.5, 13.5, 11.5, 9.5, 8.5, 7.5, 6.5, 6.0, 5.0, 3.5, 3.0, 2.5, 2.0, 1.5, 0.5, 0.5];
 
-export function runDraftLottery(order, nonPlayoffCount, rng) {
+// history : [{ year, winners: [ids] }] des loteries précédentes. Règle LNH : une équipe ne peut
+// pas gagner la loterie plus de deux fois en cinq ans ; elle est alors exclue des tirages.
+export function lotteryIneligible(history = [], year) {
+  const count = {};
+  history.filter((h) => h.year > year - 5 && h.year < year).forEach((h) => h.winners.forEach((id) => { count[id] = (count[id] || 0) + 1; }));
+  return new Set(Object.keys(count).filter((id) => count[id] >= 2));
+}
+
+export function runDraftLottery(order, nonPlayoffCount, rng, ineligible = new Set()) {
   const pool = order.slice(0, nonPlayoffCount);
   const fixed = {}; // position (1 = premier choix) -> équipe
   const placed = new Set();
   const draws = [];
   for (let pick = 1; pick <= 2; pick++) {
     if (fixed[pick]) continue; // déjà attribué par la montée de 10 rangs du tirage précédent
-    const candidates = pool.map((id, i) => ({ id, rank: i + 1, odds: LOTTERY_ODDS[i] ?? 0 })).filter((c) => !placed.has(c.id));
+    const candidates = pool.map((id, i) => ({ id, rank: i + 1, odds: LOTTERY_ODDS[i] ?? 0 })).filter((c) => !placed.has(c.id) && !ineligible.has(c.id));
     const total = candidates.reduce((a, c) => a + c.odds, 0);
     let r = rng() * total, drawn = candidates[candidates.length - 1];
     for (const c of candidates) { r -= c.odds; if (r <= 0) { drawn = c; break; } }
@@ -117,15 +125,16 @@ export function runDraftLottery(order, nonPlayoffCount, rng) {
       let target = drawn.rank - 10;
       while (fixed[target]) target++;
       fixed[target] = drawn.id; placed.add(drawn.id);
-      const best = candidates.find((c) => !placed.has(c.id));
+      const best = pool.map((id, i) => ({ id, rank: i + 1 })).find((c) => !placed.has(c.id));
       fixed[pick] = best.id; placed.add(best.id);
       draws.push({ pick, drawn: drawn.id, winner: best.id, from: best.rank, movedTo: target });
     }
   }
   const rest = order.filter((id) => !placed.has(id));
   const result = [];
+  // Gagnants au sens de la règle des 5 ans : les équipes tirées (même celles qui montent de 10 rangs).
   for (let pos = 1; pos <= order.length; pos++) result.push(fixed[pos] || rest.shift());
-  return { order: result, draws };
+  return { order: result, draws, winners: draws.map((d) => d.drawn) };
 }
 
 export { CONFERENCES };

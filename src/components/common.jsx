@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Star } from "lucide-react";
 import { attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
-import { attr20Color } from "../ui/theme";
+import { attr20Color, btnStyle } from "../ui/theme";
+import { injuryLabel } from "../engine/injuries";
+import { formatDay } from "../engine/calendar";
 import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
 
 export function SortTh({ label, sortKey, activeKey, activeDir, onSort }) {
@@ -96,6 +99,27 @@ export function PlayerLink({ player, team, onSelect, children, style }) {
       style={{ cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3, ...style }}
     >
       {children ?? player.name}
+    </span>
+  );
+}
+
+// Bouton à confirmation intégrée (deux clics) : les fenêtres confirm() sont bloquées dans
+// certains lecteurs (artefacts Claude).
+export function ConfirmButton({ label, confirmLabel, color, onConfirm, small = false, title }) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <button title={title} onClick={(e) => { e.stopPropagation(); if (armed) { setArmed(false); onConfirm(); } else setArmed(true); }} onBlur={() => setArmed(false)} style={{ ...btnStyle(armed ? "var(--red)" : color), fontSize: small ? 11 : 12, padding: small ? "3px 8px" : undefined }}>
+      {armed ? confirmLabel : label}
+    </button>
+  );
+}
+
+// Pastille « blessé » (croix rouge + durée), ou « LTIR ».
+export function InjuryBadge({ injury, day }) {
+  if (!injury || injury.until <= day) return null;
+  return (
+    <span title={`${injuryLabel(injury, day)} · retour vers le ${formatDay(injury.until)}`} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, color: "#fff", background: injury.ltir ? "#7A4E9E" : "var(--loss)", borderRadius: 4, padding: "1px 5px", marginLeft: 6, verticalAlign: "middle", whiteSpace: "nowrap" }}>
+      ✚ {injury.ltir ? "LTIR" : injuryLabel(injury, day).split(" — ")[1]}
     </span>
   );
 }

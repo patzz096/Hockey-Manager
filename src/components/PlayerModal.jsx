@@ -7,7 +7,7 @@ import { formatDay } from "../engine/calendar";
 import { getScoutInfo, perceivedRatings, assignScout, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
 import { contractLabel, draftLabel } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
-import { StarRating, AttrRow, InfoCard, PlayerFace } from "./common";
+import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge } from "./common";
 import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
 
 export function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
@@ -116,7 +116,7 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, onOfferContract }) {
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, onOfferContract }) {
   const [tab, setTab] = useState("profile");
   const owner = team || (player.draftProspect ? PROSPECT_TEAM : FREE_AGENT_TEAM);
   const isMine = owner.id === myTeamId;
@@ -141,7 +141,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
               <span style={{ position: "absolute", right: -4, bottom: -2, background: "var(--navy)", border: "1px solid #ffffff55", borderRadius: 10, padding: "0 5px", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 11, color: "#fff" }}>{player.number ?? player.pos}</span>
             </div>
             <div>
-              <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 17, color: "#fff" }}>{player.name}</div>
+              <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 17, color: "#fff" }}>{player.name}<InjuryBadge injury={injuries[player.id]} day={currentDay} /></div>
               <div style={{ fontSize: 12, color: "#ffffffcc" }}>{NATION_FLAG[player.nationality] || "🏳️"} {owner.name} · {player.pos} · {player.age} ans</div>
             </div>
           </div>

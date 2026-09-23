@@ -3,7 +3,7 @@ import { useCustomization } from "../custom/CustomizationContext";
 import { parseRosterFile, exportLeagueDb } from "../custom/rosterFile";
 import { faceKeys } from "../custom/images";
 import { h2Style, btnStyle, inputStyle } from "../ui/theme";
-import { TeamCrest } from "./common";
+import { TeamCrest, ConfirmButton } from "./common";
 
 const section = { background: "var(--navy2)", border: "1px solid #ffffff1a", borderRadius: 4, padding: 16, marginBottom: 18 };
 const hint = { fontSize: 12, color: "var(--iceMuted)", lineHeight: 1.5 };
@@ -17,17 +17,6 @@ function FileButton({ label, accept, multiple, directory, onFiles, color = "var(
       <input ref={ref} type="file" accept={accept} multiple={multiple} {...dirProps} style={{ display: "none" }}
         onChange={(e) => { const files = [...(e.target.files || [])]; e.target.value = ""; if (files.length) onFiles(files); }} />
     </>
-  );
-}
-
-// Bouton à confirmation intégrée (deux clics) : les fenêtres confirm() sont bloquées dans
-// certains lecteurs (artefacts Claude).
-function ConfirmButton({ label, confirmLabel, color, onConfirm }) {
-  const [armed, setArmed] = useState(false);
-  return (
-    <button onClick={() => { if (armed) { setArmed(false); onConfirm(); } else setArmed(true); }} onBlur={() => setArmed(false)} style={{ ...btnStyle(armed ? "var(--red)" : color), fontSize: 12 }}>
-      {armed ? confirmLabel : label}
-    </button>
   );
 }
 

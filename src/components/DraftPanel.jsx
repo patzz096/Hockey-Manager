@@ -74,7 +74,8 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
                   {d.movedTo && <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{teamsById[d.drawn].name}, tirée au sort, ne peut monter que de 10 rangs : elle passe au {d.movedTo}e choix.</div>}
                 </div>
               ))}
-              <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6 }}>16 équipes hors séries, 2 tirages, chances de 18,5 % (pire dossier) à 0,5 %. Montée maximale de 10 rangs.</div>
+              {draft.lottery.ineligible?.length > 0 && <div style={{ fontSize: 11, color: "var(--loss)", marginTop: 6 }}>Exclues des tirages (2 loteries gagnées en 5 ans) : {draft.lottery.ineligible.map((id) => teamsById[id].name).join(", ")}</div>}
+              <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6 }}>16 équipes hors séries, 2 tirages, chances de 18,5 % (pire dossier) à 0,5 %. Montée maximale de 10 rangs. Une équipe ne peut gagner plus de 2 loteries en 5 ans.</div>
             </div>
           )}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>TES CHOIX</div>

@@ -3,12 +3,12 @@ import { fitsUnderCap, formatMoney, ROSTER_MAX } from "../engine/cap";
 import { btnStyle } from "../ui/theme";
 import { PlayerLink, TeamCrest } from "./common";
 
-export function WaiversPanel({ waivers, myTeam, myTeamId, myClaims, year, teamsById, onToggleClaim, onSelectPlayer }) {
+export function WaiversPanel({ waivers, myTeam, myTeamId, myClaims, year, teamsById, capOpts = {}, onToggleClaim, onSelectPlayer }) {
   return (
     <div style={{ marginTop: 26 }}>
       <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 18, marginBottom: 4 }}>Ballottage</div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>
-        Un joueur de 23 ans et plus (ou avec 160 matchs LNH) doit passer 24 heures au ballottage avant d'aller au club-école. Toute équipe peut le réclamer avec son contrat ; priorité à la pire équipe au classement. Il faut une place (max. {ROSTER_MAX}) et de l'espace sous le plafond.
+        Un joueur non exempté passe 24 heures au ballottage avant d'aller au club-école. L'exemption dépend de l'âge à la signature du premier contrat (table de la convention LNH) : par ex. signé à 18-20 ans, exempté 3 saisons ou 160 matchs ; à 22 ans, 3 saisons ou 70 matchs ; à 25 ans et plus, 1 saison seulement et aucun match. Toute équipe peut le réclamer avec son contrat ; priorité à la pire équipe au classement. Il faut une place (max. {ROSTER_MAX}) et de l'espace sous le plafond.
       </p>
       {waivers.length === 0 ? <div style={{ fontSize: 13, color: "var(--iceMuted)" }}>Aucun joueur au ballottage.</div> : (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -16,7 +16,7 @@ export function WaiversPanel({ waivers, myTeam, myTeamId, myClaims, year, teamsB
           <tbody>{waivers.map((w) => {
             const mine = w.fromTeamId === myTeamId;
             const claimed = myClaims.includes(w.player.id);
-            const fits = fitsUnderCap(myTeam.roster, year, w.player.contract?.salary || 0) && myTeam.roster.length < ROSTER_MAX;
+            const fits = fitsUnderCap(myTeam.roster, year, w.player.contract?.salary || 0, 0, capOpts) && myTeam.roster.filter((p) => !(capOpts.ltirIds || []).includes(p.id)).length < ROSTER_MAX;
             return (
               <tr key={w.player.id} style={{ borderBottom: "1px solid #ffffff11" }}>
                 <td style={{ padding: "5px 8px" }}><PlayerLink player={w.player} onSelect={(p) => onSelectPlayer(p, null)} /></td>

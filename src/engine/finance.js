@@ -46,7 +46,8 @@ export function autoTuneFinances(biz, lastFin) {
 
 export function priceElasticity(price, basePrice) { return Math.max(0.4, Math.min(1.4, 1.3 - (price / basePrice - 1) * 0.6)); }
 
-export function computeGameFinance(team, business, winPct) {
+// extraPayroll : salaires versés hors alignement (rachats, salaires retenus), en k$ par saison.
+export function computeGameFinance(team, business, winPct, extraPayroll = 0) {
   const marketingBoost = business.facilities.marketing * 0.03;
   const baseDemand = Math.max(0.12, Math.min(0.97, 0.35 + winPct * 0.5 + marketingBoost));
 
@@ -77,7 +78,7 @@ export function computeGameFinance(team, business, winPct) {
 
   const merchRevenue = Math.round(attendance * business.facilities.boutique * 1.4);
   const revenue = ticketRevenue + concessionsRevenue + parkingRevenue + merchRevenue;
-  const payroll = Math.round((team.roster.reduce((a, p) => a + (p.contract?.salary || 0), 0) * 1000) / 56);
+  const payroll = Math.round(((team.roster.reduce((a, p) => a + (p.contract?.salary || 0), 0) + extraPayroll) * 1000) / 56);
   const staffPayroll = Math.round((Object.values(business.staff || {}).reduce((a, s) => a + (s?.salary || 0), 0) * 1000) / 56);
   const maintenance = Object.values(business.facilities).reduce((a, l) => a + l * 250, 0);
   const arenaBase = 3500;
