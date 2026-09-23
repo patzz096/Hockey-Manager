@@ -154,7 +154,9 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const slug = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 const faceKey = (p) => (p.nhlId != null ? String(p.nhlId) : slug(p.name));
-const to20 = (v) => Math.max(1, Math.min(20, Math.round(v / 5)));
+// Même formule que le jeu (engine/attributes.js: attr20) : les grades /20 affichés ici
+// correspondent exactement à ce que montre le jeu, pour les attributs comme pour le potentiel.
+const to20 = (v) => Math.max(1, Math.min(20, Math.round((v / 99) * 20)));
 const gradeColor = (g) => (g >= 16 ? "#2DBE74" : g >= 11 ? "#FFC247" : "#F0605D");
 const money = (m) => (m >= 1 ? `${m.toLocaleString("fr-CA", { minimumFractionDigits: 1, maximumFractionDigits: 3 })} M$` : `${Math.round(m * 1e6).toLocaleString("fr-CA")} $`);
 
@@ -236,7 +238,7 @@ function playerRow(p, i) {
     <td><input type="number" data-k="years" min="1" max="8" value="${c.years}" aria-label="Années" style="width:52px"></td>
     <td><select data-k="type" aria-label="Type de contrat"><option value="one"${c.type !== "two" ? " selected" : ""}>1 volet</option><option value="two"${c.type === "two" ? " selected" : ""}>2 volets</option></select></td>
     <td>${c.type === "two" ? `<input type="number" data-k="ahlSalaryM" step="0.025" min="0.05" max="1" value="${c.ahlSalaryM}" aria-label="Salaire LAH en millions" style="width:70px">` : `<span class="muted">—</span>`}</td>
-    <td><input type="number" data-k="potential" min="1" max="99" value="${p.potential ?? ""}" aria-label="Potentiel" style="width:58px"></td>
+    <td><input type="number" data-k="potential" min="1" max="99" value="${p.potential ?? ""}" aria-label="Potentiel" style="width:58px"> <span class="grade num" style="background:${gradeColor(to20(p.potential ?? 60))}">${to20(p.potential ?? 60)}/20</span></td>
     <td><button class="btn small" type="button" data-attrs="${i}" aria-expanded="${openAttrs === i}">Attributs</button></td>
     <td><button class="btn small danger" type="button" data-del="${i}">Retirer</button></td>
   </tr>`;
@@ -298,7 +300,7 @@ $("#roster").addEventListener("change", (e) => {
   const k = t.dataset.k;
   const val = t.type === "number" ? (t.value === "" ? undefined : Number(t.value)) : t.value;
   if (CONTRACT_KEYS.includes(k)) p.contract[k] = val; else p[k] = val;
-  if (k === "pos" || k === "type" || k === "salaryM") renderTeam();
+  if (k === "pos" || k === "type" || k === "salaryM" || k === "potential") renderTeam();
   if (k === "name") renderTeams();
 });
 $("#roster").addEventListener("click", (e) => {
