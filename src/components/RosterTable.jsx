@@ -5,7 +5,7 @@ import { getScoutInfo } from "../engine/scouting";
 import { contractLabel } from "../ui/format";
 import { scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
-import { SortTh, StarRating } from "./common";
+import { SortTh, StarRating, PlayerFace } from "./common";
 
 export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowledge, onSelect }) {
   const [sortKey, sortDir, toggleSort] = useSort("ovr");
@@ -43,7 +43,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowl
           <tr key={p.id} onClick={() => onSelect(p)} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{p.number ?? "—"}</td>
-            <td style={{ padding: "7px 10px" }}>{NATION_FLAG[p.nationality] || ""} {p.name}</td>
+            <td style={{ padding: "5px 10px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><PlayerFace player={p} size={26} />{NATION_FLAG[p.nationality] || ""} {p.name}</span></td>
             <td style={{ padding: "7px 10px" }}>{p.pos}</td>
             <td style={{ padding: "7px 10px" }}>{p.age}</td>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{lineLabel(p.id, lines)}</td>

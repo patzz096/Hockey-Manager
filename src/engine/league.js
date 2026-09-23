@@ -5,10 +5,13 @@ import { buildRealRoster, buildRoster, buildFreeAgentPool, buildFarmRoster, assi
 import { seededRandom } from "./random";
 import { buildStaffMarket } from "./staff";
 
-export function initLeague() {
+// custom : base de données personnalisée ({ teams: { ID: [joueurs] }, teamInfo: { ID: {...} } }).
+// Ses alignements remplacent ceux par défaut ; teamInfo renomme ou recolore les équipes.
+export function initLeague(custom = null) {
   const rng = seededRandom(42);
-  const teams = TEAM_SEED.map((t, idx) => {
-    const realData = REAL_ROSTERS[t.id];
+  const teams = TEAM_SEED.map((seed, idx) => {
+    const t = { ...seed, ...(custom?.teamInfo?.[seed.id] || {}), id: seed.id };
+    const realData = custom?.teams?.[t.id]?.length ? custom.teams[t.id] : REAL_ROSTERS[t.id];
     const roster = realData ? buildRealRoster(realData, idx, rng) : buildRoster(idx, rng);
     return { ...t, roster, lines: buildLines(roster) };
   });

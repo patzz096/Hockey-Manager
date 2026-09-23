@@ -6,7 +6,8 @@ import { lineLabel } from "../engine/lines";
 import { getScoutInfo, perceivedRatings, assignScout, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
 import { contractLabel, draftLabel } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
-import { StarRating, AttrRow, InfoCard } from "./common";
+import { StarRating, AttrRow, InfoCard, PlayerFace } from "./common";
+import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
 
 export function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
 
@@ -20,6 +21,21 @@ export function deriveBio(player) {
   const weightKg = baseWeight + ((h >> 3) % 15) - 7;
   // Les vraies données (import LNH) priment sur les valeurs dérivées.
   return { shoots: player.shoots || shoots, heightCm: player.heightCm || heightCm, weightKg: player.weightKg || weightKg };
+}
+
+function FacePicker({ player }) {
+  const { setFace } = useCustomization();
+  const url = useFaceUrl(player);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--iceMuted)", margin: "4px 0 14px" }}>
+      Photo :
+      <label style={{ ...btnStyle("var(--steel)"), fontSize: 11, padding: "3px 8px" }}>
+        {url ? "Changer" : "Choisir une image"}
+        <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setFace(player, f); }} />
+      </label>
+      {url && <button onClick={() => setFace(player, null)} style={{ background: "none", border: "none", color: "var(--iceMuted)", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>Retirer</button>}
+    </div>
+  );
 }
 
 const FREE_AGENT_TEAM = { id: null, name: "Agent libre", color: "#5C7080", roster: [] };
@@ -118,8 +134,9 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--navy2)", border: `1px solid ${owner.color}55`, borderRadius: 4, width: 500, maxWidth: "94vw", maxHeight: "90vh", overflow: "auto" }}>
         <div style={{ background: `linear-gradient(90deg, ${owner.color}, ${owner.color}99)`, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#00000030", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #ffffff55", flexShrink: 0 }}>
-              <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 16, color: "#fff" }}>{player.number ?? player.pos}</span>
+            <div style={{ position: "relative" }}>
+              <PlayerFace player={player} size={56} color={owner.color} />
+              <span style={{ position: "absolute", right: -4, bottom: -2, background: "var(--navy)", border: "1px solid #ffffff55", borderRadius: 10, padding: "0 5px", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 11, color: "#fff" }}>{player.number ?? player.pos}</span>
             </div>
             <div>
               <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 17, color: "#fff" }}>{player.name}</div>
@@ -197,6 +214,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
               </table>
             </div>
           )}
+          <FacePicker player={player} />
           {editable && (
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => onEdit(player)} style={{ ...btnStyle("var(--steel)"), flex: 1, justifyContent: "center" }}>Modifier ce joueur</button>

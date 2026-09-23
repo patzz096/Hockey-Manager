@@ -12,9 +12,9 @@ export function buildRealRoster(data, teamIndex, rng) {
     const attrs = {};
     allAttrs.forEach((a) => { attrs[a] = (d.attrs && d.attrs[a] != null) ? d.attrs[a] : 60; });
     const ovr = computeOvr(d.pos, attrs);
-    const potential = Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
+    const potential = d.potential != null ? Math.max(ovr, Math.min(99, d.potential)) : Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
     const contract = d.contract || randomContract(rng);
-    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, shoots: d.shoots, heightCm: d.heightCm, weightKg: d.weightKg, attrs, ovr, potential, contract };
+    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, shoots: d.shoots, heightCm: d.heightCm, weightKg: d.weightKg, nhlId: d.nhlId, attrs, ovr, potential, contract };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 

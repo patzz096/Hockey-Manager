@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20 } from "./engine/attributes";
 import { evaluateOffer } from "./engine/contracts";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
@@ -28,12 +28,14 @@ import { StatsTables } from "./components/StatsTables";
 import { StrategyEditor } from "./components/StrategyEditor";
 import { TransactionsCenter } from "./components/TransactionsCenter";
 import { TeamCrest } from "./components/common";
+import { CustomizationPanel } from "./components/CustomizationPanel";
+import { useCustomization } from "./custom/CustomizationContext";
 import { BoxscoreView } from "./components/match/BoxscoreView";
 import { LiveMatchViewer } from "./components/match/LiveMatchViewer";
 import { LiveSimPanel } from "./components/match/LiveSimPanel";
 
-export default function HockeyGM() {
-  const [initial] = useState(initLeague);
+export default function HockeyGM({ custom = null, onNewGame = null }) {
+  const [initial] = useState(() => initLeague(custom));
   const [teams, setTeams] = useState(initial.teams);
   const [freeAgents, setFreeAgents] = useState(initial.freeAgents);
   const [staffMarket, setStaffMarket] = useState(initial.staffMarket);
@@ -56,6 +58,15 @@ export default function HockeyGM() {
   const [schedule, setSchedule] = useState(() => buildSchedule(teams));
   const [linesByTeam, setLinesByTeam] = useState(() => Object.fromEntries(teams.map((t) => [t.id, t.lines])));
   const [myTeamId, setMyTeamId] = useState(null);
+  const [showCustomization, setShowCustomization] = useState(false);
+  // Nom, ville et couleur modifiés dans Personnalisation s'appliquent tout de suite.
+  const { teamInfo } = useCustomization();
+  useEffect(() => {
+    setTeams((prev) => prev.map((t) => {
+      const base = initial.teams.find((x) => x.id === t.id);
+      return { ...t, city: base.city, name: base.name, color: base.color, ...(teamInfo[t.id] || {}) };
+    }));
+  }, [teamInfo, initial]);
   const [tab, setTab] = useState("roster");
   const [rngSeed, setRngSeed] = useState(1000);
   const [expandedGameId, setExpandedGameId] = useState(null);
@@ -520,7 +531,11 @@ export default function HockeyGM() {
         <style>{FONT_IMPORT}</style>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 13, letterSpacing: 2, color: "var(--iceMuted)", marginBottom: 6 }}>SIMULATION DE GESTION — LIGUE FICTIVE</div>
-          <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 40, margin: "0 0 8px" }}>Choisis ton équipe</h1>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 40, margin: "0 0 8px" }}>{showCustomization ? "Personnalisation" : "Choisis ton équipe"}</h1>
+            <button onClick={() => setShowCustomization((v) => !v)} style={btnStyle(showCustomization ? "var(--red)" : "var(--steel)")}><Palette size={14} /> {showCustomization ? "Retour au choix d'équipe" : "Personnalisation"}</button>
+          </div>
+          {showCustomization ? <div style={{ marginTop: 16 }}><CustomizationPanel teams={teams} inGame={false} onNewGame={() => { setShowCustomization(false); onNewGame?.(); }} /></div> : <>
           <p style={{ color: "var(--iceMuted)", fontSize: 15, maxWidth: 520, marginBottom: 32 }}>Gère tes trios, tes paires et tes gardiens, avance le calendrier et surveille les meneurs statistiques.</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
             {teams.map((t) => {
@@ -536,6 +551,7 @@ export default function HockeyGM() {
               );
             })}
           </div>
+          </>}
         </div>
       </div>
     );
@@ -559,6 +575,7 @@ export default function HockeyGM() {
     { key: "staff", label: "Personnel", icon: UserCog },
     { key: "inbox", label: "Messagerie", icon: Mail },
     { key: "standings", label: "Classement", icon: Trophy },
+    { key: "custom", label: "Personnalisation", icon: Palette },
   ];
 
   return (
@@ -622,6 +639,8 @@ export default function HockeyGM() {
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onOfferContract={(p) => openOffer(p, true)} onSelectPlayer={selectPlayer} />}
 
         {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={month} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onAdvanceMonth={advanceMonth} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
+
+        {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
 
         {tab === "inbox" && <InboxPanel messages={messages} onMarkRead={markRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 

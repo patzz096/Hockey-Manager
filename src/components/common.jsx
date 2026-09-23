@@ -1,6 +1,7 @@
 import { Star } from "lucide-react";
 import { attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { attr20Color } from "../ui/theme";
+import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
 
 export function SortTh({ label, sortKey, activeKey, activeDir, onSort }) {
   const active = sortKey === activeKey;
@@ -16,11 +17,23 @@ export function teamInitials(name) {
 }
 
 export function TeamCrest({ team, size = 40 }) {
+  const { logos } = useCustomization();
+  const logo = logos[team.id];
+  if (logo) return <img src={logo} alt={team.name} style={{ width: size, height: size, objectFit: "contain", flexShrink: 0 }} />;
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", background: `linear-gradient(145deg, ${team.color}, ${team.color}cc)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "2px solid #ffffff33", boxShadow: "0 2px 4px #00000055" }}>
       <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: size * 0.38, color: "#fff" }}>{teamInitials(team.name)}</span>
     </div>
   );
+}
+
+// Photo du joueur (facepack) ou, à défaut, silhouette avec ses initiales.
+export function PlayerFace({ player, size = 44, color = "#5C7080" }) {
+  const url = useFaceUrl(player);
+  const box = { width: size, height: size, borderRadius: "50%", flexShrink: 0, border: "2px solid #ffffff55", overflow: "hidden", background: "#00000030", display: "flex", alignItems: "center", justifyContent: "center" };
+  if (url) return <div style={box}><img src={url} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>;
+  const initials = String(player.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  return <div style={{ ...box, background: `${color}66` }}><span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: size * 0.36, color: "#ffffffcc" }}>{initials}</span></div>;
 }
 
 export function StarRating({ value, size = 14, color = "#D9A404" }) {

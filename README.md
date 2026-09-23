@@ -130,6 +130,23 @@ tests/engine.test.js       tests du moteur
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
 
+## Personnalisation (façon FM / EHM)
+
+Accessible depuis l'écran de choix d'équipe (bouton **Personnalisation**) ou l'onglet du même
+nom en cours de partie. Tout est conservé dans le navigateur (IndexedDB, `src/custom/`).
+
+- **Base de données** : importe tes propres alignements. Formats acceptés : le fichier exporté
+  par le jeu, ou le JSON/CSV de `scripts/fetch_nhl_rosters.py`. « Exporter la base actuelle »
+  produit un JSON complet (joueurs, attributs, potentiel, contrats, infos d'équipe) à modifier
+  dans un éditeur de texte puis réimporter. Les équipes absentes du fichier gardent leur
+  alignement par défaut. Une nouvelle base s'applique à la nouvelle partie.
+- **Équipes** : nom, ville et couleur, appliqués tout de suite.
+- **Logos** : un par équipe, ou en lot avec des fichiers nommés `MTL.png`, `TOR.svg`...
+- **Facepack** : ajout de photos en lot ou d'un dossier entier. Chaque fichier est nommé
+  d'après l'identifiant LNH (`8478402.png`) ou le nom du joueur (`connor_mcdavid.png`,
+  `Connor McDavid.jpg`). Une photo peut aussi être choisie depuis le profil d'un joueur. Les
+  photos s'affichent dans le profil et l'alignement, et sont réduites à 160 px.
+
 ## Importer les vrais alignements (API LNH)
 
 L'API de la LNH n'est pas accessible depuis Claude Code, donc la récupération se fait sur ton

@@ -13,7 +13,7 @@ if (!input) {
   console.error("Usage: node scripts/import-nhl-rosters.mjs <alignement_complet_nhl.json> [--all]");
   process.exit(1);
 }
-const rows = JSON.parse(readFileSync(input, "utf8").replace(/^﻿/, ""));
+const rows = JSON.parse(readFileSync(input, "utf8").replace(/^\uFEFF/, ""));
 const HANDMADE = ["MTL", "TOR", "BOS", "BUF", "DET", "FLA", "OTT", "TBL", "CAR", "NYR", "NYI", "NJD", "PHI", "PIT", "WSH", "CBJ"];
 const all = flags.includes("--all");
 const teamsInFile = [...new Set(rows.map((r) => r.equipe))];
