@@ -106,3 +106,12 @@ export function perceivedRatings(player, scoutInfo) {
   if (scoutInfo?.estOvr != null) return { ovr: scoutInfo.estOvr, potential: scoutInfo.estPotential, attrs: scoutInfo.attrs };
   return { ovr: player.ovr, potential: player.potential, attrs: player.attrs };
 }
+
+// Comme dans FM : même tes propres joueurs sont vus à travers ton personnel. Le dépisteur
+// assigné (amateur/pro selon l'âge) produit une évaluation continue ; le bruit est fixe pour un
+// même joueur et un même dépisteur, donc la progression réelle reste visible.
+export function staffViewPlayer(player, staff) {
+  const scout = assignScout(player, staff);
+  const r = createScoutReport(player, scout, 0);
+  return { ...player, ovr: r.estOvr, potential: r.estPotential, attrs: r.attrs, staffView: { scoutName: scout.name, quality: scout.rating } };
+}

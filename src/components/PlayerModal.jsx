@@ -90,7 +90,7 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
         </div>
       ) : (
         <div style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 14 }}>
-          {isMine ? "Joueur connu de ton personnel interne. Demande un rapport pour obtenir l'avis détaillé d'un dépisteur." : "Aucun rapport pour ce joueur. Sa cote et ses attributs restent cachés jusqu'à la réception d'un rapport."}
+          {isMine ? "Ton personnel évalue ce joueur en continu (valeurs de l'onglet Profil, précises selon la note de ton dépisteur). Demande un rapport pour obtenir l'avis détaillé d'un dépisteur." : "Aucun rapport pour ce joueur. Sa cote et ses attributs restent cachés jusqu'à la réception d'un rapport."}
         </div>
       )}
     </div>
@@ -109,7 +109,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
   const scoutInfo = getScoutInfo(player, owner.id, myTeamId, staff, scoutKnowledge);
   const known = scoutInfo.known;
   const pending = pendingScouts.find((m) => m.playerId === player.id);
-  // Tes propres joueurs sont affichés à leur vraie valeur; les autres selon le rapport reçu.
+  // Tes joueurs arrivent déjà vus par ton personnel (staffViewPlayer); les autres selon le rapport reçu.
   const shown = isMine ? perceivedRatings(player, null) : perceivedRatings(player, scoutInfo);
   const qColor = scoutQualityColor(scoutInfo.quality);
   return (

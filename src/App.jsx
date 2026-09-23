@@ -9,7 +9,7 @@ import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
 import { teamStrength, penaltyPropensity, TOTAL_CHUNKS, simulateChunk, emptyLiveAccum, mergeLivePeriod, simulateGame } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
-import { assignScout, scoutingDelay, createScoutReport } from "./engine/scouting";
+import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
 import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS, computeTeamProfile, getStrategyMultipliers } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
 import { ContractOfferModal } from "./components/ContractOfferModal";
@@ -68,6 +68,13 @@ export default function HockeyGM() {
   const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), staff: { hockeyOpsDirector: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, scoutAmateur: null, scoutPro: null }, delegation: { finance: "manual", hockeyOps: "manual" }, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
+  // Ton équipe telle que ton personnel la perçoit (valeurs estimées) : c'est ce qu'affiche l'interface.
+  const myTeamView = useMemo(() => {
+    const t = teamsById[myTeamId];
+    return t ? { ...t, roster: t.roster.map((p) => staffViewPlayer(p, business.staff)) } : null;
+  }, [teamsById, myTeamId, business.staff]);
+  const myFarmView = useMemo(() => (farmByTeam[myTeamId] || []).map((p) => staffViewPlayer(p, business.staff)), [farmByTeam, myTeamId, business.staff]);
+  const realPlayer = (p) => findPlayer(p.id) || p;
   const standings = useMemo(() => computeStandings(teams, schedule), [teams, schedule]);
   const currentRound = useMemo(() => { const n = schedule.find((g) => !g.played); return n ? n.round : null; }, [schedule]);
   const nextMyGame = useMemo(() => schedule.find((g) => !g.played && (g.home === myTeamId || g.away === myTeamId)), [schedule, myTeamId]);
@@ -209,12 +216,15 @@ export default function HockeyGM() {
       return { ...prev, cash: prev.cash - cost, facilities: { ...prev.facilities, [key]: level + 1 } };
     });
   }
-  function selectPlayer(player, team = null) { setSelectedPlayer({ player, team }); }
+  function selectPlayer(player, team = null) {
+    if (team?.id === myTeamId) setSelectedPlayer({ player: staffViewPlayer(realPlayer(player), business.staff), team: myTeamView });
+    else setSelectedPlayer({ player, team });
+  }
   function openCreatePlayer() {
     setSelectedPlayer(null);
     setEditingPlayer({ isNew: true, initial: { id: `${myTeamId}-new-${Date.now()}`, name: "", pos: "C", age: 20, attrs: emptyAttrs("C", 60), potential: 60 } });
   }
-  function openEditPlayer(player) { setSelectedPlayer(null); setEditingPlayer({ isNew: false, initial: player }); }
+  function openEditPlayer(player) { setSelectedPlayer(null); setEditingPlayer({ isNew: false, initial: realPlayer(player) }); }
   function savePlayer(updated) {
     setTeams((prev) => prev.map((t) => {
       if (t.id !== myTeamId) return t;
@@ -265,15 +275,15 @@ export default function HockeyGM() {
     });
   }
   function autoOptimizeLines() {
-    const fresh = buildLines(teamsById[myTeamId].roster);
+    const fresh = buildLines(myTeamView.roster);
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], forwards: fresh.forwards, defense: fresh.defense, goalies: fresh.goalies } }));
   }
   function autoOptimizeSpecialTeams() {
-    const fresh = buildLines(teamsById[myTeamId].roster);
+    const fresh = buildLines(myTeamView.roster);
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], pp: fresh.pp, pk: fresh.pk } }));
   }
   function autoOptimizeStrategy() {
-    const team = teamsById[myTeamId];
+    const team = myTeamView;
     const skaters = team.roster.filter((p) => p.pos !== "G");
     const n = skaters.length || 1;
     const profile = computeTeamProfile(team);
@@ -325,7 +335,7 @@ export default function HockeyGM() {
   }
   function openOffer(player, isRenewal = false) {
     setSelectedPlayer(null);
-    setOfferTarget({ player, isRenewal });
+    setOfferTarget({ player: isRenewal ? realPlayer(player) : player, isRenewal });
   }
   function submitOffer(player, offer, isRenewal) {
     const result = evaluateOffer(player, offer);
@@ -523,7 +533,7 @@ export default function HockeyGM() {
     );
   }
 
-  const myTeam = teamsById[myTeamId];
+  const myTeam = myTeamView;
   const myLines = linesByTeam[myTeamId];
   const myStanding = standings.find((s) => s.id === myTeamId);
   const myRank = standings.findIndex((s) => s.id === myTeamId) + 1;
@@ -547,9 +557,9 @@ export default function HockeyGM() {
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Inter, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
-      {offerTarget && <ContractOfferModal player={offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
+      {offerTarget && <ContractOfferModal player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} />}
-      {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={myTeam} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
+      {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 190, background: "var(--navy2)", padding: "20px 12px", display: "flex", flexDirection: "column", gap: 4, borderRight: `1px solid ${myTeam.color}33` }}>
         <div style={{ padding: "0 8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
           <TeamCrest team={myTeam} size={34} />
@@ -593,7 +603,7 @@ export default function HockeyGM() {
 
         {tab === "lines" && <LinesEditor team={myTeam} lines={myLines} onChange={updateLine} onSwap={swapLineSlots} onChangeUnit={updateUnit} onAutoLines={autoOptimizeLines} onAutoSpecialTeams={autoOptimizeSpecialTeams} onSelectPlayer={selectPlayer} />}
 
-        {tab === "depth" && <DepthChartPanel team={myTeam} farm={farmByTeam[myTeamId] || []} lines={myLines} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} onSendDown={sendDownPlayer} />}
+        {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} onSendDown={sendDownPlayer} />}
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} />}
 

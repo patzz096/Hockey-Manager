@@ -84,6 +84,10 @@ tests/engine.test.js       tests du moteur
     étoiles (relatives à ton effectif ; le potentiel pèse plus chez les jeunes), avec la
     fiabilité et un texte forces/faiblesses. Les attributs de l'onglet Profil sont les
     valeurs estimées par ce rapport
+  - comme dans FM, tes propres joueurs sont aussi vus à travers ton personnel
+    (`staffViewPlayer`) : alignement, trios, profondeur, contrats et choix automatiques
+    utilisent les valeurs estimées par ton dépisteur ; embaucher un meilleur dépisteur rend
+    ces valeurs plus justes. Le moteur de simulation utilise toujours les vraies valeurs
 
 **Moteur de simulation**
 - Simulation par match complet (`simulateGame`) ou par tranche de 5 minutes en mode direct

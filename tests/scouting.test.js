@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { initLeague } from "../src/engine/league";
-import { assignScout, scoutingDelay, createScoutReport, getScoutInfo, perceivedRatings, INTERNAL_SCOUT_RATING } from "../src/engine/scouting";
+import { assignScout, scoutingDelay, createScoutReport, getScoutInfo, perceivedRatings, staffViewPlayer, INTERNAL_SCOUT_RATING } from "../src/engine/scouting";
 
 const players = initLeague().teams.flatMap((t) => t.roster);
 
@@ -46,5 +46,12 @@ describe("dépistage", () => {
     const info = getScoutInfo(p, "X", "MTL", {}, { [p.id]: report });
     expect(perceivedRatings(p, info).ovr).toBe(report.estOvr);
     expect(getScoutInfo(p, "X", "MTL", {}, {}).known).toBe(false);
+  });
+
+  it("tes joueurs sont vus à travers ton personnel, plus justement avec un bon dépisteur", () => {
+    const err = (staff) => players.reduce((a, p) => a + Math.abs(staffViewPlayer(p, staff).ovr - p.ovr), 0) / players.length;
+    const good = { scoutAmateur: { id: "A", name: "A", rating: 95 }, scoutPro: { id: "P", name: "P", rating: 95 } };
+    expect(err(good)).toBeLessThan(err({}));
+    expect(staffViewPlayer(players[0], {})).toEqual(staffViewPlayer(players[0], {}));
   });
 });
