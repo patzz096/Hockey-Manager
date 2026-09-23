@@ -1053,7 +1053,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "lines" && <TacticsPlanner team={myTeam} lines={myLines} onAssign={updateLine} onSwap={swapLineSlots} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onAutoLines={autoOptimizeLines} onChangeSystem={updateSpecialSystem} onBestSystem={bestSpecialSystem} onAutoUnits={autoSpecialUnits} onSelectPlayer={selectPlayer} />}
 
-        {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} injuries={injuries} day={currentDay} />}
+        {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} injuries={injuries} day={currentDay} cap={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts)} />}
 
         {tab === "roles" && <RolesPanel team={myTeam} lines={myLines} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onSelectPlayer={selectPlayer} />}
 

@@ -113,6 +113,10 @@ tests/engine.test.js       tests du moteur
   avertissements (rôle mal placé dans l'alignement) et conseils de composition des trios et
   paires. En match, le rôle change qui tire, passe, frappe, bloque et gagne les mises au jeu ;
   un contre-emploi est joué à moitié et moins bien
+- Onglet Profondeur (inspiré du Squad Planner de FM et du Team Report d'EHM) : toute
+  l'organisation (LNH, club-école, espoirs) en trois vues — patinoire (une carte par position,
+  ordre de l'alignement réel, compteur de joueurs LNH en santé), tableau par position classé
+  par cote, et rapport d'équipe (besoins, meneurs par catégorie, meilleurs espoirs, infirmerie)
 - Gestion du joueur dans son profil : rappel, renvoi au club-école ou ballottage, LTIR, nouveau
   contrat, rachat, réclamation au ballottage, offre à un agent libre et repêchage se font dans
   le volet « Gestion du joueur » (les listes n'ont plus de boutons à côté des joueurs)
