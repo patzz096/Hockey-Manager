@@ -1,13 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered } from "lucide-react";
-import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20 } from "./engine/attributes";
+import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars } from "lucide-react";
+import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer } from "./engine/contracts";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
 import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow } from "./engine/calendar";
 import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, lotteryIneligible, ROUND_NAMES } from "./engine/playoffs";
-import { createDraft, aiPick, makePick, draftDone } from "./engine/draft";
+import { createDraft, aiPick, makePick, draftDone, upcomingDraftClass } from "./engine/draft";
+import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promoteFromJunior } from "./engine/minorLeagues";
+import { DEFAULT_ASSIGNMENTS, DEFAULT_COVERAGE, weeklyScouting, regionLabel } from "./engine/scoutingZones";
+import { ScoutingCenter } from "./components/ScoutingCenter";
 import { expireContracts, aiFreeAgency, agePlayers } from "./engine/offseason";
 import { aggregateStats, leadersOf } from "./engine/stats";
 import { capStatus, fitsUnderCap, ROSTER_MAX, formatMoney, deadCapFor, buyoutTerms, retentionEntry, MAX_RETAINED_CONTRACTS } from "./engine/cap";
@@ -76,6 +79,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [myClaims, setMyClaims] = useState([]);
   const [notice, setNotice] = useState(null);
   const [pendingScouts, setPendingScouts] = useState([]);
+  // Dépistage à la FM : zone de chaque dépisteur, couverture des zones (%), suggestions reçues,
+  // et ta liste de repêchage (ordre de préférence, pour la cuvée `year`).
+  const [scoutAssignments, setScoutAssignments] = useState(DEFAULT_ASSIGNMENTS);
+  const [scoutCoverage, setScoutCoverage] = useState(DEFAULT_COVERAGE);
+  const [scoutSuggestions, setScoutSuggestions] = useState([]);
+  const [draftList, setDraftList] = useState({ year: FIRST_SEASON, ids: [] });
   const [winsThisMonth, setWinsThisMonth] = useState(0);
   const [profitThisMonth, setProfitThisMonth] = useState(0);
   const [progressionReport, setProgressionReport] = useState([]);
@@ -121,6 +130,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const standings = useMemo(() => computeStandings(teams, schedule), [teams, schedule]);
   const currentRound = useMemo(() => { const n = schedule.find((g) => !g.played); return n ? n.round : null; }, [schedule]);
   const dates = seasonDates(seasonYear);
+  // Cuvée du prochain repêchage : celle de la saison, ou la suivante une fois le repêchage passé.
+  const classYear = draft && draftDone(draft) ? seasonYear + 1 : seasonYear;
+  const draftClass = useMemo(() => {
+    const taken = new Set(draft && draft.year === classYear ? draft.picks.map((k) => k.playerId).filter(Boolean) : []);
+    return upcomingDraftClass(classYear).filter((p) => !taken.has(p.id));
+  }, [classYear, draft]);
+  const myDraftIds = draftList.year === classYear ? draftList.ids : [];
   // Plafond de ton équipe : cap mort (rachats, rétentions) et allègement LTIR.
   const myCapOpts = useMemo(() => {
     const ltirIds = Object.values(injuries).filter((i) => i.ltir && i.teamId === myTeamId && i.until > currentDay).map((i) => i.playerId);
@@ -329,7 +345,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     if (team) return selectPlayer(team.roster.find((p) => p.id === playerId), team);
     const farmOwner = Object.keys(farmByTeam).find((id) => farmByTeam[id].some((p) => p.id === playerId));
     if (farmOwner) return selectPlayer(farmByTeam[farmOwner].find((p) => p.id === playerId), teamsById[farmOwner]);
-    const fa = freeAgents.find((p) => p.id === playerId);
+    const fa = freeAgents.find((p) => p.id === playerId) || upcomingDraftClass(classYear).find((p) => p.id === playerId);
     if (fa) selectPlayer(fa, null);
   }
   function openEditPlayer(player) { setSelectedPlayer(null); setEditingPlayer({ isNew: false, initial: realPlayer(player) }); }
@@ -502,7 +518,53 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function findPlayer(playerId) {
     for (const t of teams) { const p = t.roster.find((x) => x.id === playerId); if (p) return p; }
     for (const list of Object.values(farmByTeam)) { const p = list.find((x) => x.id === playerId); if (p) return p; }
-    return freeAgents.find((x) => x.id === playerId) || null;
+    return freeAgents.find((x) => x.id === playerId) || upcomingDraftClass(classYear).find((x) => x.id === playerId) || null;
+  }
+  // Ligne de statistiques de la saison en cours dans une ligue mineure (simulation rapide).
+  function minorLine(player) {
+    if (!player || !(player.draftProspect || player.level === "LAH")) return null;
+    const owner = Object.keys(farmByTeam).find((id) => farmByTeam[id].some((p) => p.id === player.id));
+    const lg = leagueOf(player, owner ? teamsById[owner]?.name : null);
+    if (!lg) return null;
+    const year = player.draftProspect ? (player.id.split("-")[1] ? Number(player.id.split("-")[1]) : seasonYear) : seasonYear;
+    return { ...minorSeasonStats(player, lg.league, year, minorSeasonFraction(currentDay, seasonDates(year).start)), club: lg.club, year };
+  }
+  // Liste de repêchage : ajout en fin de liste, retrait, réordonnancement.
+  function setMyDraftIds(ids) { setDraftList({ year: classYear, ids }); }
+  function toggleDraftList(playerId) {
+    setMyDraftIds(myDraftIds.includes(playerId) ? myDraftIds.filter((x) => x !== playerId) : [...myDraftIds, playerId]);
+  }
+  // Une semaine de dépistage par zone (voir engine/scoutingZones.js).
+  function runScoutingWeeks(fromDay, weeks) {
+    let coverage = scoutCoverage;
+    const known = { ...scoutKnowledge };
+    const newReports = {}, suggestions = [];
+    const bench = teamOvrBenchmark(teamsById[myTeamId]);
+    const candidatesOf = (regionId) => {
+      if (regionId === "pro") return [
+        ...teams.filter((t) => t.id !== myTeamId).flatMap((t) => t.roster.map((player) => ({ player, ownerTeamId: t.id }))),
+        ...Object.entries(farmByTeam).filter(([id]) => id !== myTeamId).flatMap(([id, list]) => list.map((player) => ({ player, ownerTeamId: id }))),
+        ...freeAgents.map((player) => ({ player, ownerTeamId: null })),
+      ];
+      const leagues = SCOUT_REGIONS.find((r) => r.id === regionId)?.leagues || [];
+      return draftClass.filter((p) => leagues.includes(p.league)).map((player) => ({ player, ownerTeamId: null }));
+    };
+    for (let w = 0; w < weeks; w++) {
+      const day = fromDay + 7 * (w + 1);
+      const res = weeklyScouting({ assignments: scoutAssignments, coverage, staff: business.staff, candidatesOf, lastReportDay: (id) => known[id]?.day ?? null, day, rng: seededRandom((day * 7919 + 17) % 233280), benchmark: bench });
+      coverage = res.coverage;
+      res.reports.forEach((r) => {
+        known[r.player.id] = r.report; newReports[r.player.id] = r.report;
+        if (r.grade !== "D") suggestions.push({ id: `${r.player.id}-${day}`, playerId: r.player.id, playerName: r.player.name, pos: r.player.pos, age: r.player.age, grade: r.grade, note: r.note, regionId: r.regionId, scoutName: r.scoutName, day, ownerTeamId: r.ownerTeamId, draftProspect: !!r.player.draftProspect });
+      });
+    }
+    setScoutCoverage(coverage);
+    if (Object.keys(newReports).length) setScoutKnowledge((prev) => ({ ...prev, ...newReports }));
+    if (suggestions.length) {
+      setScoutSuggestions((prev) => [...suggestions.reverse(), ...prev.filter((x) => !suggestions.some((y) => y.playerId === x.playerId))].slice(0, 80));
+      const top = suggestions.filter((x) => x.grade !== "C");
+      if (top.length) addMessage({ from: "Service de dépistage", subject: `Dépistage : ${top.length} joueur${top.length > 1 ? "s" : ""} recommandé${top.length > 1 ? "s" : ""}`, category: "scout", playerIds: top.map((x) => x.playerId), body: top.map((x) => `[${x.grade}] ${x.playerName} (${x.pos}, ${x.age} ans) — ${regionLabel(x.regionId)} · ${x.scoutName}`).join("\n") + "\n\nTous les rapports : onglet Dépistage, « Rapports et suggestions »." });
+    }
   }
   // Une demande de dépistage part en mission : le rapport arrive après un délai qui dépend de
   // la cote du dépisteur (voir scoutingDelay), en jours de calendrier.
@@ -526,6 +588,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const months = monthIndex(newDay) - monthIndex(currentDay);
     if (months > 0) monthlyTick(months, monthLabel(currentDay));
     processWaivers(newDay, teams, waivers);
+    const weeks = Math.min(40, Math.floor(newDay / 7) - Math.floor(currentDay / 7));
+    if (weeks > 0) runScoutingWeeks(currentDay, weeks);
     const healed = Object.values(injuries).filter((i) => i.until <= newDay);
     if (healed.length) {
       setInjuries((prev) => Object.fromEntries(Object.entries(prev).filter(([, i]) => i.until > newDay)));
@@ -618,7 +682,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     if (rosterCount(roster) >= ROSTER_MAX) { setNotice(`Rappel impossible : ton alignement compte déjà ${ROSTER_MAX} joueurs (maximum LNH).`); return; }
     if (!fitsUnderCap(roster, seasonYear, player.contract?.salary || 0, 0, myCapOpts)) { setNotice(`Rappel impossible : le salaire de ${player.name} (${formatMoney(player.contract?.salary || 0)}) dépasse ton espace sous le plafond.`); return; }
     setFarmByTeam((prev) => ({ ...prev, [myTeamId]: prev[myTeamId].filter((p) => p.id !== player.id) }));
-    setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: [...t.roster, { ...player, level: undefined }].sort((a, b) => b.ovr - a.ovr) })));
+    setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: [...t.roster, { ...player, level: undefined, league: undefined, club: undefined }].sort((a, b) => b.ovr - a.ovr) })));
     addMessage({ from: "Directeur du club-école", subject: `Rappel: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.pos}) est rappelé du club-école vers l'équipe.` });
   }
   function sendDownPlayer(shown) {
@@ -690,6 +754,16 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       }
     } else if (isFreeAgent) {
       out.push({ key: "sign", label: "Offrir un contrat", color: "var(--win)", requiresKnown: true, disabled: !txWindow.open, hint: txWindow.open ? "Dépiste-le d'abord pour connaître sa valeur." : txWindow.reason, onClick: () => openOffer(player, false) });
+    }
+    const inClass = draftClass.some((p) => p.id === player.id);
+    if (inClass) {
+      const idx = myDraftIds.indexOf(player.id);
+      out.push(idx >= 0
+        ? { key: "list", label: "Retirer de ma liste de repêchage", color: "var(--steel)", hint: `N° ${idx + 1} de ta liste (onglet Dépistage, « Ma liste de repêchage »).`, onClick: () => toggleDraftList(player.id) }
+        : { key: "list", label: "Ajouter à ma liste de repêchage", color: "var(--accent)", hint: `Il prendra le n° ${myDraftIds.length + 1}. Lors du repêchage, tes choix automatiques suivent ta liste.`, onClick: () => toggleDraftList(player.id) });
+    }
+    if (onRoster || inFarm || onWaivers || isFreeAgent) {
+      // déjà traité
     } else if (inDraft) {
       const myTurn = draftCurrent.teamId === myTeamId;
       out.push({ key: "draft", label: `Repêcher (choix n° ${draftCurrent.overall})`, color: "var(--win)", disabled: !myTurn, hint: myTurn ? "C'est ton tour au micro." : `${teamsById[draftCurrent.teamId].name} est au micro : avance jusqu'à ton choix.`, onClick: () => runDraft({ myPlayerId: player.id, untilMine: true }), close: true });
@@ -861,6 +935,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // Classement du repêchage selon ton personnel (rapport de dépistage s'il existe).
   function myDraftChoice(d) {
     const taken = new Set(d.picks.map((k) => k.playerId).filter(Boolean));
+    // Ta liste de repêchage d'abord, dans ton ordre ; sinon le classement de ton dépisteur.
+    const fromList = (draftList.year === d.year ? draftList.ids : []).find((id) => !taken.has(id) && d.pool.some((p) => p.id === id));
+    if (fromList) return d.pool.find((p) => p.id === fromList);
     return d.pool.filter((p) => !taken.has(p.id))
       .map((p) => { const rep = scoutKnowledge[p.id]; const v = rep?.estOvr != null ? { ovr: rep.estOvr, potential: rep.estPotential } : staffViewPlayer(p, business.staff); return { p, score: v.potential * 0.8 + v.ovr * 0.2 }; })
       .sort((a, b) => b.score - a.score)[0]?.p;
@@ -920,7 +997,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     });
     const aged = aiPlaceWaivers(teams.map((t) => ({ ...t, roster: agePlayers(t.roster).sort((a, b) => b.ovr - a.ovr) })), seasonDates(seasonYear + 1).start - 1);
     setTeams(aged);
-    setFarmByTeam((prev) => Object.fromEntries(Object.entries(prev).map(([id, list]) => [id, agePlayers(list)])));
+    // Club-école : la saison dans la ligue mineure entre dans l'historique ; à 21 ans, un espoir
+    // quitte le junior pour la LAH.
+    setFarmByTeam((prev) => Object.fromEntries(Object.entries(prev).map(([id, list]) => [id, agePlayers(list.map((p) => {
+      const lg = leagueOf(p, teamsById[id]?.name);
+      const line = lg && minorSeasonStats(p, lg.league, seasonYear, 1);
+      return line ? { ...p, minorHistory: [...(p.minorHistory || []), { season: seasonYear, club: lg.club, ...line }] } : p;
+    })).map(promoteFromJunior)])));
     setFreeAgents((prev) => agePlayers(prev));
     setSchedule(buildSchedule(aged));
     setLinesByTeam((prev) => Object.fromEntries(aged.map((t) => [t.id, t.id === myTeamId ? prev[t.id] : { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality }])));
@@ -985,6 +1068,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     { key: "inbox", label: "Messagerie", icon: Mail },
     { key: "standings", label: "Classement", icon: Trophy },
     { key: "playoffs", label: "Séries", icon: Award },
+    { key: "scouting", label: "Dépistage", icon: Binoculars },
     { key: "draft", label: "Repêchage", icon: ListOrdered },
     { key: "custom", label: "Personnalisation", icon: Palette },
   ];
@@ -992,7 +1076,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   return (
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
       {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? offerTarget.player.contract?.salary || 0 : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
@@ -1126,8 +1210,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "playoffs" && <PlayoffsPanel playoffs={playoffs} teamsById={teamsById} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
 
+        {tab === "scouting" && <ScoutingCenter staff={business.staff} assignments={scoutAssignments} coverage={scoutCoverage} onAssign={(slot, region) => setScoutAssignments((prev) => ({ ...prev, [slot]: region || null }))}
+          suggestions={scoutSuggestions} draftClass={draftClass} classYear={classYear} myTeam={myTeam} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} teamsById={teamsById}
+          draftIds={myDraftIds} onReorder={setMyDraftIds} onRemoveFromList={toggleDraftList} draft={draft} minorLine={minorLine} onSelectPlayer={selectPlayer} onOpenPlayerById={openPlayerById} />}
+
         {tab === "draft" && (draft
-          ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} />
+          ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} draftIds={draftList.year === draft.year ? draftList.ids : []} onPickFromList={() => { const p = myDraftChoice(draft); if (p) runDraft({ myPlayerId: p.id, untilMine: true }); }} />
           : <div><h2 style={h2Style}>Repêchage</h2><p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Le repêchage a lieu le {formatDay(dates.draft)}, une semaine avant l'ouverture du marché des agents libres (1er juillet), après les séries. Ordre : équipes hors séries (pire dossier d'abord ; loterie pour les 2 premiers choix), puis selon la ronde d'élimination.</p></div>)}
       </div>
     </div>

@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
-import { NATION_FLAG } from "../data/names";
+import { MINOR_LEAGUES } from "../engine/minorLeagues";
 import { starsFor, teamOvrBenchmark } from "../engine/attributes";
 import { staffViewPlayer, getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { formatDay } from "../engine/calendar";
 import { h2Style, btnStyle } from "../ui/theme";
 import { StarRating, PlayerLink, TeamCrest } from "./common";
 
-export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKnowledge, onSimToMyPick, onSimAll, onSelectPlayer }) {
+export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKnowledge, onSimToMyPick, onSimAll, onSelectPlayer, draftIds = [], onPickFromList }) {
   const [posFilter, setPosFilter] = useState("Tous");
   const taken = useMemo(() => new Set(draft.picks.map((k) => k.playerId).filter(Boolean)), [draft]);
   const benchmark = teamOvrBenchmark(myTeam);
@@ -24,6 +24,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
   const done = !current;
   const myPicks = draft.picks.filter((k) => k.teamId === myTeam.id);
   const rows = board.filter((r) => posFilter === "Tous" || r.p.pos === posFilter).slice(0, 80);
+  const listAvailable = draftIds.map((id) => draft.pool.find((p) => p.id === id)).filter((p) => p && !taken.has(p.id));
   const recent = draft.picks.slice(Math.max(0, draft.current - 8), draft.current).reverse();
   return (
     <div>
@@ -36,6 +37,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
               <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>RONDE {current.round} · CHOIX {current.overall}</div>
               <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 17 }}>{myTurn ? "À toi de choisir !" : `${teamsById[current.teamId].name} est au micro`}</div>
             </div>
+            {myTurn && listAvailable.length > 0 && <button onClick={onPickFromList} style={btnStyle("var(--win)")}>Repêcher le n° 1 de ma liste : {listAvailable[0].name}</button>}
             {!myTurn && <button onClick={onSimToMyPick} style={btnStyle("var(--red)")}>Avancer jusqu'à mon choix</button>}
             <button onClick={onSimAll} style={btnStyle("var(--steel)")}>Terminer le repêchage (choix auto)</button>
           </>
@@ -50,13 +52,14 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
             </select>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr>{["#", "Espoir", "Pos", "Âge", "Actuel", "Potentiel"].map((h) => <th key={h} style={{ textAlign: "left", padding: "5px 8px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid #ffffff22" }}>{h}</th>)}</tr></thead>
+            <thead><tr>{["#", "Espoir", "Pos", "Âge", "Ligue", "Actuel", "Potentiel"].map((h) => <th key={h} style={{ textAlign: "left", padding: "5px 8px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid #ffffff22" }}>{h}</th>)}</tr></thead>
             <tbody>{rows.map((r, i) => (
               <tr key={r.p.id} onClick={() => onSelectPlayer(r.p, null)} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }}>
                 <td style={{ padding: "5px 8px", color: "var(--iceMuted)" }}>{i + 1}</td>
-                <td style={{ padding: "5px 8px" }}>{NATION_FLAG[r.p.nationality] || ""} <PlayerLink player={r.p} onSelect={(p) => onSelectPlayer(p, null)} />{r.report && <span title="Rapport de dépistage reçu" style={{ color: "var(--gold)", fontSize: 10 }}> ●</span>}</td>
+                <td style={{ padding: "5px 8px" }}>{draftIds.includes(r.p.id) && <span title="Dans ta liste de repêchage" style={{ color: "var(--gold)", fontWeight: 700, fontSize: 11 }}>n° {draftIds.indexOf(r.p.id) + 1} </span>}<PlayerLink player={r.p} onSelect={(p) => onSelectPlayer(p, null)} />{r.report && <span title="Rapport de dépistage reçu" style={{ color: "var(--gold)", fontSize: 10 }}> ●</span>}</td>
                 <td style={{ padding: "5px 8px" }}>{r.p.pos}</td>
                 <td style={{ padding: "5px 8px" }}>{r.p.age}</td>
+                <td style={{ padding: "5px 8px", color: "var(--iceMuted)" }}>{MINOR_LEAGUES[r.p.league]?.short || "—"}</td>
                 <td style={{ padding: "5px 8px" }}><StarRating value={starsFor(r.ovr, benchmark)} size={11} /></td>
                 <td style={{ padding: "5px 8px" }}><StarRating value={starsFor(r.potential, benchmark)} size={11} color="#7A9EDB" /></td>
               </tr>
@@ -77,7 +80,12 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
               <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6 }}>16 équipes hors séries, 2 tirages, chances de 18,5 % (pire dossier) à 0,5 %. Montée maximale de 10 rangs. Une équipe ne peut gagner plus de 2 loteries en 5 ans.</div>
             </div>
           )}
-          <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>TES CHOIX</div>
+          <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>MA LISTE ({listAvailable.length} disponible{listAvailable.length > 1 ? "s" : ""})</div>
+          {listAvailable.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 12 }}>Liste vide ou épuisée : tes choix automatiques suivent le classement de ton dépisteur. Prépare ta liste dans l'onglet Dépistage.</div>}
+          {listAvailable.slice(0, 8).map((p, i) => (
+            <div key={p.id} onClick={() => onSelectPlayer(p, null)} style={{ fontSize: 12, padding: "3px 0", cursor: "pointer" }}><span style={{ color: "var(--gold)", fontWeight: 700 }}>{i + 1}.</span> {p.name} <span style={{ color: "var(--iceMuted)" }}>({p.pos}, {MINOR_LEAGUES[p.league]?.short})</span></div>
+          ))}
+          <div style={{ fontSize: 12, color: "var(--iceMuted)", margin: "14px 0 6px" }}>TES CHOIX</div>
           {myPicks.map((k) => { const p = k.playerId && draft.pool.find((x) => x.id === k.playerId); return (
             <div key={k.overall} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #ffffff11" }}>R{k.round} · #{k.overall} — {p ? `${p.name} (${p.pos})` : <span style={{ color: "var(--iceMuted)" }}>à venir</span>}</div>
           ); })}

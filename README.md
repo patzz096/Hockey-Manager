@@ -113,6 +113,15 @@ tests/engine.test.js       tests du moteur
   avertissements (rôle mal placé dans l'alignement) et conseils de composition des trios et
   paires. En match, le rôle change qui tire, passe, frappe, bloque et gagne les mises au jeu ;
   un contre-emploi est joué à moitié et moins bien
+- Centre de dépistage (onglet Dépistage, à la FM24, `engine/scoutingZones.js`) : 9 zones à couvrir
+  (Québec, Ontario, Ouest, États-Unis, Suède, Finlande, Russie, Europe centrale, professionnels).
+  Chaque dépisteur est déployé dans une zone ; la couverture monte chaque semaine et il rédige
+  des rapports sur les joueurs les plus intéressants, notés A / B / C (suggestions + messagerie)
+- Liste de repêchage : cuvée connue toute la saison, ajout depuis le profil, ordre par
+  glisser-déposer ; le jour du repêchage, « Repêcher le n° 1 de ma liste » et choix auto selon la liste
+- Ligues mineures (`engine/minorLeagues.js`) : LAH, LHJMQ, OHL, WHL, NCAA, USHL, SHL, J20, Liiga,
+  U20, KHL, MHL, Extraliga, NL, DEL. Simulation rapide et déterministe des statistiques des espoirs
+  et du club-école, progressive avec le calendrier, historique dans le profil
 - Onglet Profondeur (inspiré du Squad Planner de FM et du Team Report d'EHM) : toute
   l'organisation (LNH, club-école, espoirs) en trois vues — patinoire (une carte par position,
   ordre de l'alignement réel, compteur de joueurs LNH en santé), tableau par position classé

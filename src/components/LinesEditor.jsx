@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { NATION_FLAG } from "../data/names";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STRATEGY_PHASES, normalizeStrategy, strategyOption } from "../engine/strategy";
 import { specialSystem, specialSystems } from "../engine/specialTeams";
@@ -133,7 +132,7 @@ export function RosterSideList({ team, benchmark, armed, onArm, onSelectPlayer }
               onDoubleClick={() => onSelectPlayer(p, team)}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 7px", borderRadius: 3, cursor: "grab", marginBottom: 1, background: armed?.playerId === p.id ? "var(--red)" : "transparent" }}
             >
-              <span style={{ flex: 1, fontSize: 12, color: armed?.playerId === p.id ? "#fff" : "var(--ice)" }}>{NATION_FLAG[p.nationality] || ""} {p.name}</span>
+              <span style={{ flex: 1, fontSize: 12, color: armed?.playerId === p.id ? "#fff" : "var(--ice)" }}>{p.name}</span>
               <StarRating value={starsFor(p.ovr, benchmark)} size={9} />
             </div>
           ))}

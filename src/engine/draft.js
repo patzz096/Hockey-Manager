@@ -2,6 +2,7 @@ import { FIRST_NAMES, LAST_NAMES } from "../data/names";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr } from "./attributes";
 import { pickNationality } from "./players";
 import { randAttr, seededRandom } from "./random";
+import { assignJuniorLeague } from "./minorLeagues";
 
 export const DRAFT_ROUNDS = 7;
 export const ENTRY_CONTRACT = { years: 3, salary: 950 };
@@ -23,15 +24,27 @@ export function generateDraftClass(year, count) {
     // Plafond calé sur l'échelle du jeu : une vedette actuelle de la LNH est vers 70-72.
     const potential = Math.min(82, Math.round(ovr + 10 + talent * 16 + rng() * 4));
     const fn = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)], ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
-    list.push({ id: `DRAFT-${year}-${i}`, name: `${fn} ${ln}`, pos, age: rng() < 0.75 ? 18 : 19, attrs, ovr, potential, nationality: pickNationality(rng), contract: null, draftProspect: true, draftPick: null, draftYear: null });
+    const p = { id: `DRAFT-${year}-${i}`, name: `${fn} ${ln}`, pos, age: rng() < 0.75 ? 18 : 19, attrs, ovr, potential, nationality: pickNationality(rng), contract: null, draftProspect: true, draftPick: null, draftYear: null };
+    // Ligue et club junior : graine propre au joueur, la cuvée reste identique.
+    list.push({ ...p, ...assignJuniorLeague(p) });
   }
   return list;
+}
+
+// Taille de la cuvée : 7 rondes × 32 choix + 32 joueurs non repêchés.
+export const DRAFT_CLASS_SIZE = DRAFT_ROUNDS * 32 + 32;
+// Cuvée à venir, connue toute la saison (dépistage, liste de repêchage) ; identique au bassin
+// que createDraft générera le jour du repêchage.
+const classCache = new Map();
+export function upcomingDraftClass(year) {
+  if (!classCache.has(year)) classCache.set(year, generateDraftClass(year, DRAFT_CLASS_SIZE));
+  return classCache.get(year);
 }
 
 export function createDraft(year, order) {
   const picks = [];
   for (let r = 0; r < DRAFT_ROUNDS; r++) order.forEach((teamId, i) => picks.push({ overall: r * order.length + i + 1, round: r + 1, teamId, playerId: null }));
-  return { year, picks, pool: generateDraftClass(year, picks.length + 32), current: 0 };
+  return { year, picks, pool: picks.length + 32 === DRAFT_CLASS_SIZE ? upcomingDraftClass(year) : generateDraftClass(year, picks.length + 32), current: 0 };
 }
 
 // Choix d'une équipe contrôlée par l'ordinateur : meilleur potentiel perçu (avec une part

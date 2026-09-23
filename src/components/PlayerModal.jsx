@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { NATION_FLAG, NATION_NAME } from "../data/names";
 import { SKATER_CATEGORIES, GOALIE_CATEGORIES, ATTR_LABELS, attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
@@ -10,6 +10,7 @@ import { contractLabel, draftLabel } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
 import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge, ConfirmButton } from "./common";
 import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
+import { MINOR_LEAGUES } from "../engine/minorLeagues";
 
 export function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
 
@@ -144,8 +145,14 @@ function ActionsPanel({ actions, known, onClose }) {
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [] }) {
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [], minorLine = null }) {
   const [tab, setTab] = useState("profile");
+  // Échap ferme le profil.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   const owner = team || (player.draftProspect ? PROSPECT_TEAM : FREE_AGENT_TEAM);
   const isMine = owner.id === myTeamId;
   const categories = player.pos === "G" ? GOALIE_CATEGORIES : SKATER_CATEGORIES;
@@ -256,6 +263,29 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
               </table>
             </div>
           )}
+          {(minorLine || (player.minorHistory || []).length > 0) && (() => {
+            const g = player.pos === "G";
+            const heads = g ? ["Saison", "Club", "Ligue", "PJ", "V", "D", "MOY", "%ARR", "BL"] : ["Saison", "Club", "Ligue", "PJ", "B", "A", "PTS", "+/-", "PUN"];
+            const row = (l, season, current) => {
+              const cells = g ? [l.gp, l.w, l.l, l.gaa.toFixed(2), l.svPct ? l.svPct.toFixed(3).replace(/^0/, "") : "—", l.so] : [l.gp, l.g, l.a, l.pts, l.pm > 0 ? `+${l.pm}` : l.pm, l.pim];
+              return <tr key={`${season}-${l.league}`} style={{ color: current ? "var(--gold)" : "var(--ice)" }}>{[`${season}-${String(season + 1).slice(2)}`, l.club, MINOR_LEAGUES[l.league]?.short || l.league, ...cells].map((v, i) => <td key={i} style={{ padding: "3px 6px", whiteSpace: "nowrap" }}>{v}</td>)}</tr>;
+            };
+            return (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6, borderTop: "1px solid #ffffff1a", paddingTop: 10 }}>LIGUES MINEURES ET JUNIORS {minorLine && <>· {MINOR_LEAGUES[minorLine.league]?.name}</>}</div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                    <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}>{heads.map((h) => <th key={h} style={{ padding: "3px 6px", textAlign: "left", borderBottom: "1px solid #ffffff1a" }}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {(player.minorHistory || []).map((l) => row(l, l.season, false))}
+                      {minorLine && row(minorLine, minorLine.year, true)}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--iceMuted)", marginTop: 4 }}>Saison en cours en or (simulation rapide de la ligue, mise à jour avec le calendrier).</div>
+              </div>
+            );
+          })()}
           {known && ((careerStats[player.id] || []).length > 0 || playoffStats[player.id]?.gp > 0) && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6 }}>CARRIÈRE (S = saison régulière, SÉ = séries)</div>

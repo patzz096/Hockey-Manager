@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { NATION_FLAG } from "../data/names";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { lineLabel, lineInfo } from "../engine/lines";
 import { ltirEligible, injuryLabel } from "../engine/injuries";
@@ -202,7 +201,7 @@ function ReportView({ team, org, benchmark, byPos, injuries, day, onOpen, onSele
         {prospects.map((e, i) => (
           <button key={e.p.id} onClick={() => onOpen(e)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", borderTop: i ? "1px solid #ffffff0d" : "none", padding: "4px 0", cursor: "pointer", color: "var(--ice)", fontFamily: "inherit", fontSize: 12, textAlign: "left" }}>
             <span style={{ width: 18, color: "var(--iceMuted)" }}>{i + 1}</span>
-            <span style={{ flex: 1 }}>{NATION_FLAG[e.p.nationality] || ""} {e.p.name}</span>
+            <span style={{ flex: 1 }}>{e.p.name}</span>
             <span style={{ color: "var(--iceMuted)", whiteSpace: "nowrap" }}>{e.p.age} ans · {POSITIONS.find((d) => d.pos === e.p.pos)?.short}</span>
             <LevelTag level={e.level} />
             <span title="Potentiel"><StarRating value={starsFor(e.p.potential, benchmark)} size={10} color="#7A9EDB" /></span>
