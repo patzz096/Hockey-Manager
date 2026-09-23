@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { h2Style } from "../ui/theme";
+import { PlayerLink } from "./common";
 
 export const CATEGORY_COLOR = { scout: "#7A4E9E", finance: "var(--win)", transaction: "var(--red)", general: "var(--steel)" };
 
-export function InboxPanel({ messages, onMarkRead }) {
+export function InboxPanel({ messages, onMarkRead, findPlayer, onOpenPlayer }) {
   const [openId, setOpenId] = useState(null);
   function toggle(m) {
     setOpenId(openId === m.id ? null : m.id);
@@ -25,7 +26,17 @@ export function InboxPanel({ messages, onMarkRead }) {
               {openId === m.id ? <ChevronUp size={14} color="var(--iceMuted)" /> : <ChevronDown size={14} color="var(--iceMuted)" />}
             </div>
             {openId === m.id && (
-              <div style={{ background: "var(--navy2)", border: "1px solid #ffffff1a", borderTop: "none", borderRadius: "0 0 4px 4px", padding: 14, fontSize: 13, whiteSpace: "pre-wrap", color: "var(--iceMuted)" }}>{m.body}</div>
+              <div style={{ background: "var(--navy2)", border: "1px solid #ffffff1a", borderTop: "none", borderRadius: "0 0 4px 4px", padding: 14, fontSize: 13, whiteSpace: "pre-wrap", color: "var(--iceMuted)" }}>
+                {m.body}
+                {m.playerIds?.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10, whiteSpace: "normal" }}>
+                    <span>Profils :</span>
+                    {m.playerIds.map((id) => findPlayer(id)).filter(Boolean).map((p) => (
+                      <PlayerLink key={p.id} player={p} onSelect={() => onOpenPlayer(p.id)} style={{ color: "var(--ice)", background: "#ffffff12", borderRadius: 3, padding: "1px 7px" }} />
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ))}

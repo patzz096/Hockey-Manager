@@ -112,19 +112,20 @@ tests/engine.test.js       tests du moteur
 - Messagerie interne recevant tous les rapports (progression, finances, transactions, dépistage)
 
 **Interface**
+- Joueurs cliquables partout (composant `PlayerLink`) : alignement, trios (double-clic),
+  profondeur, statistiques, feuille de match, sommaire des buts (buteur et passeurs),
+  visionneur de match, échanges, agents libres, contrats, rapport de progression, et liens
+  « Profils » dans les messages qui citent des joueurs
 - Visionneur de match animé 2D (rejeu du résultat déjà simulé, pas une physique en direct)
 - Mode "Sim en direct" avec horloge de période, sommaire de buts et stats en temps réel
 - Filtres et tri sur presque tous les tableaux (division, équipe, colonnes)
 
 ## Ce qui reste incomplet ou en cours
 
-1. **Clic sur un joueur "peu importe l'endroit"** — pas encore universel. Manquent : noms de
-   buteurs/passeurs dans `GoalSummary` et `ContractsPanel` (les échanges et les agents libres
-   ouvrent maintenant le profil).
-2. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
-3. **Statistiques de carrière multi-saisons** — pas d'historique d'une saison à l'autre (pas
+1. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
+2. **Statistiques de carrière multi-saisons** — pas d'historique d'une saison à l'autre (pas
    de mécanique de fin de saison/nouvelle saison implémentée du tout).
-4. Quelques approximations assumées : ordre chronologique des buts non réellement chronométré
+3. Quelques approximations assumées : ordre chronologique des buts non réellement chronométré
    (réparti aléatoirement par période), +/- approximatif (pas de simulation ligne par ligne
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
@@ -167,5 +168,4 @@ business = { cash, ticketTiers, facilities, parking, concessionItems, staff, del
 
 ## Prochaines étapes
 
-1. Rendre un joueur cliquable partout (voir « Ce qui reste incomplet », point 1).
-2. Ajouter les 16 équipes des divisions Centrale et Pacifique (point 2).
+1. Ajouter les 16 équipes des divisions Centrale et Pacifique (voir « Ce qui reste incomplet », point 1).

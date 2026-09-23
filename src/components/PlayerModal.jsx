@@ -113,7 +113,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
   const shown = isMine ? perceivedRatings(player, null) : perceivedRatings(player, scoutInfo);
   const qColor = scoutQualityColor(scoutInfo.quality);
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#00000099", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16 }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#00000099", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 80, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--navy2)", border: `1px solid ${owner.color}55`, borderRadius: 4, width: 500, maxWidth: "94vw", maxHeight: "90vh", overflow: "auto" }}>
         <div style={{ background: `linear-gradient(90deg, ${owner.color}, ${owner.color}99)`, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

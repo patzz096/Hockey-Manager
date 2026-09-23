@@ -3,7 +3,7 @@ import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { draftLabel } from "../ui/format";
 import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
-import { SortTh, StarRating } from "./common";
+import { SortTh, StarRating, PlayerLink } from "./common";
 
 export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, freeAgents, onSign, onRefreshFreeAgents }) {
   const [fak, fad, faToggle] = useSort("ovr");
@@ -36,7 +36,7 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
             const pending = pendingScouts.find((m) => m.playerId === p.id);
             return (
             <tr key={p.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-              <td onClick={() => onSelectPlayer(p)} style={{ padding: "7px 10px", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }}>{p.name}</td>
+              <td style={{ padding: "7px 10px" }}><PlayerLink player={p} onSelect={onSelectPlayer} /></td>
               <td style={{ padding: "7px 10px" }}>{p.pos}</td>
               <td style={{ padding: "7px 10px" }}>{p.age}</td>
               <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(perceivedRatings(p, scoutInfo).ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "#D9A404" }}>Dépistage · jour {pending.dueDay}</span> : <button onClick={() => onRequestScout(p)} style={{ ...btnStyle("var(--steel)"), fontSize: 11 }}>Dépister</button>}</td>

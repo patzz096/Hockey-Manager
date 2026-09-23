@@ -224,6 +224,14 @@ export default function HockeyGM() {
     setSelectedPlayer(null);
     setEditingPlayer({ isNew: true, initial: { id: `${myTeamId}-new-${Date.now()}`, name: "", pos: "C", age: 20, attrs: emptyAttrs("C", 60), potential: 60 } });
   }
+  function openPlayerById(playerId) {
+    const team = teams.find((t) => t.roster.some((p) => p.id === playerId));
+    if (team) return selectPlayer(team.roster.find((p) => p.id === playerId), team);
+    const farmOwner = Object.keys(farmByTeam).find((id) => farmByTeam[id].some((p) => p.id === playerId));
+    if (farmOwner) return selectPlayer(farmByTeam[farmOwner].find((p) => p.id === playerId), teamsById[farmOwner]);
+    const fa = freeAgents.find((p) => p.id === playerId);
+    if (fa) selectPlayer(fa, null);
+  }
   function openEditPlayer(player) { setSelectedPlayer(null); setEditingPlayer({ isNew: false, initial: realPlayer(player) }); }
   function savePlayer(updated) {
     setTeams((prev) => prev.map((t) => {
@@ -331,7 +339,7 @@ export default function HockeyGM() {
       return updated;
     });
     const body = `Tu envoies: ${myOutNames.join(", ") || "rien"}\nTu reçois: ${theirOutNames.join(", ") || "rien"}`;
-    addMessage({ from: "Directeur général adjoint", subject: `Échange conclu avec ${theirTeamName}`, category: "transaction", body });
+    addMessage({ from: "Directeur général adjoint", subject: `Échange conclu avec ${theirTeamName}`, category: "transaction", playerIds: [...myIds, ...theirIds], body });
   }
   function openOffer(player, isRenewal = false) {
     setSelectedPlayer(null);
@@ -349,9 +357,9 @@ export default function HockeyGM() {
         setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: [...t.roster, { ...player, contract: newContract }].sort((a, b) => b.ovr - a.ovr) })));
       }
       if (offer.signingBonus > 0) setBusiness((prev) => ({ ...prev, cash: prev.cash - offer.signingBonus }));
-      addMessage({ from: "Agent du joueur", subject: `${player.name} a accepté l'offre`, category: "transaction", body: `${offerSummary}\n\n${player.name} a signé.` });
+      addMessage({ from: "Agent du joueur", subject: `${player.name} a accepté l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\n${player.name} a signé.` });
     } else {
-      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", body: `${offerSummary}\n\nL'agent estime la valeur du joueur plus proche de ${result.expSalary.toLocaleString()}k$/an sur ${result.expYears} an${result.expYears > 1 ? "s" : ""}. Reviens avec une meilleure offre.` });
+      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nL'agent estime la valeur du joueur plus proche de ${result.expSalary.toLocaleString()}k$/an sur ${result.expYears} an${result.expYears > 1 ? "s" : ""}. Reviens avec une meilleure offre.` });
     }
     setOfferTarget(null);
   }
@@ -370,7 +378,7 @@ export default function HockeyGM() {
     const scout = assignScout(player, business.staff);
     const delay = scoutingDelay(scout.rating);
     setPendingScouts((prev) => [...prev, { playerId: player.id, playerName: player.name, scout, requestedDay: currentDay, dueDay: currentDay + delay }]);
-    addMessage({ from: scout.name, subject: `Mission de dépistage: ${player.name}`, category: "scout", body: `Dépisteur assigné: ${scout.name} (${attr20(scout.rating)}/20${scout.offSpecialty ? ", hors de sa spécialité" : ""}).\nRapport attendu dans ${delay} jour${delay > 1 ? "s" : ""} (jour ${currentDay + delay}).` });
+    addMessage({ from: scout.name, subject: `Mission de dépistage: ${player.name}`, category: "scout", playerIds: [player.id], body: `Dépisteur assigné: ${scout.name} (${attr20(scout.rating)}/20${scout.offSpecialty ? ", hors de sa spécialité" : ""}).\nRapport attendu dans ${delay} jour${delay > 1 ? "s" : ""} (jour ${currentDay + delay}).` });
   }
   function cancelScouting(playerId) {
     setPendingScouts((prev) => prev.filter((m) => m.playerId !== playerId));
@@ -391,7 +399,7 @@ export default function HockeyGM() {
       }
       const report = createScoutReport(player, m.scout, m.dueDay);
       reports[player.id] = report;
-      addMessage({ from: m.scout.name, subject: `Rapport de dépistage: ${player.name}`, category: "scout", body: `${report.text}\n\nNote du dépisteur: ${attr20(m.scout.rating)}/20. Rapport complet dans le profil du joueur (onglet Dépistage).` });
+      addMessage({ from: m.scout.name, subject: `Rapport de dépistage: ${player.name}`, category: "scout", playerIds: [player.id], body: `${report.text}\n\nNote du dépisteur: ${attr20(m.scout.rating)}/20. Rapport complet dans le profil du joueur (onglet Dépistage).` });
     });
     setScoutKnowledge((prev) => ({ ...prev, ...reports }));
   }
@@ -431,13 +439,13 @@ export default function HockeyGM() {
   function callUpPlayer(player) {
     setFarmByTeam((prev) => ({ ...prev, [myTeamId]: prev[myTeamId].filter((p) => p.id !== player.id) }));
     setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: [...t.roster, { ...player, level: undefined }].sort((a, b) => b.ovr - a.ovr) })));
-    addMessage({ from: "Directeur du club-école", subject: `Rappel: ${player.name}`, category: "transaction", body: `${player.name} (${player.pos}, cote ${player.ovr}) est rappelé du club-école vers l'équipe.` });
+    addMessage({ from: "Directeur du club-école", subject: `Rappel: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.pos}, cote ${player.ovr}) est rappelé du club-école vers l'équipe.` });
   }
   function sendDownPlayer(player) {
     setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: t.roster.filter((p) => p.id !== player.id) })));
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: cleanLinesOfPlayer(prev[myTeamId], player.id) }));
     setFarmByTeam((prev) => ({ ...prev, [myTeamId]: [...(prev[myTeamId] || []), { ...player, level: "LAH" }] }));
-    addMessage({ from: "Directeur du club-école", subject: `Rétrogradé: ${player.name}`, category: "transaction", body: `${player.name} est renvoyé au club-école.` });
+    addMessage({ from: "Directeur du club-école", subject: `Rétrogradé: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} est renvoyé au club-école.` });
   }
   function advanceMonth() {
     if (business.delegation.hockeyOps === "delegated") autoManageHockeyOps();
@@ -476,7 +484,7 @@ export default function HockeyGM() {
       : "";
     if (gainers.length) body += "En progression:\n" + gainers.map((r) => `- ${r.name}: ${r.before} → ${r.after} (+${r.delta})`).join("\n");
     if (decliners.length) body += (body ? "\n\n" : "") + "En baisse:\n" + decliners.map((r) => `- ${r.name}: ${r.before} → ${r.after} (${r.delta})`).join("\n");
-    addMessage({ from: coachName, subject: `Rapport de développement — Mois ${month}`, category: "scout", body });
+    addMessage({ from: coachName, subject: `Rapport de développement — Mois ${month}`, category: "scout", playerIds: [...gainers, ...decliners].map((r) => r.id), body });
 
     const totalGain = sorted.filter((r) => r.delta > 0).reduce((a, r) => a + r.delta, 0);
     const bonuses = [];
@@ -558,7 +566,7 @@ export default function HockeyGM() {
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
       {offerTarget && <ContractOfferModal player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
-      {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} />}
+      {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 190, background: "var(--navy2)", padding: "20px 12px", display: "flex", flexDirection: "column", gap: 4, borderRight: `1px solid ${myTeam.color}33` }}>
         <div style={{ padding: "0 8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -611,11 +619,11 @@ export default function HockeyGM() {
 
         {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onSign={(p) => openOffer(p, false)} onRefreshFreeAgents={refreshFreeAgents} />}
 
-        {tab === "contracts" && <ContractsPanel myTeam={myTeam} onOfferContract={(p) => openOffer(p, true)} />}
+        {tab === "contracts" && <ContractsPanel myTeam={myTeam} onOfferContract={(p) => openOffer(p, true)} onSelectPlayer={selectPlayer} />}
 
-        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={month} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onAdvanceMonth={advanceMonth} onSetDelegation={setDelegation} />}
+        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={month} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onAdvanceMonth={advanceMonth} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
 
-        {tab === "inbox" && <InboxPanel messages={messages} onMarkRead={markRead} />}
+        {tab === "inbox" && <InboxPanel messages={messages} onMarkRead={markRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 
         {tab === "finances" && <FinancesPanel business={business} teamCapacity={myTeam.capacity} onSetTierPrice={setTierPrice} onSetParkingPrice={setParkingPrice} onSetItemPrice={setItemPrice} onUpgrade={upgradeFacility} />}
 

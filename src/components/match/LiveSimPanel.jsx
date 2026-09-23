@@ -59,7 +59,7 @@ export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer,
       ) : (
         <button onClick={onFinish} style={{ ...btnStyle("var(--win)"), marginBottom: 16 }}>Confirmer le résultat final</button>
       )}
-      <GoalSummary goalLog={accum.goalLog} home={home} away={away} />
+      <GoalSummary goalLog={accum.goalLog} home={home} away={away} onSelectPlayer={onSelectPlayer} />
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
         <StatLines title={`${home.name} (dom.)`} box={accum.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} />
         <StatLines title={`${away.name} (visit.)`} box={accum.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} />

@@ -2,7 +2,7 @@ import { attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STAFF_ROLES } from "../engine/staff";
 import { h2Style, btnStyle, attr20Color } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
-import { SortTh, StarRating } from "./common";
+import { SortTh, StarRating, PlayerLink } from "./common";
 
 export function StaffCard({ role, hired, benchmark, onFire }) {
   return (
@@ -28,7 +28,7 @@ export function StaffCard({ role, hired, benchmark, onFire }) {
   );
 }
 
-export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onHire, onFire, onRefresh, onAdvanceMonth, onSetDelegation }) {
+export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onHire, onFire, onRefresh, onAdvanceMonth, onSetDelegation, onSelectPlayer }) {
   const [smk, smd, smToggle] = useSort("rating");
   const smAcc = (c, key) => (key === "role" ? STAFF_ROLES[c.role] : c[key]);
   const sortedStaffMarket = sortRows(staffMarket, smk, smd, smAcc);
@@ -96,7 +96,7 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
         <tbody>
           {progressionReport.map((r) => (
             <tr key={r.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-              <td style={{ padding: "7px 10px" }}>{r.name}</td>
+              <td style={{ padding: "7px 10px" }}><PlayerLink player={myTeam.roster.find((p) => p.id === r.id)} team={myTeam} onSelect={onSelectPlayer}>{r.name}</PlayerLink></td>
               <td style={{ padding: "7px 10px" }}>{r.before}</td>
               <td style={{ padding: "7px 10px" }}>{r.after}</td>
               <td style={{ padding: "7px 10px", color: r.delta >= 0 ? "var(--win)" : "var(--loss)", fontWeight: 600 }}>{r.delta >= 0 ? "+" : ""}{r.delta}</td>

@@ -69,3 +69,20 @@ export function InfoCard({ label, children, accent }) {
     </div>
   );
 }
+
+// Nom de joueur cliquable : ouvre son profil, où qu'il soit affiché.
+export function PlayerLink({ player, team, onSelect, children, style }) {
+  if (!player) return <span style={style}>{children ?? "?"}</span>;
+  if (!onSelect) return <span style={style}>{children ?? player.name}</span>;
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSelect(player, team); }}
+      onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onSelect(player, team); } }}
+      style={{ cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3, ...style }}
+    >
+      {children ?? player.name}
+    </span>
+  );
+}

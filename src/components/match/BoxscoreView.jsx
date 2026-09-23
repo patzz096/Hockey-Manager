@@ -76,7 +76,7 @@ export function BoxscoreView({ game, teamsById, linesByTeam, onSelectPlayer }) {
   return (
     <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 16, marginTop: 6, marginBottom: 10 }}>
       <MatchCompare game={game} home={home} away={away} />
-      <GoalSummary goalLog={box.goalLog} home={home} away={away} />
+      <GoalSummary goalLog={box.goalLog} home={home} away={away} onSelectPlayer={onSelectPlayer} />
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 14 }}>
         <StatLines title={`${home.name} (dom.)`} box={box.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} />
         <StatLines title={`${away.name} (visit.)`} box={box.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} />
