@@ -14,7 +14,7 @@ export function buildRealRoster(data, teamIndex, rng) {
     const ovr = computeOvr(d.pos, attrs);
     const potential = Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
     const contract = d.contract || randomContract(rng);
-    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, attrs, ovr, potential, contract };
+    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, shoots: d.shoots, heightCm: d.heightCm, weightKg: d.weightKg, attrs, ovr, potential, contract };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 

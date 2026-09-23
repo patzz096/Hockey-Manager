@@ -130,13 +130,35 @@ tests/engine.test.js       tests du moteur
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
 
+## Importer les vrais alignements (API LNH)
+
+L'API de la LNH n'est pas accessible depuis Claude Code, donc la récupération se fait sur ton
+ordinateur :
+
+```bash
+pip install requests pandas
+python scripts/fetch_nhl_rosters.py        # ~10 min : alignements + stats LNH des 2 dernières saisons
+node scripts/import-nhl-rosters.mjs alignement_complet_nhl.json         # équipes sans alignement fait main
+node scripts/import-nhl-rosters.mjs alignement_complet_nhl.json --all   # ou remplacer les 32 équipes
+```
+
+L'importateur écrit `src/data/rosters/nhl-import.json`, lu par `REAL_ROSTERS`. La conversion
+(`src/data/nhlImport.js`) produit :
+- la position réelle, et le côté des défenseurs selon leur tir (fini l'alternance) ;
+- l'âge, la nationalité, la taille, le poids et la main de tir réels ;
+- des attributs dérivés des stats : points, buts et passes par match, tirs, temps de glace,
+  +/-, punitions, poids, % de mises au jeu ; pour les gardiens, % d'arrêts et moyenne ;
+- une échelle calibrée sur les alignements faits à la main (vérifiée dans
+  `tests/nhlImport.test.js`).
+
+Les joueurs avec moins de 10 matchs LNH reçoivent un profil neutre d'espoir. L'API ne donne
+pas les contrats : ils sont générés, comme avant.
+
 ## Notes techniques
 
 - **Données de joueurs** : fournir un CSV ou un JSON (nom, position, âge, stats, contrat) reste
   la façon la plus rapide d'ajouter les 16 équipes manquantes. La conversion en attributs est
   rapide, alors que chercher chaque joueur sur le web coûte cher.
-- **Bogue connu** : `buildRealRoster` (`src/engine/players.js`) ne recopie pas `nationality`,
-  donc les joueurs réels s'affichent sans drapeau (« Nationalité — »).
 - **Code mort retiré au découpage** : une première version de `LineupPitch` était écrasée par
   une seconde définition portant le même nom. C'est interdit dans un module ES, où la
   compilation échoue. Seule la version réellement utilisée a été gardée.

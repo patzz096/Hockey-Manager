@@ -18,7 +18,8 @@ export function deriveBio(player) {
   const heightCm = baseHeight + (h % 13) - 6;
   const baseWeight = player.pos === "G" ? 84 : isD ? 92 : 85;
   const weightKg = baseWeight + ((h >> 3) % 15) - 7;
-  return { shoots, heightCm, weightKg };
+  // Les vraies données (import LNH) priment sur les valeurs dérivées.
+  return { shoots: player.shoots || shoots, heightCm: player.heightCm || heightCm, weightKg: player.weightKg || weightKg };
 }
 
 const FREE_AGENT_TEAM = { id: null, name: "Agent libre", color: "#5C7080", roster: [] };
