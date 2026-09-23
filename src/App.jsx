@@ -9,6 +9,7 @@ import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
 import { teamStrength, penaltyPropensity, TOTAL_CHUNKS, simulateChunk, emptyLiveAccum, mergeLivePeriod, simulateGame } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
+import { assignScout, scoutingDelay, createScoutReport } from "./engine/scouting";
 import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS, computeTeamProfile, getStrategyMultipliers } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
 import { ContractOfferModal } from "./components/ContractOfferModal";
@@ -39,6 +40,8 @@ export default function HockeyGM() {
   const [scoutKnowledge, setScoutKnowledge] = useState({});
   const [farmByTeam, setFarmByTeam] = useState(initial.farmByTeam);
   const [month, setMonth] = useState(1);
+  const [currentDay, setCurrentDay] = useState(1);
+  const [pendingScouts, setPendingScouts] = useState([]);
   const [winsThisMonth, setWinsThisMonth] = useState(0);
   const [profitThisMonth, setProfitThisMonth] = useState(0);
   const [progressionReport, setProgressionReport] = useState([]);
@@ -179,6 +182,7 @@ export default function HockeyGM() {
     processFinance(newlyPlayed);
     setSchedule(updated);
     setRngSeed((s) => s + 7);
+    advanceDays(1);
   }
   function simToSeasonEnd() {
     const staffByTeam = { [myTeamId]: business.staff };
@@ -192,6 +196,7 @@ export default function HockeyGM() {
     processFinance(newlyPlayed);
     setSchedule(updated);
     setRngSeed((s) => s + 13);
+    advanceDays(new Set(newlyPlayed.map((g) => g.round)).size);
   }
   function setTierPrice(key, price) { setBusiness((prev) => ({ ...prev, ticketTiers: prev.ticketTiers.map((t) => (t.key === key ? { ...t, price } : t)) })); }
   function setParkingPrice(price) { setBusiness((prev) => ({ ...prev, parking: { ...prev.parking, price } })); }
@@ -204,7 +209,7 @@ export default function HockeyGM() {
       return { ...prev, cash: prev.cash - cost, facilities: { ...prev.facilities, [key]: level + 1 } };
     });
   }
-  function selectPlayer(player, team) { setSelectedPlayer({ player, team }); }
+  function selectPlayer(player, team = null) { setSelectedPlayer({ player, team }); }
   function openCreatePlayer() {
     setSelectedPlayer(null);
     setEditingPlayer({ isNew: true, initial: { id: `${myTeamId}-new-${Date.now()}`, name: "", pos: "C", age: 20, attrs: emptyAttrs("C", 60), potential: 60 } });
@@ -343,13 +348,42 @@ export default function HockeyGM() {
   function refreshFreeAgents() {
     setFreeAgents(buildFreeAgentPoolRT(16, business.staff.scoutAmateur?.rating));
   }
+  function findPlayer(playerId) {
+    for (const t of teams) { const p = t.roster.find((x) => x.id === playerId); if (p) return p; }
+    for (const list of Object.values(farmByTeam)) { const p = list.find((x) => x.id === playerId); if (p) return p; }
+    return freeAgents.find((x) => x.id === playerId) || null;
+  }
+  // Une demande de dépistage part en mission : le rapport arrive après un délai qui dépend de
+  // la cote du dépisteur (voir scoutingDelay), mesuré en jours (1 ronde du calendrier = 1 jour).
   function requestScouting(player) {
-    const useAmateur = player.age <= 20;
-    const scout = useAmateur ? business.staff.scoutAmateur : business.staff.scoutPro;
-    const quality = scout ? scout.rating : 40;
-    const scoutName = scout ? scout.name : "Personnel interne (aucun dépisteur dédié)";
-    setScoutKnowledge((prev) => ({ ...prev, [player.id]: { known: true, month, scoutName, quality } }));
-    addMessage({ from: scoutName, subject: `Rapport de dépistage: ${player.name}`, category: "scout", body: `Cote et attributs de ${player.name} maintenant connus (qualité d'évaluation: ${attr20(quality)}/20).` });
+    if (pendingScouts.some((m) => m.playerId === player.id)) return;
+    const scout = assignScout(player, business.staff);
+    const delay = scoutingDelay(scout.rating);
+    setPendingScouts((prev) => [...prev, { playerId: player.id, playerName: player.name, scout, requestedDay: currentDay, dueDay: currentDay + delay }]);
+    addMessage({ from: scout.name, subject: `Mission de dépistage: ${player.name}`, category: "scout", body: `Dépisteur assigné: ${scout.name} (${attr20(scout.rating)}/20${scout.offSpecialty ? ", hors de sa spécialité" : ""}).\nRapport attendu dans ${delay} jour${delay > 1 ? "s" : ""} (jour ${currentDay + delay}).` });
+  }
+  function cancelScouting(playerId) {
+    setPendingScouts((prev) => prev.filter((m) => m.playerId !== playerId));
+  }
+  function advanceDays(n) {
+    if (n <= 0) return;
+    const newDay = currentDay + n;
+    const due = pendingScouts.filter((m) => m.dueDay <= newDay);
+    setCurrentDay(newDay);
+    if (due.length === 0) return;
+    setPendingScouts((prev) => prev.filter((m) => m.dueDay > newDay));
+    const reports = {};
+    due.forEach((m) => {
+      const player = findPlayer(m.playerId);
+      if (!player) {
+        addMessage({ from: m.scout.name, subject: `Dépistage annulé: ${m.playerName}`, category: "scout", body: `${m.playerName} n'est plus disponible; la mission a été annulée.` });
+        return;
+      }
+      const report = createScoutReport(player, m.scout, m.dueDay);
+      reports[player.id] = report;
+      addMessage({ from: m.scout.name, subject: `Rapport de dépistage: ${player.name}`, category: "scout", body: `${report.text}\n\nNote du dépisteur: ${attr20(m.scout.rating)}/20. Rapport complet dans le profil du joueur (onglet Dépistage).` });
+    });
+    setScoutKnowledge((prev) => ({ ...prev, ...reports }));
   }
   function hireStaff(candidate) {
     setBusiness((prev) => ({ ...prev, staff: { ...prev.staff, [candidate.role]: candidate } }));
@@ -459,6 +493,7 @@ export default function HockeyGM() {
     setProfitThisMonth(0);
     setWinsThisMonth(0);
     setMonth((m) => m + 1);
+    advanceDays(30);
   }
 
   if (!myTeamId) {
@@ -511,7 +546,7 @@ export default function HockeyGM() {
   return (
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Inter, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} lines={linesByTeam[selectedPlayer.team.id]} editable={selectedPlayer.team.id === myTeamId} seasonStats={seasonStats} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} onRequestScout={requestScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
       {offerTarget && <ContractOfferModal player={offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={myTeam} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
@@ -528,7 +563,7 @@ export default function HockeyGM() {
             )}
           </button>
         ))}
-        <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}>Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
+        <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}>Jour <span style={{ color: "var(--ice)" }}>{currentDay}</span> · Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
       </div>
       <div style={{ flex: 1, padding: "24px 32px", overflow: "auto" }}>
         {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={simulateLiveNextPeriod} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")} />}
@@ -562,9 +597,9 @@ export default function HockeyGM() {
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} onRequestScout={requestScouting} onTrade={executeTrade} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} />}
 
-        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} onRequestScout={requestScouting} freeAgents={freeAgents} onSign={(p) => openOffer(p, false)} onRefreshFreeAgents={refreshFreeAgents} />}
+        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onSign={(p) => openOffer(p, false)} onRefreshFreeAgents={refreshFreeAgents} />}
 
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onOfferContract={(p) => openOffer(p, true)} />}
 

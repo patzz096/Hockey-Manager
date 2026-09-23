@@ -1,13 +1,17 @@
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
-import { getScoutInfo } from "../engine/scouting";
+import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { draftLabel } from "../ui/format";
 import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating } from "./common";
 
-export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, onRequestScout, freeAgents, onSign, onRefreshFreeAgents }) {
+export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, freeAgents, onSign, onRefreshFreeAgents }) {
   const [fak, fad, faToggle] = useSort("ovr");
-  const faAcc = (p, key) => (key === "draft" ? (p.draftPick || 9999) : p[key]);
+  const faAcc = (p, key) => {
+    if (key === "draft") return p.draftPick || 9999;
+    if (key === "ovr") { const info = getScoutInfo(p, null, myTeamId, staff, scoutKnowledge); return info.known ? perceivedRatings(p, info).ovr : -1; }
+    return p[key];
+  };
   const sortedFreeAgents = sortRows(freeAgents, fak, fad, faAcc);
   const benchmark = teamOvrBenchmark(myTeam);
   return (
@@ -29,12 +33,13 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, onReq
         <tbody>
           {sortedFreeAgents.map((p) => {
             const scoutInfo = getScoutInfo(p, null, myTeamId, staff, scoutKnowledge);
+            const pending = pendingScouts.find((m) => m.playerId === p.id);
             return (
             <tr key={p.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-              <td style={{ padding: "7px 10px" }}>{p.name}</td>
+              <td onClick={() => onSelectPlayer(p)} style={{ padding: "7px 10px", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }}>{p.name}</td>
               <td style={{ padding: "7px 10px" }}>{p.pos}</td>
               <td style={{ padding: "7px 10px" }}>{p.age}</td>
-              <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(p.ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : <button onClick={() => onRequestScout(p)} style={{ ...btnStyle("var(--steel)"), fontSize: 11 }}>Dépister</button>}</td>
+              <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(perceivedRatings(p, scoutInfo).ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "#D9A404" }}>Dépistage · jour {pending.dueDay}</span> : <button onClick={() => onRequestScout(p)} style={{ ...btnStyle("var(--steel)"), fontSize: 11 }}>Dépister</button>}</td>
               <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{scoutInfo.known ? draftLabel(p) : "?"}</td>
               <td style={{ padding: "7px 10px" }}><button onClick={() => onSign(p)} style={btnStyle("var(--win)")} disabled={!scoutInfo.known}>Offrir un contrat</button></td>
             </tr>

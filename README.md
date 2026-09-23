@@ -69,9 +69,21 @@ tests/engine.test.js       tests du moteur
 - Cote actuelle et potentiel affichés en **étoiles sur 5**, relatives à la moyenne de
   l'effectif qui évalue (`teamOvrBenchmark` + `starsFor`)
 - Nationalité avec drapeau, contrat (années/salaire/clause de non-échange), rang de repêchage
-- Système de dépistage ("fog of war") : les joueurs des autres équipes sont cachés
-  (cote/attributs invisibles) tant qu'ils n'ont pas été dépistés à la demande — voir
-  `scoutKnowledge`, `getScoutInfo`, `requestScouting`
+- Système de dépistage ("fog of war") : les joueurs des autres équipes et les agents libres
+  restent cachés (cote/attributs invisibles) tant qu'un rapport n'a pas été reçu
+  (`src/engine/scouting.js`) :
+  - demande depuis l'onglet **Dépistage** du profil du joueur (case à cocher : cocher pour
+    envoyer un dépisteur, décocher pour annuler), ou le bouton « Dépister » des listes
+  - dépisteur amateur pour les 20 ans et moins, pro pour les autres ; si le poste est vide,
+    l'autre dépisteur s'en charge à 85 % de sa cote, sinon le personnel interne (8/20)
+  - délai en jours (1 ronde = 1 jour, un mois = 30 jours) : de 1 jour pour un dépisteur 20/20
+    à 5-6 jours pour un faible ; notification dans la messagerie au départ et à la réception
+  - précision selon la note du dépisteur (/20) : avec un 4/20, la cote estimée s'écarte de ~5
+    points en moyenne et le potentiel de ~8 ; avec un 20/20, moins de 1 et ~1,5 point
+  - le rapport donne l'habileté actuelle, le potentiel (long terme) et une note générale en
+    étoiles (relatives à ton effectif ; le potentiel pèse plus chez les jeunes), avec la
+    fiabilité et un texte forces/faiblesses. Les attributs de l'onglet Profil sont les
+    valeurs estimées par ce rapport
 
 **Moteur de simulation**
 - Simulation par match complet (`simulateGame`) ou par tranche de 5 minutes en mode direct
@@ -102,18 +114,13 @@ tests/engine.test.js       tests du moteur
 
 ## Ce qui reste incomplet ou en cours
 
-1. **Système de délai de dépistage** — demandé mais pas terminé : actuellement
-   `requestScouting` révèle un joueur instantanément. Il faut ajouter un compteur de jours
-   (`currentDay`), une file de demandes en attente (`pendingScouts`), et résoudre les rapports
-   après un délai (plus rapide si le dépisteur est meilleur), avec message de notification à
-   la réception. Voir la dernière partie de la conversation pour le plan détaillé déjà rédigé.
-2. **Clic sur un joueur "peu importe l'endroit"** — pas encore universel. Manquent : noms de
-   buteurs/passeurs dans `GoalSummary`, lignes de `TransactionsCenter` (RosterPicker),
-   `FreeAgentsPanel`, `ContractsPanel`.
-3. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
-4. **Statistiques de carrière multi-saisons** — pas d'historique d'une saison à l'autre (pas
+1. **Clic sur un joueur "peu importe l'endroit"** — pas encore universel. Manquent : noms de
+   buteurs/passeurs dans `GoalSummary` et `ContractsPanel` (les échanges et les agents libres
+   ouvrent maintenant le profil).
+2. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
+3. **Statistiques de carrière multi-saisons** — pas d'historique d'une saison à l'autre (pas
    de mécanique de fin de saison/nouvelle saison implémentée du tout).
-5. Quelques approximations assumées : ordre chronologique des buts non réellement chronométré
+4. Quelques approximations assumées : ordre chronologique des buts non réellement chronométré
    (réparti aléatoirement par période), +/- approximatif (pas de simulation ligne par ligne
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
@@ -139,6 +146,7 @@ tests/engine.test.js       tests du moteur
 | `simulateGame` / `simulateChunk` | `engine/simulation.js` | Simule un match complet ou une tranche de 5 min |
 | `computeOvr`, `starsFor`, `attr20` | `engine/attributes.js` | Conversion attributs internes (0-99) → cote → étoiles / 20 |
 | `getScoutInfo` | `engine/scouting.js` | Détermine si un joueur est "connu" et avec quelle qualité |
+| `createScoutReport`, `scoutingDelay` | `engine/scouting.js` | Rapport estimé selon la cote du dépisteur, délai de la mission |
 | `getStrategyMultipliers` / `STRATEGY_ENGINE` | `engine/strategy.js` | Effet des stratégies selon le profil d'effectif |
 | `computeGameFinance` | `engine/finance.js` | Revenus/dépenses d'un match local |
 
@@ -155,6 +163,5 @@ business = { cash, ticketTiers, facilities, parking, concessionItems, staff, del
 
 ## Prochaines étapes
 
-1. Terminer le délai de dépistage (voir « Ce qui reste incomplet », point 1).
-2. Rendre un joueur cliquable partout (point 2).
-3. Ajouter les 16 équipes des divisions Centrale et Pacifique (point 3).
+1. Rendre un joueur cliquable partout (voir « Ce qui reste incomplet », point 1).
+2. Ajouter les 16 équipes des divisions Centrale et Pacifique (point 2).

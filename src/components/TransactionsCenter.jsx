@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
-import { getScoutInfo } from "../engine/scouting";
+import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { h2Style, btnStyle, inputStyle, scoutQualityColor } from "../ui/theme";
 import { StarRating } from "./common";
 
-export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, onRequestScout, onTrade }) {
+export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);
   const [partnerId, setPartnerId] = useState(otherTeams[0]?.id);
   const [myIds, setMyIds] = useState([]);
@@ -16,16 +16,19 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
   function confirmTrade() { onTrade(partner.id, myIds, theirIds); setMyIds([]); setTheirIds([]); }
 
   const benchmark = teamOvrBenchmark(myTeam);
-  function RosterPicker({ roster, ownerTeamId, selected, onToggle }) {
+  function RosterPicker({ team, selected, onToggle }) {
+    const roster = team.roster, ownerTeamId = team.id;
     return (
       <div style={{ maxHeight: 300, overflow: "auto", border: "1px solid #ffffff1a", borderRadius: 4 }}>
         {roster.map((p) => {
           const scoutInfo = getScoutInfo(p, ownerTeamId, myTeamId, staff, scoutKnowledge);
+          const pending = pendingScouts.find((m) => m.playerId === p.id);
+          const shown = perceivedRatings(p, ownerTeamId === myTeamId ? null : scoutInfo);
           return (
             <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", fontSize: 13, borderBottom: "1px solid #ffffff11", cursor: "pointer", background: selected.includes(p.id) ? "#ffffff14" : "transparent" }}>
               <input type="checkbox" checked={selected.includes(p.id)} onChange={() => onToggle(p.id)} />
-              <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>{p.name} <span style={{ color: "var(--iceMuted)" }}>({p.pos})</span>
-                {scoutInfo.known ? <StarRating value={starsFor(p.ovr, benchmark)} size={11} color={scoutQualityColor(scoutInfo.quality)} /> : <button onClick={(e) => { e.preventDefault(); onRequestScout(p); }} style={{ ...btnStyle("var(--steel)"), fontSize: 10, padding: "2px 6px" }}>Dépister</button>}
+              <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}><span onClick={(e) => { e.preventDefault(); onSelectPlayer(p, team); }} style={{ textDecoration: "underline dotted", textUnderlineOffset: 3 }}>{p.name}</span> <span style={{ color: "var(--iceMuted)" }}>({p.pos})</span>
+                {scoutInfo.known ? <StarRating value={starsFor(shown.ovr, benchmark)} size={11} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "#D9A404" }}>Dépistage · jour {pending.dueDay}</span> : <button onClick={(e) => { e.preventDefault(); onRequestScout(p); }} style={{ ...btnStyle("var(--steel)"), fontSize: 10, padding: "2px 6px" }}>Dépister</button>}
               </span>
             </label>
           );
@@ -46,11 +49,11 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
         <div>
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>Tu envoies ({myTeam.name})</div>
-          <RosterPicker roster={myTeam.roster} ownerTeamId={myTeam.id} selected={myIds} onToggle={(id) => toggle(setMyIds, myIds, id)} />
+          <RosterPicker team={myTeam} selected={myIds} onToggle={(id) => toggle(setMyIds, myIds, id)} />
         </div>
         <div>
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>Tu reçois ({partner?.name})</div>
-          {partner && <RosterPicker roster={partner.roster} ownerTeamId={partner.id} selected={theirIds} onToggle={(id) => toggle(setTheirIds, theirIds, id)} />}
+          {partner && <RosterPicker team={partner} selected={theirIds} onToggle={(id) => toggle(setTheirIds, theirIds, id)} />}
         </div>
       </div>
       <button onClick={confirmTrade} disabled={myIds.length === 0 && theirIds.length === 0} style={btnStyle("var(--red)")}>Conclure l'échange</button>
