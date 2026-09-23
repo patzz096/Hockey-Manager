@@ -101,7 +101,7 @@ tests/engine.test.js       tests du moteur
   période avec un effet de pointage (l'équipe menée pousse, celle qui mène protège). Égalité :
   prolongation (but crédité à un joueur) ou tirs de barrage (+1 au score, sans buteur)
 - Calibrage vérifié par `tests/simulation-calibration.test.js` sur 3 saisons : ~3,1 buts et
-  ~31 tirs par équipe, % d'arrêts ~.901, AN ~20 %, ~55 % de victoires à domicile, ~7 % de
+  ~31 tirs par équipe, % d'arrêts ~.905, AN ~19 %, ~0,06 but en DN par équipe, ~55 % de victoires à domicile, ~7 % de
   matchs à 5 buts d'écart ou plus, et le gagnant d'un écrasement domine nettement aux tirs
 - Buts, passes, tirs, mises en échec, punitions, avantage/désavantage numérique, mises au jeu,
   tirs bloqués, +/-, temps de glace — tous simulés par joueur selon ses attributs réels
@@ -113,6 +113,15 @@ tests/engine.test.js       tests du moteur
   avertissements (rôle mal placé dans l'alignement) et conseils de composition des trios et
   paires. En match, le rôle change qui tire, passe, frappe, bloque et gagne les mises au jeu ;
   un contre-emploi est joué à moitié et moins bien
+- Planificateur tactique (onglet Trios, à la Football Manager) : schéma de la patinoire à
+  gauche, tableau Poste / Rôle / Aptitude / Joueur à droite, réservistes en bas. On glisse un
+  joueur sur un poste (ou clic-clic) ; un joueur déjà placé échange sa place. Trois vues :
+  égalité numérique, avantage numérique, désavantage numérique
+- Unités spéciales (`engine/specialTeams.js`) : deux unités d'AN (62 % / 38 % du temps) et de DN
+  (55 % / 45 %). Systèmes d'AN : 1-3-1, parapluie, surcharge côté fort, 2-1-2 ; de DN : boîte,
+  losange, triangle + 1, pression agressive. Chaque poste (quart-arrière, tireur sur réception,
+  écran devant le filet, chasseur…) a son profil d'attributs ; l'adéquation de l'unité module
+  tirs, qualité des chances et buts en infériorité (type « SH », pastille DN au sommaire)
 - Systèmes de jeu (`engine/strategy.js`, d'après le guide « Stratégies NHL et profils de
   joueurs ») : 5 phases (zone défensive, sortie de zone, zone offensive, échec avant, repli
   défensif) × 5 systèmes. Chaque système décrit le profil qui lui convient ou non ; l'adéquation

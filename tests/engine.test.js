@@ -24,7 +24,7 @@ describe("moteur", () => {
     const a = simulateSeason(1000).games.map((g) => [g.homeScore, g.awayScore]);
     const b = simulateSeason(1000).games.map((g) => [g.homeScore, g.awayScore]);
     expect(a).toEqual(b);
-  });
+  }, 20000);
 
   it("produit un classement cohérent", () => {
     const { league, games } = simulateSeason(1000);

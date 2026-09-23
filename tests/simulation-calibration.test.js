@@ -27,6 +27,7 @@ const shots = mean((g) => g.box.home.shots + g.box.away.shots) / 2;
 const corsi = mean((g) => g.box.home.corsiFor + g.box.away.corsiFor) / 2;
 const svPct = mean((g) => g.box.homeGoalie.saves + g.box.awayGoalie.saves) / mean((g) => g.box.homeGoalie.shotsAgainst + g.box.awayGoalie.shotsAgainst);
 const ppPct = games.reduce((a, g) => a + g.box.home.ppGoals + g.box.away.ppGoals, 0) / games.reduce((a, g) => a + g.box.home.penalties + g.box.away.penalties, 0);
+const shPerTeam = mean((g) => (g.box.home.shGoals || 0) + (g.box.away.shGoals || 0)) / 2;
 const homeWin = mean((g) => (g.homeScore > g.awayScore ? 1 : 0));
 const shotGoalCorr = corr(games.map((g) => g.box.home.shots - g.box.away.shots), games.map((g) => g.homeScore - g.awayScore));
 const blowouts = games.filter((g) => Math.abs(g.homeScore - g.awayScore) >= 5);
@@ -36,7 +37,7 @@ describe("calibrage de la simulation", () => {
   it("affiche le rapport", () => {
     console.log([
       `${n} matchs · buts/équipe ${goals.toFixed(2)} · tirs/équipe ${shots.toFixed(1)} · corsi/équipe ${corsi.toFixed(1)}`,
-      `% arrêts ${svPct.toFixed(3)} · AN ${(ppPct * 100).toFixed(1)} % · victoires à domicile ${(homeWin * 100).toFixed(1)} %`,
+      `% arrêts ${svPct.toFixed(3)} · AN ${(ppPct * 100).toFixed(1)} % · buts en DN/équipe ${shPerTeam.toFixed(3)} · victoires à domicile ${(homeWin * 100).toFixed(1)} %`,
       `corrélation écart aux tirs / écart au score ${shotGoalCorr.toFixed(2)}`,
       `écarts de 5 buts et plus ${(blowouts.length / n * 100).toFixed(1)} % · avance du gagnant aux tirs ${blowoutShotEdge.toFixed(1)}`,
     ].join("\n"));
@@ -48,6 +49,7 @@ describe("calibrage de la simulation", () => {
     expect(corsi).toBeGreaterThan(50); expect(corsi).toBeLessThan(63);
     expect(svPct).toBeGreaterThan(0.893); expect(svPct).toBeLessThan(0.912);
     expect(ppPct).toBeGreaterThan(0.16); expect(ppPct).toBeLessThan(0.25);
+    expect(shPerTeam).toBeGreaterThan(0.04); expect(shPerTeam).toBeLessThan(0.2);
     expect(homeWin).toBeGreaterThan(0.51); expect(homeWin).toBeLessThan(0.58);
   });
 

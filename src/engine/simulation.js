@@ -2,6 +2,7 @@ import { OFFENSIVE, DEFENSIVE, GOALIE_TECH, avg } from "./attributes";
 import { FORWARD_BONUS, DEFENSE_BONUS, lineInfo } from "./lines";
 import { poisson, weightedPick } from "./random";
 import { roleMods } from "./roles";
+import { unitsForSim } from "./specialTeams";
 import { DEFAULT_STRATEGY, computeStrategyFits, getStrategyMultipliers, shooterMods } from "./strategy";
 
 // ---------------------------------------------------------------------------------------
@@ -19,10 +20,12 @@ import { DEFAULT_STRATEGY, computeStrategyFits, getStrategyMultipliers, shooterM
 export const SIM = {
   esShots: 24.5,       // tirs à forces égales par équipe et par match, à forces égales
   shotExp: 1.8,        // sensibilité du volume de tirs à l'écart attaque / défense
-  esGoalProb: 0.110,   // probabilité qu'un tir à forces égales soit un but
+  esGoalProb: 0.107,   // probabilité qu'un tir à forces égales soit un but
   finishExp: 1.6,      // sensibilité à l'écart finition / gardien
   ppShotsPerOpp: 1.8,  // tirs par avantage numérique
   ppGoalProb: 0.105,
+  shShotsPerOpp: 0.25, // tirs en désavantage numérique, par punition écopée
+  shGoalProb: 0.10,
   homeEdge: 1.08,      // avantage de la glace (volume de tirs)
   missedRate: 0.40,    // tirs ratés par tir cadré
   blockRate: 0.36,     // tirs bloqués par tir cadré (modulé par le blocage adverse)
@@ -80,6 +83,17 @@ export function unitRating(ids, roster, keys) {
   const players = (ids || []).map((id) => roster.find((p) => p.id === id)).filter(Boolean);
   if (players.length === 0) return 60;
   return players.reduce((a, p) => a + avg(p.attrs, keys), 0) / players.length;
+}
+
+// Moyenne des unités spéciales d'une équipe, pondérée par leur temps de glace : cote (attributs
+// `keys`) et effets du système.
+function mixUnits(units, keys, neutral) {
+  const out = { rating: 60, fx: { ...neutral } };
+  const total = units.reduce((a, u) => a + u.share, 0);
+  if (!total) return out;
+  out.rating = units.reduce((a, u) => a + u.share * u.members.reduce((b, m) => b + avg(m.p.attrs, keys), 0) / u.members.length, 0) / total;
+  Object.keys(neutral).forEach((k) => { out.fx[k] = units.reduce((a, u) => a + u.share * u.fx[k], 0) / total; });
+  return out;
 }
 
 export function penaltyPropensity(p) { return (p.attrs.aggressiveness + p.attrs.hitting + (100 - p.attrs.temperament)) / 3; }
@@ -146,7 +160,7 @@ function generateHits(team, lines, rng, scale) {
 }
 
 // Attaque d'une équipe pendant un segment de match (scale = fraction de 60 minutes).
-function simulateAttack(team, lines, rt, oppRt, strat, oppStrat, oppTeam, oppLines, ppOpps, rng, scale, isHome) {
+function simulateAttack(team, lines, rt, oppRt, strat, oppStrat, oppTeam, oppLines, ppOpps, pkOpps, rng, scale, isHome) {
   const skaters = team.roster.filter((p) => p.pos !== "G");
   const bonusOf = (p) => lineInfo(p.id, lines).bonus;
   const mods = shooterMods(lines.strategy);
@@ -159,21 +173,39 @@ function simulateAttack(team, lines, rt, oppRt, strat, oppStrat, oppTeam, oppLin
   const esGoals = binomial(esShots, esProb, rng);
   const es = distributeAttack(skaters, esShots, esGoals, rng, (p) => skillPower(offenseSkillScore(p) + p.attrs.hitting * mods.hitting + p.attrs.strength * mods.strength) * bonusOf(p) * (isD(p) ? mods.defenseBoost : 1) * roleMods(lines, p).shoot, "ES", bonusOf, (p) => roleMods(lines, p).pass);
 
-  const unit = (lines.pp || []).map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
-  const ppOff = unitRating(lines.pp, team.roster, OFFENSIVE);
-  const pkDef = unitRating(oppLines.pk, oppTeam.roster, DEFENSIVE);
-  const ppShots = ppOpps > 0 ? poisson(ppOpps * SIM.ppShotsPerOpp * Math.pow(ppOff / pkDef, 1.5), rng) : 0;
-  const ppFinish = unit.length ? unit.reduce((a, p) => a + offenseSkillScore(p), 0) / unit.length : rt.finish;
-  const ppProb = clamp(SIM.ppGoalProb * Math.pow(ppFinish / oppRt.goalieQ, 2) * Math.pow(ppOff / pkDef, 0.8), 0.05, 0.3);
-  const ppGoals = binomial(ppShots, ppProb, rng);
-  const pp = distributeAttack(unit.length ? unit : skaters, ppShots, ppGoals, rng, (p) => skillPower(offenseSkillScore(p)) * roleMods(lines, p).shoot, "PP", () => 1, (p) => roleMods(lines, p).pass);
+  // Avantage numérique : chaque unité joue sa part du temps contre le désavantage adverse.
+  // Le système (1-3-1, parapluie…) et l'adéquation de l'unité modulent tirs et qualité ;
+  // le poste de chaque joueur décide qui tire et qui passe.
+  const ppUnits = unitsForSim(team, lines, "pp");
+  const pkMix = mixUnits(unitsForSim(oppTeam, oppLines, "pk"), DEFENSIVE, { volA: 1, qA: 1, sh: 1 });
+  const pp = { shots: 0, shotsBy: {}, goalsBy: {}, assistsBy: {}, events: [] };
+  if (ppOpps > 0) ppUnits.forEach((u) => {
+    const players = u.members.map((m) => m.p);
+    const slotOf = new Map(u.members.map((m) => [m.p.id, m.slot]));
+    const ratio = players.reduce((a, p) => a + avg(p.attrs, OFFENSIVE), 0) / players.length / pkMix.rating;
+    const shots = poisson(ppOpps * u.share * SIM.ppShotsPerOpp * Math.pow(ratio, 1.5) * u.fx.vol * pkMix.fx.volA, rng);
+    const finish = players.reduce((a, p) => a + offenseSkillScore(p), 0) / players.length;
+    const prob = clamp(SIM.ppGoalProb * Math.pow(finish / oppRt.goalieQ, 2) * Math.pow(ratio, 0.8) * u.fx.q * pkMix.fx.qA, 0.05, 0.3);
+    const r = distributeAttack(players, shots, binomial(shots, prob, rng), rng, (p) => skillPower(offenseSkillScore(p)) * roleMods(lines, p).shoot * slotOf.get(p.id).shoot, "PP", () => 1, (p) => roleMods(lines, p).pass * slotOf.get(p.id).pass);
+    pp.shots += shots; mergeCount(pp.shotsBy, r.shotsBy); mergeCount(pp.goalsBy, r.goalsBy); mergeCount(pp.assistsBy, r.assistsBy); pp.events.push(...r.events);
+  });
 
-  const shotsBy = { ...es.shotsBy }; mergeCount(shotsBy, pp.shotsBy);
-  const goalsBy = { ...es.goalsBy }; mergeCount(goalsBy, pp.goalsBy);
-  const assistsBy = { ...es.assistsBy }; mergeCount(assistsBy, pp.assistsBy);
+  // Désavantage numérique : chances de marquer en infériorité (pression agressive, contre-attaques).
+  const pkUnits = unitsForSim(team, lines, "pk");
+  const myPk = mixUnits(pkUnits, DEFENSIVE, { volA: 1, qA: 1, sh: 1 });
+  const oppPp = mixUnits(unitsForSim(oppTeam, oppLines, "pp"), OFFENSIVE, { vol: 1, q: 1, shA: 1 });
+  const shShots = pkOpps > 0 && pkUnits.length ? poisson(pkOpps * SIM.shShotsPerOpp * myPk.fx.sh * oppPp.fx.shA, rng) : 0;
+  const pkPlayers = pkUnits.flatMap((u) => u.members);
+  const pkSlot = new Map(pkPlayers.map((m) => [m.p.id, m.slot]));
+  const shProb = clamp(SIM.shGoalProb * Math.pow(rt.finish / oppRt.goalieQ, 1.5), 0.05, 0.3);
+  const sh = distributeAttack(pkPlayers.map((m) => m.p), shShots, binomial(shShots, shProb, rng), rng, (p) => skillPower(offenseSkillScore(p)) * pkSlot.get(p.id).shoot, "SH");
+
+  const shotsBy = { ...es.shotsBy }; mergeCount(shotsBy, pp.shotsBy); mergeCount(shotsBy, sh.shotsBy);
+  const goalsBy = { ...es.goalsBy }; mergeCount(goalsBy, pp.goalsBy); mergeCount(goalsBy, sh.goalsBy);
+  const assistsBy = { ...es.assistsBy }; mergeCount(assistsBy, pp.assistsBy); mergeCount(assistsBy, sh.assistsBy);
   return {
-    shots: esShots + ppShots, goals: es.events.length + pp.events.length, ppGoals: pp.events.length,
-    shotsBy, goalsBy, assistsBy, esEvents: es.events, events: [...es.events, ...pp.events],
+    shots: esShots + pp.shots + shShots, goals: es.events.length + pp.events.length + sh.events.length, ppGoals: pp.events.length, shGoals: sh.events.length,
+    shotsBy, goalsBy, assistsBy, esEvents: es.events, events: [...es.events, ...pp.events, ...sh.events],
     hitsBy: generateHits(team, lines, rng, scale),
   };
 }
@@ -198,8 +230,8 @@ function simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, sca
   const homePimBy = assignPenalties(home, homePen, rng);
   const awayPimBy = assignPenalties(away, awayPen, rng);
 
-  const H = simulateAttack(home, linesHome, rtH, rtA, stratHome, stratAway, away, linesAway, awayPen, rng, scale, true);
-  const A = simulateAttack(away, linesAway, rtA, rtH, stratAway, stratHome, home, linesHome, homePen, rng, scale, false);
+  const H = simulateAttack(home, linesHome, rtH, rtA, stratHome, stratAway, away, linesAway, awayPen, homePen, rng, scale, true);
+  const A = simulateAttack(away, linesAway, rtA, rtH, stratAway, stratHome, home, linesHome, homePen, awayPen, rng, scale, false);
 
   const goalLog = timeline([
     ...H.events.map((e) => ({ ...e, side: "home" })),
@@ -214,7 +246,7 @@ function simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, sca
 
   const side = (X, pimBy, pens, fo, foBy, corsi, blocksBy, pm, toiBy) => ({
     goalsBy: X.goalsBy, assistsBy: X.assistsBy, hitsBy: X.hitsBy, shotsBy: X.shotsBy, events: X.events,
-    pimBy, ppGoals: X.ppGoals, penalties: pens, shots: X.shots, corsiFor: corsi,
+    pimBy, ppGoals: X.ppGoals, shGoals: X.shGoals, penalties: pens, shots: X.shots, corsiFor: corsi,
     faceoffsWon: fo, faceoffsTotal: faceoffs.total, faceoffsWonBy: foBy, blocksBy, plusMinusBy: pm, toiBy,
   });
   return {
@@ -296,8 +328,8 @@ export function applyOvertime(box, ot) {
 
 export function emptyLiveAccum() {
   return {
-    home: { goalsBy: {}, assistsBy: {}, hitsBy: {}, shotsBy: {}, pimBy: {}, blocksBy: {}, plusMinusBy: {}, faceoffsWonBy: {}, toiBy: {}, ppGoals: 0, penalties: 0, shots: 0, corsiFor: 0, faceoffsWon: 0, faceoffsTotal: 0, saves: 0, shotsAgainst: 0 },
-    away: { goalsBy: {}, assistsBy: {}, hitsBy: {}, shotsBy: {}, pimBy: {}, blocksBy: {}, plusMinusBy: {}, faceoffsWonBy: {}, toiBy: {}, ppGoals: 0, penalties: 0, shots: 0, corsiFor: 0, faceoffsWon: 0, faceoffsTotal: 0, saves: 0, shotsAgainst: 0 },
+    home: { goalsBy: {}, assistsBy: {}, hitsBy: {}, shotsBy: {}, pimBy: {}, blocksBy: {}, plusMinusBy: {}, faceoffsWonBy: {}, toiBy: {}, ppGoals: 0, shGoals: 0, penalties: 0, shots: 0, corsiFor: 0, faceoffsWon: 0, faceoffsTotal: 0, saves: 0, shotsAgainst: 0 },
+    away: { goalsBy: {}, assistsBy: {}, hitsBy: {}, shotsBy: {}, pimBy: {}, blocksBy: {}, plusMinusBy: {}, faceoffsWonBy: {}, toiBy: {}, ppGoals: 0, shGoals: 0, penalties: 0, shots: 0, corsiFor: 0, faceoffsWon: 0, faceoffsTotal: 0, saves: 0, shotsAgainst: 0 },
     goalLog: [],
   };
 }
@@ -308,7 +340,7 @@ export function mergeLivePeriod(accum, periodResult) {
     next.home[k] = { ...next.home[k] }; mergeCount(next.home[k], periodResult.home[k]);
     next.away[k] = { ...next.away[k] }; mergeCount(next.away[k], periodResult.away[k]);
   });
-  ["ppGoals", "penalties", "shots", "corsiFor", "faceoffsWon", "faceoffsTotal"].forEach((k) => {
+  ["ppGoals", "shGoals", "penalties", "shots", "corsiFor", "faceoffsWon", "faceoffsTotal"].forEach((k) => {
     next.home[k] = (next.home[k] || 0) + (periodResult.home[k] || 0);
     next.away[k] = (next.away[k] || 0) + (periodResult.away[k] || 0);
   });

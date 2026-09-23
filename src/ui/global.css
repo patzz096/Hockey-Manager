@@ -53,3 +53,7 @@ tbody tr[style*="cursor: pointer"]:active { background-color: rgba(92, 200, 255,
 
 /* Onglet Rôles : la fiche du rôle passe sous la liste sur écran étroit. */
 @media (max-width: 900px) { .roles-grid { grid-template-columns: 1fr !important; } }
+
+/* Planificateur tactique : schéma à gauche, tableau à droite ; empilés sur téléphone. */
+.tp-grid { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .tp-grid { grid-template-columns: 1fr; } }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NATION_FLAG } from "../data/names";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STRATEGY_PHASES, normalizeStrategy, strategyOption } from "../engine/strategy";
+import { specialSystem, specialSystems } from "../engine/specialTeams";
 import { starsText } from "../ui/format";
 import { h2Style, btnStyle } from "../ui/theme";
 import { StarRating } from "./common";
@@ -105,6 +106,8 @@ export function TacticSummary({ lines }) {
   return (
     <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: "var(--iceMuted)", marginBottom: 16, background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: "8px 12px" }}>
       {STRATEGY_PHASES.map((ph) => <span key={ph.key}><strong style={{ color: "var(--ice)" }}>{ph.short} :</strong> {strategyOption(ph.key, st[ph.key]).label}</span>)}
+      <span><strong style={{ color: "var(--ice)" }}>AN :</strong> {specialSystem("pp", specialSystems(lines).pp).label}</span>
+      <span><strong style={{ color: "var(--ice)" }}>DN :</strong> {specialSystem("pk", specialSystems(lines).pk).label}</span>
       <span><strong style={{ color: "var(--ice)" }}>Agressivité :</strong> {lines.mentality.aggression}</span>
     </div>
   );

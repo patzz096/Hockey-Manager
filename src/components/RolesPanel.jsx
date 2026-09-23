@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ROLES, ROLE_GROUPS, roleGroupOf, roleFit, roleOf, naturalRole, roleWarnings } from "../engine/roles";
 import { attr20 } from "../engine/attributes";
 import { lineInfo } from "../engine/lines";
+import { specialUnitOf } from "../engine/specialTeams";
 import { ATTR_LABELS } from "../engine/attributes";
 import { h2Style, btnStyle, attr20Color } from "../ui/theme";
 import { PlayerLink } from "./common";
@@ -60,7 +61,7 @@ function PlayerRoleRow({ player, lines, team, selected, onPick, onFocus, focused
   const group = roleGroupOf(player);
   const natural = naturalRole(player);
   const info = lineInfo(player.id, lines);
-  const warnings = roleWarnings(selected, info, (lines.pp || []).includes(player.id), (lines.pk || []).includes(player.id));
+  const warnings = roleWarnings(selected, info, specialUnitOf(lines, "pp", player.id) > 0, specialUnitOf(lines, "pk", player.id) > 0);
   return (
     <div style={{ background: focused ? "rgba(92,200,255,0.06)" : "var(--navy)", border: `1px solid ${focused ? "var(--accent)" : "var(--line)"}`, borderRadius: 8, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>

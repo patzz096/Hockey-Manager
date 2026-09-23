@@ -1,3 +1,5 @@
+import { repairUnits } from "./specialTeams";
+
 // Blessures et liste des blessés à long terme (LTIR).
 //  - Après chaque match, chaque équipe peut perdre un joueur (≈ 1 blessure par 6 matchs).
 //  - Durée : surtout des blessures « au jour le jour », parfois plusieurs semaines ou mois.
@@ -71,6 +73,5 @@ export function dressTeam(team, lines, injuries, day) {
   defense.forEach((l) => ["LD", "RD"].forEach((k) => { if (!l[k]) l[k] = best(posFor[k]); }));
   if (!goalies.starter) goalies.starter = best(["G"]);
   if (!goalies.backup) goalies.backup = best(["G"]);
-  const unit = (ids, n) => { const kept = (ids || []).filter((id) => inRoster(id)); const extra = roster.filter((p) => p.pos !== "G" && !kept.includes(p.id)).sort((a, b) => b.ovr - a.ovr).map((p) => p.id); return [...kept, ...extra].slice(0, n); };
-  return { team: { ...team, roster }, lines: { ...lines, forwards, defense, goalies, pp: unit(lines.pp, 5), pk: unit(lines.pk, 4) } };
+  return { team: { ...team, roster }, lines: { ...lines, forwards, defense, goalies, pp: repairUnits(lines, roster, "pp"), pk: repairUnits(lines, roster, "pk") } };
 }

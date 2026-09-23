@@ -27,7 +27,8 @@ import { DepthChartPanel } from "./components/DepthChartPanel";
 import { FinancesPanel } from "./components/FinancesPanel";
 import { FreeAgentsPanel } from "./components/FreeAgentsPanel";
 import { InboxPanel } from "./components/InboxPanel";
-import { LinesEditor } from "./components/LinesEditor";
+import { TacticsPlanner } from "./components/TacticsPlanner";
+import { autoUnits, bestSpecial, specialUnits, specialSystems } from "./engine/specialTeams";
 import { PlayerEditorModal } from "./components/PlayerEditorModal";
 import { PlayerModal } from "./components/PlayerModal";
 import { RosterTable } from "./components/RosterTable";
@@ -341,21 +342,38 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     }));
     setEditingPlayer(null);
   }
+  // Place un joueur à un poste. S'il occupe déjà un autre poste du même ensemble (trios-paires-
+  // gardiens, unités d'AN ou unités de DN), les deux joueurs échangent leur place.
+  const SLOT_GROUPS = { forwards: "es", defense: "es", goalies: "es", pp: "pp", pk: "pk" };
+  function findSlot(teamLines, section, playerId) {
+    const group = SLOT_GROUPS[section];
+    const sections = Object.keys(SLOT_GROUPS).filter((k) => SLOT_GROUPS[k] === group);
+    for (const sec of sections) {
+      if (sec === "goalies") { for (const k of ["starter", "backup"]) if (teamLines.goalies[k] === playerId) return { sec, idx: null, key: k }; continue; }
+      const arr = sec === "pp" || sec === "pk" ? specialUnits(teamLines, sec) : teamLines[sec];
+      for (let i = 0; i < arr.length; i++) for (const k of Object.keys(arr[i])) if (arr[i][k] === playerId) return { sec, idx: i, key: k };
+    }
+    return null;
+  }
   function updateLine(section, idx, slot, playerId) {
     setLinesByTeam((prev) => {
-      const teamLines = prev[myTeamId];
-      if (section === "goalies") return { ...prev, [myTeamId]: { ...teamLines, goalies: { ...teamLines.goalies, [slot]: playerId } } };
-      const arr = teamLines[section].map((l, i) => (i === idx ? { ...l, [slot]: playerId } : l));
-      return { ...prev, [myTeamId]: { ...teamLines, [section]: arr } };
+      let teamLines = prev[myTeamId];
+      const from = findSlot(teamLines, section, playerId);
+      const current = getSlotValue(teamLines, section, idx, slot);
+      if (from) teamLines = setSlotValue(teamLines, from.sec, from.idx, from.key, current);
+      teamLines = setSlotValue(teamLines, section, idx, slot, playerId);
+      return { ...prev, [myTeamId]: teamLines };
     });
   }
   function getSlotValue(teamLines, section, idx, key) {
     if (section === "goalies") return teamLines.goalies[key];
+    if (section === "pp" || section === "pk") return specialUnits(teamLines, section)[idx][key];
     return teamLines[section][idx][key];
   }
   function setSlotValue(teamLines, section, idx, key, val) {
     if (section === "goalies") return { ...teamLines, goalies: { ...teamLines.goalies, [key]: val } };
-    const arr = teamLines[section].map((l, i) => (i === idx ? { ...l, [key]: val } : l));
+    const src = section === "pp" || section === "pk" ? specialUnits(teamLines, section) : teamLines[section];
+    const arr = src.map((l, i) => (i === idx ? { ...l, [key]: val } : l));
     return { ...teamLines, [section]: arr };
   }
   function swapLineSlots(secA, idxA, keyA, secB, idxB, keyB) {
@@ -381,20 +399,20 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function updateMentality(field, value) {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], mentality: { ...prev[myTeamId].mentality, [field]: value } } }));
   }
-  function updateUnit(unitKey, idx, playerId) {
-    setLinesByTeam((prev) => {
-      const teamLines = prev[myTeamId];
-      const arr = [...teamLines[unitKey]]; arr[idx] = playerId;
-      return { ...prev, [myTeamId]: { ...teamLines, [unitKey]: arr } };
-    });
-  }
   function autoOptimizeLines() {
     const fresh = buildLines(myTeamView.roster);
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], forwards: fresh.forwards, defense: fresh.defense, goalies: fresh.goalies } }));
   }
-  function autoOptimizeSpecialTeams() {
-    const fresh = buildLines(myTeamView.roster);
-    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], pp: fresh.pp, pk: fresh.pk } }));
+  // Unités spéciales : système choisi (AN / DN), meilleures unités pour ce système, ou meilleur des deux.
+  function updateSpecialSystem(kind, systemId) {
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], special: { ...specialSystems(prev[myTeamId]), [kind]: systemId } } }));
+  }
+  function autoSpecialUnits(kind) {
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], [kind]: autoUnits(myTeamView.roster, kind, specialSystems(prev[myTeamId])[kind]) } }));
+  }
+  function bestSpecialSystem(kind) {
+    const best = bestSpecial(myTeamView.roster, kind);
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], [kind]: best.units, special: { ...specialSystems(prev[myTeamId]), [kind]: best.id } } }));
   }
   // Meilleur système pour chaque phase, selon l'effectif tel que ton personnel le perçoit.
   function autoOptimizeStrategy() {
@@ -407,8 +425,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       forwards: l.forwards.map((x) => ({ LW: x.LW === playerId ? undefined : x.LW, C: x.C === playerId ? undefined : x.C, RW: x.RW === playerId ? undefined : x.RW })),
       defense: l.defense.map((x) => ({ LD: x.LD === playerId ? undefined : x.LD, RD: x.RD === playerId ? undefined : x.RD })),
       goalies: { starter: l.goalies.starter === playerId ? undefined : l.goalies.starter, backup: l.goalies.backup === playerId ? undefined : l.goalies.backup },
-      pp: l.pp.map((id) => (id === playerId ? undefined : id)),
-      pk: l.pk.map((id) => (id === playerId ? undefined : id)),
+      pp: specialUnits(l, "pp").map((u) => Object.fromEntries(Object.entries(u).map(([k, id]) => [k, id === playerId ? undefined : id]))),
+      pk: specialUnits(l, "pk").map((u) => Object.fromEntries(Object.entries(u).map(([k, id]) => [k, id === playerId ? undefined : id]))),
     };
   }
   function executeTrade(otherTeamId, myIds, theirIds, retention = {}) {
@@ -988,7 +1006,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           </div>
         )}
 
-        {tab === "lines" && <LinesEditor team={myTeam} lines={myLines} onChange={updateLine} onSwap={swapLineSlots} onChangeUnit={updateUnit} onAutoLines={autoOptimizeLines} onAutoSpecialTeams={autoOptimizeSpecialTeams} onSelectPlayer={selectPlayer} />}
+        {tab === "lines" && <TacticsPlanner team={myTeam} lines={myLines} onAssign={updateLine} onSwap={swapLineSlots} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onAutoLines={autoOptimizeLines} onChangeSystem={updateSpecialSystem} onBestSystem={bestSpecialSystem} onAutoUnits={autoSpecialUnits} onSelectPlayer={selectPlayer} />}
 
         {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} injuries={injuries} day={currentDay} onLtir={placeOnLtir} onSendDown={sendDownPlayer} />}
 
