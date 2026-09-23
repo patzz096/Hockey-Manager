@@ -9,7 +9,7 @@ import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex,
 import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, lotteryIneligible, ROUND_NAMES } from "./engine/playoffs";
 import { createDraft, aiPick, makePick, draftDone, upcomingDraftClass } from "./engine/draft";
 import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promoteFromJunior } from "./engine/minorLeagues";
-import { DEFAULT_ASSIGNMENTS, DEFAULT_COVERAGE, weeklyScouting, regionLabel } from "./engine/scoutingZones";
+import { DEFAULT_MISSIONS, DEFAULT_COVERAGE, MAX_EXTRA_SCOUTS, weeklyScouting, regionLabel, scoutRoster, buildScoutMarket, missionSummary } from "./engine/scoutingZones";
 import { ScoutingCenter } from "./components/ScoutingCenter";
 import { expireContracts, aiFreeAgency, agePlayers } from "./engine/offseason";
 import { aggregateStats, leadersOf } from "./engine/stats";
@@ -81,7 +81,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [pendingScouts, setPendingScouts] = useState([]);
   // Dépistage à la FM : zone de chaque dépisteur, couverture des zones (%), suggestions reçues,
   // et ta liste de repêchage (ordre de préférence, pour la cuvée `year`).
-  const [scoutAssignments, setScoutAssignments] = useState(DEFAULT_ASSIGNMENTS);
+  // missions : { idDuDépisteur: { region, league, focus, focusValue, target, weeks, weeksDone } }.
+  const [scoutMissions, setScoutMissions] = useState(DEFAULT_MISSIONS);
+  const [scoutMarket, setScoutMarket] = useState(() => buildScoutMarket(seededRandom(4242), 6));
+  const [scoutingSpend, setScoutingSpend] = useState(0); // frais de mission de la saison ($)
   const [scoutCoverage, setScoutCoverage] = useState(DEFAULT_COVERAGE);
   const [scoutSuggestions, setScoutSuggestions] = useState([]);
   const [draftList, setDraftList] = useState({ year: FIRST_SEASON, ids: [] });
@@ -535,35 +538,64 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setMyDraftIds(myDraftIds.includes(playerId) ? myDraftIds.filter((x) => x !== playerId) : [...myDraftIds, playerId]);
   }
   // Une semaine de dépistage par zone (voir engine/scoutingZones.js).
+  // Équipe de dépistage : dépisteurs en chef + dépisteurs engagés en renfort (salaire dans les
+  // dépenses du personnel), et leurs missions (frais hebdomadaires déduits de la caisse).
+  const scouts = scoutRoster(business.staff, business.scoutTeam || [], myTeamId);
+  function hireScout(candidate) {
+    if ((business.scoutTeam || []).length >= MAX_EXTRA_SCOUTS) { setNotice(`Ton service de dépistage compte déjà ${MAX_EXTRA_SCOUTS} dépisteurs en renfort.`); return; }
+    setBusiness((prev) => ({ ...prev, scoutTeam: [...(prev.scoutTeam || []), candidate] }));
+    setScoutMarket((prev) => prev.filter((c) => c.id !== candidate.id));
+  }
+  function fireScout(scoutId) {
+    setBusiness((prev) => ({ ...prev, scoutTeam: (prev.scoutTeam || []).filter((c) => c.id !== scoutId) }));
+    setScoutMissions((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id !== scoutId)));
+  }
+  function setScoutMission(scoutId, mission) {
+    setScoutMissions((prev) => ({ ...prev, [scoutId]: mission ? { ...mission, weeksDone: 0, startDay: currentDay } : null }));
+  }
+  function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 6)); }
+  // Semaines de dépistage (voir engine/scoutingZones.js).
   function runScoutingWeeks(fromDay, weeks) {
     let coverage = scoutCoverage;
+    let missions = { ...scoutMissions };
     const known = { ...scoutKnowledge };
-    const newReports = {}, suggestions = [];
+    const newReports = {}, suggestions = [], ended = [];
+    let spend = 0;
     const bench = teamOvrBenchmark(teamsById[myTeamId]);
-    const candidatesOf = (regionId) => {
+    const candidatesOf = (regionId, mission) => {
       if (regionId === "pro") return [
         ...teams.filter((t) => t.id !== myTeamId).flatMap((t) => t.roster.map((player) => ({ player, ownerTeamId: t.id }))),
         ...Object.entries(farmByTeam).filter(([id]) => id !== myTeamId).flatMap(([id, list]) => list.map((player) => ({ player, ownerTeamId: id }))),
         ...freeAgents.map((player) => ({ player, ownerTeamId: null })),
       ];
       const leagues = SCOUT_REGIONS.find((r) => r.id === regionId)?.leagues || [];
-      return draftClass.filter((p) => leagues.includes(p.league)).map((player) => ({ player, ownerTeamId: null }));
+      const prospects = draftClass.filter((p) => leagues.includes(p.league)).map((player) => ({ player, ownerTeamId: null }));
+      if (mission.target === "draft") return prospects;
+      // Tous les joueurs : aussi les espoirs déjà repêchés par les autres équipes, restés dans ces ligues.
+      return [...prospects, ...Object.entries(farmByTeam).filter(([id]) => id !== myTeamId).flatMap(([id, list]) => list.filter((p) => leagues.includes(p.league)).map((player) => ({ player, ownerTeamId: id })))];
     };
     for (let w = 0; w < weeks; w++) {
       const day = fromDay + 7 * (w + 1);
-      const res = weeklyScouting({ assignments: scoutAssignments, coverage, staff: business.staff, candidatesOf, lastReportDay: (id) => known[id]?.day ?? null, day, rng: seededRandom((day * 7919 + 17) % 233280), benchmark: bench });
+      const list = scouts.filter((sc) => missions[sc.id]?.region).map((sc) => ({ scout: sc, mission: missions[sc.id] }));
+      const res = weeklyScouting({ missions: list, coverage, candidatesOf, lastReportDay: (id) => known[id]?.day ?? null, day, rng: seededRandom((day * 7919 + 17) % 233280), benchmark: bench });
       coverage = res.coverage;
+      spend += res.cost;
+      missions = Object.fromEntries(Object.entries(missions).map(([id, m]) => [id, m?.region ? { ...m, weeksDone: (m.weeksDone || 0) + 1 } : m]));
+      res.finished.forEach((id) => { ended.push({ scout: scouts.find((x) => x.id === id), mission: missions[id] }); missions[id] = null; });
       res.reports.forEach((r) => {
         known[r.player.id] = r.report; newReports[r.player.id] = r.report;
-        if (r.grade !== "D") suggestions.push({ id: `${r.player.id}-${day}`, playerId: r.player.id, playerName: r.player.name, pos: r.player.pos, age: r.player.age, grade: r.grade, note: r.note, regionId: r.regionId, scoutName: r.scoutName, day, ownerTeamId: r.ownerTeamId, draftProspect: !!r.player.draftProspect });
+        if (r.grade !== "D") suggestions.push({ id: `${r.player.id}-${day}`, playerId: r.player.id, playerName: r.player.name, pos: r.player.pos, age: r.player.age, grade: r.grade, note: r.note, regionId: r.regionId, scoutName: r.scoutName, scoutId: r.scoutId, day, ownerTeamId: r.ownerTeamId, draftProspect: !!r.player.draftProspect });
       });
     }
     setScoutCoverage(coverage);
+    setScoutMissions(missions);
+    if (spend > 0) { setBusiness((prev) => ({ ...prev, cash: prev.cash - spend })); setScoutingSpend((x) => x + spend); }
     if (Object.keys(newReports).length) setScoutKnowledge((prev) => ({ ...prev, ...newReports }));
+    ended.forEach(({ scout, mission }) => addMessage({ from: scout?.name || "Service de dépistage", subject: `Mission terminée : ${regionLabel(mission.region)}`, category: "scout", body: `${missionSummary(mission)}.\nMission de ${mission.weeks} semaines terminée : le dépisteur est de retour et attend une nouvelle affectation (onglet Dépistage, « Équipe et missions »).` }));
     if (suggestions.length) {
-      setScoutSuggestions((prev) => [...suggestions.reverse(), ...prev.filter((x) => !suggestions.some((y) => y.playerId === x.playerId))].slice(0, 80));
+      setScoutSuggestions((prev) => [...suggestions.reverse(), ...prev.filter((x) => !suggestions.some((y) => y.playerId === x.playerId))].slice(0, 120));
       const top = suggestions.filter((x) => x.grade !== "C");
-      if (top.length) addMessage({ from: "Service de dépistage", subject: `Dépistage : ${top.length} joueur${top.length > 1 ? "s" : ""} recommandé${top.length > 1 ? "s" : ""}`, category: "scout", playerIds: top.map((x) => x.playerId), body: top.map((x) => `[${x.grade}] ${x.playerName} (${x.pos}, ${x.age} ans) — ${regionLabel(x.regionId)} · ${x.scoutName}`).join("\n") + "\n\nTous les rapports : onglet Dépistage, « Rapports et suggestions »." });
+      if (top.length) addMessage({ from: "Service de dépistage", subject: `Dépistage : ${top.length} joueur${top.length > 1 ? "s" : ""} recommandé${top.length > 1 ? "s" : ""}`, category: "scout", playerIds: top.map((x) => x.playerId), body: top.map((x) => `[${x.grade}] ${x.playerName} (${x.pos}, ${x.age} ans) — ${regionLabel(x.regionId)} · ${x.scoutName}`).join("\n") + `\n\nFrais de mission cette période : ${spend.toLocaleString("fr-CA")} $. Tous les rapports : onglet Dépistage.` });
     }
   }
   // Une demande de dépistage part en mission : le rapport arrive après un délai qui dépend de
@@ -1009,6 +1041,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setLinesByTeam((prev) => Object.fromEntries(aged.map((t) => [t.id, t.id === myTeamId ? prev[t.id] : { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality }])));
     setPlayoffs(null);
     setDraft(null);
+    setScoutingSpend(0);
     setFreeAgencyDone(false);
     setSeasonYear(seasonYear + 1);
     advanceTo(seasonDates(seasonYear + 1).start - 1);
@@ -1210,7 +1243,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "playoffs" && <PlayoffsPanel playoffs={playoffs} teamsById={teamsById} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
 
-        {tab === "scouting" && <ScoutingCenter staff={business.staff} assignments={scoutAssignments} coverage={scoutCoverage} onAssign={(slot, region) => setScoutAssignments((prev) => ({ ...prev, [slot]: region || null }))}
+        {tab === "scouting" && <ScoutingCenter scouts={scouts} missions={scoutMissions} coverage={scoutCoverage} onSetMission={setScoutMission} market={scoutMarket} onHire={hireScout} onFire={fireScout} onRefreshMarket={refreshScoutMarket} spend={scoutingSpend} cash={business.cash} maxExtra={MAX_EXTRA_SCOUTS} staff={business.staff}
           suggestions={scoutSuggestions} draftClass={draftClass} classYear={classYear} myTeam={myTeam} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} teamsById={teamsById}
           draftIds={myDraftIds} onReorder={setMyDraftIds} onRemoveFromList={toggleDraftList} draft={draft} minorLine={minorLine} onSelectPlayer={selectPlayer} onOpenPlayerById={openPlayerById} />}
 

@@ -115,8 +115,11 @@ tests/engine.test.js       tests du moteur
   un contre-emploi est joué à moitié et moins bien
 - Centre de dépistage (onglet Dépistage, à la FM24, `engine/scoutingZones.js`) : 9 zones à couvrir
   (Québec, Ontario, Ouest, États-Unis, Suède, Finlande, Russie, Europe centrale, professionnels).
-  Chaque dépisteur est déployé dans une zone ; la couverture monte chaque semaine et il rédige
-  des rapports sur les joueurs les plus intéressants, notés A / B / C (suggestions + messagerie)
+  Équipe de dépistage : 2 dépisteurs en chef + jusqu'à 6 en renfort (marché, salaire dans les
+  dépenses). Chaque dépisteur part en mission : zone ou une seule ligue, recherche générale / par
+  position / par rôle, cible (cuvée ou tous les joueurs), durée (2 semaines à 3 mois, ou continue).
+  Frais hebdomadaires selon l'étendue, la distance port d'attache → zone et le niveau du dépisteur.
+  La couverture monte chaque semaine et les rapports sont notés A / B / C (suggestions + messagerie)
 - Liste de repêchage : cuvée connue toute la saison, ajout depuis le profil, ordre par
   glisser-déposer ; le jour du repêchage, « Repêcher le n° 1 de ma liste » et choix auto selon la liste
 - Ligues mineures (`engine/minorLeagues.js`) : LAH, LHJMQ, OHL, WHL, NCAA, USHL, SHL, J20, Liiga,

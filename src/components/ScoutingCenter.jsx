@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { ArrowUp, ArrowDown, X, GripVertical } from "lucide-react";
 import { SCOUT_REGIONS, MINOR_LEAGUES } from "../engine/minorLeagues";
-import { SCOUT_SLOTS, GRADES, scoutForSlot, coverageGain, reportsPerWeek, regionLabel } from "../engine/scoutingZones";
+import { GRADES, DURATIONS, POSITION_FOCUS, coverageGain, reportsPerWeek, regionLabel, effectiveScout, missionWeeklyCost, missionTotalCost, missionSummary, distanceLabel } from "../engine/scoutingZones";
+import { ROLES } from "../engine/roles";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { teamOvrBenchmark, starsFor, attr20 } from "../engine/attributes";
 import { formatDay } from "../engine/calendar";
-import { h2Style } from "../ui/theme";
-import { StarRating, TeamCrest } from "./common";
+import { h2Style, btnStyle } from "../ui/theme";
+import { StarRating, TeamCrest, ConfirmButton } from "./common";
 
 // ---------------------------------------------------------------------------------------
 // Centre de dépistage, à la FM24 : zones à couvrir (déploiement des dépisteurs et couverture),
@@ -41,57 +42,161 @@ function Estimate({ player, info, benchmark }) {
 }
 
 // ------------------------------------ Zones ------------------------------------
-function ZonesView({ staff, assignments, coverage, onAssign, draftClass }) {
+function ZonesView({ scouts, missions, coverage, draftClass }) {
   const perRegion = (r) => draftClass.filter((p) => r.leagues.includes(p.league)).length;
   const groups = [["Amérique du Nord", ["quebec", "ontario", "west", "usa"]], ["Europe", ["sweden", "finland", "russia", "central"]], ["Professionnels", ["pro"]]];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <section style={card}>
-        <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 4 }}>Déploiement des dépisteurs</div>
-        <p style={{ fontSize: 12, color: "var(--iceMuted)", margin: "0 0 10px" }}>Chaque semaine, un dépisteur déployé augmente la couverture de sa zone et rédige des rapports sur ses joueurs les plus intéressants. Une zone bien couverte fait ressortir les meilleurs. Hors de sa spécialité (amateur chez les pros ou l'inverse), un dépisteur perd 15 % d'efficacité.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-          {SCOUT_SLOTS.map((slot) => {
-            const region = assignments[slot.key];
-            const scout = scoutForSlot(staff, slot.key, region || "pro");
-            return (
-              <div key={slot.key} style={{ background: "var(--navy)", border: "1px solid var(--line)", borderRadius: 8, padding: 12 }}>
-                <div style={{ fontSize: 11, color: "var(--iceMuted)", letterSpacing: 0.4 }}>{slot.label.toUpperCase()}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, margin: "2px 0 8px" }}>{staff?.[slot.key]?.name || "Poste vacant — personnel interne"} <span style={{ color: "var(--gold)", fontWeight: 600 }}>{attr20(staff?.[slot.key]?.rating || 40)}/20</span></div>
-                <label style={{ fontSize: 12, color: "var(--iceMuted)", display: "block", marginBottom: 4 }} htmlFor={`zone-${slot.key}`}>Zone à couvrir</label>
-                <select id={`zone-${slot.key}`} value={region || ""} onChange={(e) => onAssign(slot.key, e.target.value)} style={{ ...selStyle, width: "100%" }}>
-                  <option value="">— En réserve (aucune zone) —</option>
-                  {SCOUT_REGIONS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-                </select>
-                {region && <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6 }}>+{Math.round(coverageGain(scout.rating))} % de couverture par semaine · {reportsPerWeek(scout.rating)} rapport{reportsPerWeek(scout.rating) > 1 ? "s" : ""} par semaine{scout.offSpecialty ? " · hors de sa spécialité (-15 %)" : ""}</div>}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", margin: 0 }}>Couverture de chaque zone : elle monte chaque semaine où un dépisteur y est en mission et s'érode lentement sinon. Une zone bien couverte fait ressortir les meilleurs joueurs. Les missions se gèrent dans « Équipe et missions ».</p>
       {groups.map(([title, ids]) => (
         <section key={title}>
           <div style={{ fontSize: 11, letterSpacing: 0.5, color: "var(--iceMuted)", margin: "4px 0 6px" }}>{title.toUpperCase()}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 10 }}>
             {ids.map((id) => {
               const r = SCOUT_REGIONS.find((x) => x.id === id);
-              const who = SCOUT_SLOTS.filter((s) => assignments[s.key] === id);
+              const who = scouts.filter((sc) => missions[sc.id]?.region === id);
               return (
                 <div key={id} style={{ ...card, padding: 12, borderColor: who.length ? "var(--accent)" : "var(--line)", boxShadow: who.length ? "0 0 0 1px var(--accent)" : "none" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 6, marginBottom: 6 }}>
-                    <strong style={{ fontSize: 13 }}>{r.label}</strong>
-                    {who.length > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: "#0A1627", background: "var(--accent)", borderRadius: 3, padding: "1px 5px", alignSelf: "flex-start" }}>{who.map((s) => (s.key === "scoutPro" ? "PRO" : "AMA")).join(" + ")}</span>}
-                  </div>
+                  <strong style={{ fontSize: 13, display: "block", marginBottom: 6 }}>{r.label}</strong>
                   <CoverageBar value={coverage[id] ?? 0} />
                   <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6 }}>
                     {r.leagues.map((l) => (l === "NHL" ? "LNH" : MINOR_LEAGUES[l].short)).join(" · ")}
                     {id !== "pro" && <> · {perRegion(r)} espoirs de la cuvée</>}
                   </div>
+                  {who.length > 0 && <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 6 }}>En mission : {who.map((sc) => sc.name).join(", ")}</div>}
                 </div>
               );
             })}
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+// ------------------------------- Équipe et missions -------------------------------
+const money = (v) => `${Math.round(v).toLocaleString("fr-CA")} $`;
+const SPEC = { junior: "Amateur (juniors, NCAA, Europe)", pro: "Professionnel (LNH, LAH)" };
+
+function defaultMission(scout) {
+  const region = scout.specialty === "pro" ? "pro" : scout.home === "pro" ? "quebec" : scout.home;
+  return { region, league: null, focus: "general", focusValue: null, target: region === "pro" ? "all" : "draft", weeks: 4 };
+}
+
+function MissionEditor({ scout, mission, onSetMission, onFire }) {
+  const active = !!mission?.region;
+  const [m, setM] = useState(() => (active ? { ...mission } : defaultMission(scout)));
+  const set = (patch) => setM((prev) => ({ ...prev, ...patch }));
+  const region = SCOUT_REGIONS.find((r) => r.id === m.region);
+  const eff = effectiveScout(scout, m.region);
+  const weekly = missionWeeklyCost(scout, m), total = missionTotalCost(scout, m);
+  const field = { display: "flex", flexDirection: "column", gap: 3, fontSize: 11, color: "var(--iceMuted)" };
+  return (
+    <div style={{ ...card, borderColor: active ? "var(--accent)" : "var(--line)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 11, color: "var(--iceMuted)", letterSpacing: 0.4 }}>{(scout.head || "Dépisteur en renfort").toUpperCase()}</div>
+          <div style={{ fontSize: 15, fontWeight: 700 }}>{scout.name} <span style={{ color: "var(--gold)" }}>{attr20(scout.rating)}/20</span></div>
+          <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{SPEC[scout.specialty]} · port d'attache : {regionLabel(scout.home)}{scout.salary ? ` · ${scout.salary.toLocaleString("fr-CA")} k$/an` : ""}</div>
+        </div>
+        <div style={{ textAlign: "right", fontSize: 12 }}>
+          {active ? <>
+            <div style={{ color: "var(--accent)", fontWeight: 700 }}>En mission</div>
+            <div style={{ color: "var(--iceMuted)" }}>{mission.weeks ? `semaine ${Math.min(mission.weeksDone + 1, mission.weeks)} sur ${mission.weeks}` : `continue · ${mission.weeksDone} semaine${mission.weeksDone > 1 ? "s" : ""}`}</div>
+          </> : <div style={{ color: "var(--iceMuted)" }}>En réserve</div>}
+        </div>
+      </div>
+      {active && <div style={{ fontSize: 12, marginBottom: 10, color: "var(--ice)" }}>{missionSummary(mission)} · {money(missionWeeklyCost(scout, mission))} par semaine</div>}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+        <label style={field}>Zone
+          <select value={m.region} onChange={(e) => set({ region: e.target.value, league: null, target: e.target.value === "pro" ? "all" : m.target })} style={selStyle}>
+            {SCOUT_REGIONS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+          </select>
+        </label>
+        <label style={field}>Étendue
+          <select value={m.league || ""} onChange={(e) => set({ league: e.target.value || null })} style={selStyle}>
+            <option value="">Toute la zone</option>
+            {region.leagues.map((l) => <option key={l} value={l}>Seulement : {l === "NHL" ? "LNH" : MINOR_LEAGUES[l].short}</option>)}
+          </select>
+        </label>
+        <label style={field}>Recherche
+          <select value={m.focus} onChange={(e) => set({ focus: e.target.value, focusValue: e.target.value === "pos" ? "F" : e.target.value === "role" ? "sniper" : null })} style={selStyle}>
+            <option value="general">Générale (meilleurs joueurs)</option><option value="pos">Par position</option><option value="role">Par rôle</option>
+          </select>
+        </label>
+        {m.focus === "pos" && <label style={field}>Position
+          <select value={m.focusValue} onChange={(e) => set({ focusValue: e.target.value })} style={selStyle}>{POSITION_FOCUS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
+        </label>}
+        {m.focus === "role" && <label style={field}>Rôle recherché
+          <select value={m.focusValue} onChange={(e) => set({ focusValue: e.target.value })} style={selStyle}>
+            {["F", "D", "G"].map((g) => <optgroup key={g} label={g === "F" ? "Attaquants" : g === "D" ? "Défenseurs" : "Gardiens"}>{Object.entries(ROLES).filter(([, r]) => r.group === g).map(([id, r]) => <option key={id} value={id}>{r.label}</option>)}</optgroup>)}
+          </select>
+        </label>}
+        <label style={field}>Cible
+          <select value={m.target} onChange={(e) => set({ target: e.target.value })} disabled={m.region === "pro"} style={selStyle}>
+            <option value="draft">Cuvée du repêchage</option><option value="all">Tous les joueurs</option>
+          </select>
+        </label>
+        <label style={field}>Durée
+          <select value={m.weeks ?? ""} onChange={(e) => set({ weeks: e.target.value ? Number(e.target.value) : null })} style={selStyle}>
+            {DURATIONS.map((d) => <option key={d.label} value={d.weeks ?? ""}>{d.label}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, margin: "10px 0", padding: "8px 10px", background: "var(--navy)", borderRadius: 8 }}>
+        <span>Frais : <strong style={{ color: "var(--gold)" }}>{money(weekly)}</strong> / semaine</span>
+        <span>Total : <strong style={{ color: "var(--gold)" }}>{total != null ? money(total) : "selon la durée"}</strong></span>
+        <span style={{ color: "var(--iceMuted)" }}>Distance : {distanceLabel(scout.home, m.region)}{m.league ? " · une ligue (frais × 0,6, couverture × 1,3)" : ""}</span>
+        <span style={{ color: "var(--iceMuted)" }}>+{Math.round(coverageGain(eff.rating, m))} % de couverture et {reportsPerWeek(eff.rating)} rapport{reportsPerWeek(eff.rating) > 1 ? "s" : ""} par semaine</span>
+        {eff.offSpecialty && <span style={{ color: "#F59A4A" }}>Hors de sa spécialité : -15 %</span>}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button onClick={() => onSetMission(scout.id, m)} style={{ ...btnStyle("var(--win)"), fontSize: 12 }}>{active ? "Modifier la mission" : "Lancer la mission"}</button>
+        {active && <button onClick={() => onSetMission(scout.id, null)} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Rappeler le dépisteur</button>}
+        {!scout.head && <ConfirmButton label="Congédier" confirmLabel="Confirmer le congédiement" color="var(--loss)" onConfirm={() => onFire(scout.id)} />}
+      </div>
+    </div>
+  );
+}
+
+function TeamView({ scouts, missions, onSetMission, market, onHire, onFire, onRefreshMarket, spend, cash, maxExtra }) {
+  const extra = scouts.filter((sc) => !sc.head).length;
+  const weekly = scouts.reduce((a, sc) => a + missionWeeklyCost(sc, missions[sc.id]), 0);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 12 }}>
+        {[["Dépisteurs", `${scouts.length} (${extra}/${maxExtra} en renfort)`], ["En mission", scouts.filter((sc) => missions[sc.id]?.region).length], ["Frais actuels", `${money(weekly)} / sem.`], ["Frais de la saison", money(spend)], ["Caisse", money(cash)]].map(([k, v]) => (
+          <span key={k} style={{ background: "var(--navy2)", border: "1px solid var(--line)", borderRadius: 8, padding: "5px 10px" }}><span style={{ color: "var(--iceMuted)" }}>{k} </span><strong>{v}</strong></span>
+        ))}
+      </div>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", margin: 0 }}>Une mission : une zone (ou une seule de ses ligues), une recherche générale, par position ou par rôle, une cible et une durée. Les frais dépendent de l'étendue, de la distance entre le port d'attache du dépisteur et la zone, et de son niveau ; ils sont prélevés chaque semaine. Le salaire des dépisteurs en renfort s'ajoute aux dépenses du personnel.</p>
+      {scouts.map((sc) => <MissionEditor key={`${sc.id}-${JSON.stringify(missions[sc.id] || null)}`} scout={sc} mission={missions[sc.id]} onSetMission={onSetMission} onFire={onFire} />)}
+      <section style={card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16 }}>Dépisteurs disponibles</div>
+          <button onClick={onRefreshMarket} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Rafraîchir le marché</button>
+        </div>
+        {market.length === 0 ? <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucun dépisteur disponible.</div> : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
+              <thead><tr>{["Nom", "Cote", "Spécialité", "Port d'attache", "Salaire", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>{market.map((c) => (
+                <tr key={c.id}>
+                  <td style={{ ...td, fontWeight: 600 }}>{c.name}</td>
+                  <td style={{ ...td, color: "var(--gold)", fontWeight: 700 }}>{attr20(c.rating)}/20</td>
+                  <td style={td}>{SPEC[c.specialty]}</td>
+                  <td style={td}>{regionLabel(c.home)}</td>
+                  <td style={td}>{c.salary.toLocaleString("fr-CA")} k$/an</td>
+                  <td style={td}><button onClick={() => onHire(c)} disabled={extra >= maxExtra} style={{ ...btnStyle("var(--win)"), fontSize: 11, padding: "3px 10px", opacity: extra >= maxExtra ? 0.5 : 1 }}>Engager</button></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -235,10 +340,10 @@ function ListView({ draftIds, byId, info, benchmark, minorLine, onReorder, onRem
   );
 }
 
-const VIEWS = [["zones", "Zones à couvrir"], ["reports", "Rapports et suggestions"], ["class", "Cuvée du repêchage"], ["list", "Ma liste de repêchage"]];
+const VIEWS = [["team", "Équipe et missions"], ["zones", "Zones à couvrir"], ["reports", "Rapports et suggestions"], ["class", "Cuvée du repêchage"], ["list", "Ma liste de repêchage"]];
 
-export function ScoutingCenter({ staff, assignments, coverage, onAssign, suggestions, draftClass, classYear, myTeam, myTeamId, scoutKnowledge, pendingScouts, teamsById, draftIds, onReorder, onRemoveFromList, draft, minorLine, onSelectPlayer, onOpenPlayerById }) {
-  const [view, setView] = useState("zones");
+export function ScoutingCenter({ scouts, missions, coverage, onSetMission, market, onHire, onFire, onRefreshMarket, spend, cash, maxExtra, staff, suggestions, draftClass, classYear, myTeam, myTeamId, scoutKnowledge, pendingScouts, teamsById, draftIds, onReorder, onRemoveFromList, draft, minorLine, onSelectPlayer, onOpenPlayerById }) {
+  const [view, setView] = useState("team");
   const benchmark = teamOvrBenchmark(myTeam);
   const info = (p, owner = null) => getScoutInfo(p, owner, myTeamId, staff, scoutKnowledge);
   const classById = new Map([...draftClass, ...(draft?.pool || [])].map((p) => [p.id, p]));
@@ -261,11 +366,11 @@ export function ScoutingCenter({ staff, assignments, coverage, onAssign, suggest
           </button>
         ))}
       </div>
-      {view === "zones" && <ZonesView staff={staff} assignments={assignments} coverage={coverage} onAssign={onAssign} draftClass={draftClass} />}
+      {view === "team" && <TeamView scouts={scouts} missions={missions} onSetMission={onSetMission} market={market} onHire={onHire} onFire={onFire} onRefreshMarket={onRefreshMarket} spend={spend} cash={cash} maxExtra={maxExtra} />}
+      {view === "zones" && <ZonesView scouts={scouts} missions={missions} coverage={coverage} draftClass={draftClass} />}
       {view === "reports" && <ReportsView suggestions={suggestions} findPlayerView={findPlayerView} onOpenPlayerById={onOpenPlayerById} teamsById={teamsById} benchmark={benchmark} />}
       {view === "class" && <ClassView draftClass={draftClass} classYear={classYear} info={info} benchmark={benchmark} minorLine={minorLine} draftIds={draftIds} onSelectPlayer={onSelectPlayer} />}
       {view === "list" && <ListView draftIds={draftIds} byId={(id) => classById.get(id)} info={info} benchmark={benchmark} minorLine={minorLine} onReorder={onReorder} onRemove={onRemoveFromList} onSelectPlayer={onSelectPlayer} draft={draft} teamsById={teamsById} />}
-      <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 12 }}>Zones : {SCOUT_REGIONS.length} · rapports hebdomadaires. {regionLabel(assignments.scoutAmateur) !== "—" ? `Amateur : ${regionLabel(assignments.scoutAmateur)}.` : "Dépisteur amateur en réserve."} {regionLabel(assignments.scoutPro) !== "—" ? `Pro : ${regionLabel(assignments.scoutPro)}.` : "Dépisteur pro en réserve."}</p>
     </div>
   );
 }

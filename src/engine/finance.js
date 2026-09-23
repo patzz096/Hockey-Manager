@@ -79,7 +79,8 @@ export function computeGameFinance(team, business, winPct, extraPayroll = 0) {
   const merchRevenue = Math.round(attendance * business.facilities.boutique * 1.4);
   const revenue = ticketRevenue + concessionsRevenue + parkingRevenue + merchRevenue;
   const payroll = Math.round(((team.roster.reduce((a, p) => a + (p.contract?.salary || 0), 0) + extraPayroll) * 1000) / 56);
-  const staffPayroll = Math.round((Object.values(business.staff || {}).reduce((a, s) => a + (s?.salary || 0), 0) * 1000) / 56);
+  // Personnel, plus les dépisteurs engagés en renfort (onglet Dépistage).
+  const staffPayroll = Math.round(([...Object.values(business.staff || {}), ...(business.scoutTeam || [])].reduce((a, s) => a + (s?.salary || 0), 0) * 1000) / 56);
   const maintenance = Object.values(business.facilities).reduce((a, l) => a + l * 250, 0);
   const arenaBase = 3500;
   const expenses = payroll + staffPayroll + maintenance + arenaBase;
