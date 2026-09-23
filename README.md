@@ -105,11 +105,14 @@ tests/engine.test.js       tests du moteur
   matchs à 5 buts d'écart ou plus, et le gagnant d'un écrasement domine nettement aux tirs
 - Buts, passes, tirs, mises en échec, punitions, avantage/désavantage numérique, mises au jeu,
   tirs bloqués, +/-, temps de glace — tous simulés par joueur selon ses attributs réels
-- Stratégies façon coaching NHL (forecheck, système défensif, entrée/sortie de zone) +
-  curseurs de mentalité (agressivité, pincement, discipline). Chaque système agit séparément
-  sur le volume de tirs (pour/contre), la qualité des chances (pour/contre) et les punitions,
-  selon son adéquation aux attributs de l'effectif (ex. : dégagement et chasse = plus de tirs
-  de moindre qualité ; trappe = peu de tirs de part et d'autre)
+- Systèmes de jeu (`engine/strategy.js`, d'après le guide « Stratégies NHL et profils de
+  joueurs ») : 5 phases (zone défensive, sortie de zone, zone offensive, échec avant, repli
+  défensif) × 5 systèmes. Chaque système décrit le profil qui lui convient ou non ; l'adéquation
+  de l'effectif (attributs pondérés par groupe — défenseurs, centres, ailiers… — et par temps de
+  glace) module ses effets sur le volume et la qualité des tirs pour/contre et les punitions.
+  Un système mal adapté peut se retourner contre l'équipe. Onglet Stratégie : adéquation de
+  chaque système, meilleur choix, effets chiffrés, joueurs les mieux et les moins adaptés,
+  effet combiné ; plus les curseurs de mentalité
 - Auto-optimisation (meilleures lignes, meilleure stratégie, meilleur alignement spécial)
 
 **Saison (modèle LNH)**

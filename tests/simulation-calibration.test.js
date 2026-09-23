@@ -4,7 +4,7 @@ import { describe, it, expect } from "vitest";
 import { initLeague, buildSchedule } from "../src/engine/league";
 import { simulateGame, teamRatings } from "../src/engine/simulation";
 import { seededRandom } from "../src/engine/random";
-import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS, getStrategyMultipliers, computeTeamProfile } from "../src/engine/strategy";
+import { STRATEGY_PHASES, bestStrategy, computeStrategyFits, optionEffects, optionValue } from "../src/engine/strategy";
 
 const lg = initLeague();
 const byId = Object.fromEntries(lg.teams.map((t) => [t.id, t]));
@@ -82,17 +82,16 @@ describe("calibrage de la simulation", () => {
 
   it("récompense une stratégie adaptée à l'effectif", () => {
     const team = byId.MTL;
-    const profile = computeTeamProfile(team);
-    const combos = [];
-    FORECHECK_OPTIONS.forEach((fc) => DEFENSE_OPTIONS.forEach((df) => ENTRY_OPTIONS.forEach((en) => EXIT_OPTIONS.forEach((ex) => combos.push({ forecheck: fc.id, defense: df.id, entry: en.id, exit: ex.id })))));
-    const value = (c) => { const m = getStrategyMultipliers(c, profile); return m.own / m.opp; };
-    combos.sort((a, b) => value(b) - value(a));
+    const fits = computeStrategyFits(team, lines.MTL);
+    // Pire combinaison : la moins bonne option de chaque phase pour cet effectif.
+    const worst = Object.fromEntries(STRATEGY_PHASES.map((ph) => [ph.key, [...ph.options].sort((a, b) => optionValue(optionEffects(ph.key, a.id, fits[ph.key][a.id])) - optionValue(optionEffects(ph.key, b.id, fits[ph.key][b.id])))[0].id]));
     const goalDiff = (strategy) => {
       const r = seededRandom(7), L = { ...lines, MTL: { ...lines.MTL, strategy } };
       let d = 0;
       for (let i = 0; i < 600; i++) { const g = simulateGame({ id: "t", home: i % 2 ? "MTL" : "BOS", away: i % 2 ? "BOS" : "MTL" }, byId, r, L); d += (g.home === "MTL" ? 1 : -1) * (g.homeScore - g.awayScore); }
       return d / 600;
     };
-    expect(goalDiff(combos[0])).toBeGreaterThan(goalDiff(combos[combos.length - 1]));
+    expect(goalDiff(bestStrategy(team, lines.MTL))).toBeGreaterThan(goalDiff(worst));
   });
+
 });

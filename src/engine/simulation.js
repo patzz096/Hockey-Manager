@@ -1,7 +1,7 @@
 import { OFFENSIVE, DEFENSIVE, GOALIE_TECH, avg } from "./attributes";
 import { FORWARD_BONUS, DEFENSE_BONUS, lineInfo } from "./lines";
 import { poisson, weightedPick } from "./random";
-import { DEFAULT_STRATEGY, computeTeamProfile, getStrategyMultipliers } from "./strategy";
+import { DEFAULT_STRATEGY, computeStrategyFits, getStrategyMultipliers, shooterMods } from "./strategy";
 
 // ---------------------------------------------------------------------------------------
 // Modèle de match : tout découle des tirs, pour que la feuille de match soit cohérente.
@@ -144,14 +144,15 @@ function generateHits(team, lines, rng, scale) {
 function simulateAttack(team, lines, rt, oppRt, strat, oppStrat, oppTeam, oppLines, ppOpps, rng, scale, isHome) {
   const skaters = team.roster.filter((p) => p.pos !== "G");
   const bonusOf = (p) => lineInfo(p.id, lines).bonus;
-  const dump = lines.strategy?.entry === "dump";
+  const mods = shooterMods(lines.strategy);
+  const isD = (p) => p.pos === "LD" || p.pos === "RD";
 
   const shotRatio = Math.pow(rt.attack / oppRt.defense, SIM.shotExp);
   const esLambda = SIM.esShots * scale * shotRatio * strat.vol * oppStrat.volA * (isHome ? SIM.homeEdge : 1);
   const esShots = poisson(Math.max(0.05, esLambda), rng);
   const esProb = clamp(SIM.esGoalProb * Math.pow(rt.finish / oppRt.goalieQ, SIM.finishExp) * strat.q * oppStrat.qA, 0.03, 0.2);
   const esGoals = binomial(esShots, esProb, rng);
-  const es = distributeAttack(skaters, esShots, esGoals, rng, (p) => skillPower(offenseSkillScore(p) + (dump ? p.attrs.hitting * 0.12 : 0)) * bonusOf(p), "ES", bonusOf);
+  const es = distributeAttack(skaters, esShots, esGoals, rng, (p) => skillPower(offenseSkillScore(p) + p.attrs.hitting * mods.hitting + p.attrs.strength * mods.strength) * bonusOf(p) * (isD(p) ? mods.defenseBoost : 1), "ES", bonusOf);
 
   const unit = (lines.pp || []).map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
   const ppOff = unitRating(lines.pp, team.roster, OFFENSIVE);
@@ -182,8 +183,8 @@ function timeline(events, rng, startMin, lengthMin) {
 
 // Simule un segment (match complet : scale 1 ; tranche du direct : 5/60).
 function simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, scale, startMin, lead = 0) {
-  const stratHome = scoreEffect(getStrategyMultipliers(linesHome.strategy || DEFAULT_STRATEGY, computeTeamProfile(home), linesHome.mentality), lead, startMin);
-  const stratAway = scoreEffect(getStrategyMultipliers(linesAway.strategy || DEFAULT_STRATEGY, computeTeamProfile(away), linesAway.mentality), -lead, startMin);
+  const stratHome = scoreEffect(getStrategyMultipliers(linesHome.strategy || DEFAULT_STRATEGY, computeStrategyFits(home, linesHome), linesHome.mentality), lead, startMin);
+  const stratAway = scoreEffect(getStrategyMultipliers(linesAway.strategy || DEFAULT_STRATEGY, computeStrategyFits(away, linesAway), linesAway.mentality), -lead, startMin);
   const rtH = teamRatings(home, linesHome, staffByTeam[home.id]);
   const rtA = teamRatings(away, linesAway, staffByTeam[away.id]);
 

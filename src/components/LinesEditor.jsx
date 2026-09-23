@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NATION_FLAG } from "../data/names";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
-import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS } from "../engine/strategy";
+import { STRATEGY_PHASES, normalizeStrategy, strategyOption } from "../engine/strategy";
 import { starsText } from "../ui/format";
 import { h2Style, btnStyle } from "../ui/theme";
 import { StarRating } from "./common";
@@ -101,17 +101,11 @@ export function LineupPitch({ team, lines, onSelectPlayer, onAssign, onSwap, arm
 }
 
 export function TacticSummary({ lines }) {
-  const fc = FORECHECK_OPTIONS.find((o) => o.id === lines.strategy.forecheck)?.label;
-  const df = DEFENSE_OPTIONS.find((o) => o.id === lines.strategy.defense)?.label;
-  const en = ENTRY_OPTIONS.find((o) => o.id === lines.strategy.entry)?.label;
-  const ex = EXIT_OPTIONS.find((o) => o.id === lines.strategy.exit)?.label;
+  const st = normalizeStrategy(lines.strategy);
   return (
     <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 11, color: "var(--iceMuted)", marginBottom: 16, background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: "8px 12px" }}>
-      <span><strong style={{ color: "var(--ice)" }}>Forecheck:</strong> {fc}</span>
-      <span><strong style={{ color: "var(--ice)" }}>Défense:</strong> {df}</span>
-      <span><strong style={{ color: "var(--ice)" }}>Entrée:</strong> {en}</span>
-      <span><strong style={{ color: "var(--ice)" }}>Sortie:</strong> {ex}</span>
-      <span><strong style={{ color: "var(--ice)" }}>Agressivité:</strong> {lines.mentality.aggression}</span>
+      {STRATEGY_PHASES.map((ph) => <span key={ph.key}><strong style={{ color: "var(--ice)" }}>{ph.short} :</strong> {strategyOption(ph.key, st[ph.key]).label}</span>)}
+      <span><strong style={{ color: "var(--ice)" }}>Agressivité :</strong> {lines.mentality.aggression}</span>
     </div>
   );
 }

@@ -16,10 +16,10 @@ import { waiverExempt, placeOnWaivers, resolveWaivers, aiWaiverCandidates, aiMon
 import { buildLines } from "./engine/lines";
 import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
-import { teamStrength, penaltyPropensity, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime } from "./engine/simulation";
+import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
-import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS, computeTeamProfile, getStrategyMultipliers } from "./engine/strategy";
+import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
 import { ContractOfferModal } from "./components/ContractOfferModal";
 import { ContractsPanel } from "./components/ContractsPanel";
@@ -367,7 +367,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     });
   }
   function updateStrategy(field, value) {
-    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], strategy: { ...prev[myTeamId].strategy, [field]: value } } }));
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], strategy: { ...normalizeStrategy(prev[myTeamId].strategy), [field]: value } } }));
   }
   function updateMentality(field, value) {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], mentality: { ...prev[myTeamId].mentality, [field]: value } } }));
@@ -387,21 +387,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const fresh = buildLines(myTeamView.roster);
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], pp: fresh.pp, pk: fresh.pk } }));
   }
+  // Meilleur système pour chaque phase, selon l'effectif tel que ton personnel le perçoit.
   function autoOptimizeStrategy() {
-    const team = myTeamView;
-    const skaters = team.roster.filter((p) => p.pos !== "G");
-    const n = skaters.length || 1;
-    const profile = computeTeamProfile(team);
-    const avgPenaltyProp = skaters.reduce((a, p) => a + penaltyPropensity(p), 0) / n;
-    let best = null, bestScore = -Infinity;
-    FORECHECK_OPTIONS.forEach((fc) => DEFENSE_OPTIONS.forEach((df) => ENTRY_OPTIONS.forEach((en) => EXIT_OPTIONS.forEach((ex) => {
-      const combo = { forecheck: fc.id, defense: df.id, entry: en.id, exit: ex.id };
-      const mult = getStrategyMultipliers(combo, profile, linesByTeam[myTeamId].mentality);
-      const score = mult.own * 100 + (2 - mult.opp) * 60 - mult.pen * avgPenaltyProp * 0.5;
-      if (score > bestScore) { bestScore = score; best = combo; }
-    }))));
-    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], strategy: best } }));
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], strategy: bestStrategy(myTeamView, prev[myTeamId]) } }));
   }
+
   function cleanLinesOfPlayer(l, playerId) {
     return {
       ...l,
@@ -992,7 +982,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} injuries={injuries} day={currentDay} onLtir={placeOnLtir} onSendDown={sendDownPlayer} />}
 
-        {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} />}
+        {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
 
         {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
