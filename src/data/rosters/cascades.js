@@ -1,0 +1,20 @@
+// Alignement réel — Cascades Élite (Ligue de Hockey d'Excellence du Québec)
+export const CASCADES_ROSTER_DATA = [
+  { name: "Laurent Talbot", number: 33, pos: "G" },
+  { name: "Théo Lapointe", number: 29, pos: "G" },
+  { name: "Edison Hotte", number: 27, pos: "C" },
+  { name: "Émile Fillion", number: 14, pos: "C" },
+  { name: "Hubert Chamberland", number: 12, pos: "C" },
+  { name: "Isaac Daigle", number: 28, pos: "C" },
+  { name: "Liam Tanguay", number: 25, pos: "LW" },
+  { name: "Logan Boisvert", number: 19, pos: "RW" },
+  { name: "Loïc Huppé", number: 43, pos: "LW" },
+  { name: "Lowen Fréchette", number: 9, pos: "RW" },
+  { name: "Nolan Beauvilliers", number: 34, pos: "LW" },
+  { name: "Derek Guérard", number: 42, pos: "LD" },
+  { name: "Édouard Pouliot", number: 23, pos: "RD" },
+  { name: "François-Xavier Guimond", number: 32, pos: "LD" },
+  { name: "Jacob Corriveau", number: 45, pos: "RD" },
+  { name: "Louis Légaré", number: 49, pos: "LD" },
+  { name: "Zachary Pratte", number: 44, pos: "RD" },
+];

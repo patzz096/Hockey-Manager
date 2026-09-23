@@ -2,15 +2,56 @@
 
 Prototype de jeu de gestion façon **Franchise Hockey Manager / Football Manager 24**, où le
 joueur agit comme directeur général d'une équipe de la LNH (32 vraies équipes). Construit
-comme un artefact React à fichier unique (`hockey_gm_prototype.jsx`), pensé pour être publié
-via l'outil Artifact de Claude.ai.
+en React (Vite), et regroupable en un seul fichier HTML pour être publié via l'outil Artifact
+de Claude.ai.
 
 ## État actuel
 
-Le fichier principal fait plusieurs milliers de lignes et contient **tout** : moteur de
-simulation, génération de joueurs, données réelles de 16/32 équipes, et toute l'interface
-(React, un seul fichier, pas de build step). C'est fonctionnel mais devenu lourd à éditer —
-d'où la reprise dans Claude Code.
+Le prototype d'origine (`hockey_gm_prototype.jsx`, un seul fichier de 3 362 lignes, conservé
+dans l'historique git) a été découpé en modules ES sous `src/`, avec un projet Vite pour le
+lancer en local et le regrouper en un seul fichier HTML publiable comme artefact.
+Le découpage ne change rien au comportement : avec la même graine, une saison complète
+simulée donne un résultat identique au bit près à celui du fichier d'origine.
+
+## Démarrer
+
+```bash
+npm install
+npm run dev              # serveur de développement (http://localhost:5173)
+npm test                 # tests du moteur (vitest)
+npm run lint             # ESLint
+npm run build:artifact   # dist/index.html autonome (JS en ligne), à publier comme artefact
+```
+
+## Structure
+
+```
+src/
+  main.jsx                 point d'entrée React
+  App.jsx                  état global + orchestration (HockeyGM)
+  data/
+    teams.js               32 équipes (TEAM_SEED)
+    names.js               prénoms/noms générés, drapeaux et nationalités
+    rosters/               alignements réels, un fichier par division
+      index.js             REAL_ROSTERS : identifiant d'équipe → données
+      atlantique.js, metropolitaine.js, cascades.js (inutilisé)
+  engine/                  logique pure, sans React
+    random.js              RNG à graine, poisson, tirage pondéré
+    attributes.js          catégories d'attributs, cote (computeOvr), /20, étoiles
+    players.js             génération de joueurs, agents libres, club-école, repêchage
+    lines.js               trios/paires par défaut, rôle d'un joueur dans l'alignement
+    strategy.js            systèmes de jeu et multiplicateurs selon le profil d'effectif
+    simulation.js          simulateGame, simulateChunk (direct), feuille de match
+    league.js              initLeague, calendrier, classement
+    contracts.js           salaires attendus, évaluation d'une offre
+    finance.js             billetterie, concessions, stationnement, bilan de match
+    staff.js               rôles et marché du personnel
+    scouting.js            getScoutInfo (brouillard de dépistage)
+  ui/                      thème (couleurs, styles), formatage, hook de tri
+  components/              un fichier par écran ou onglet
+    match/                 feuille de match, sim en direct, visionneur, sommaire des buts
+tests/engine.test.js       tests du moteur
+```
 
 ## Ce qui est fait
 
@@ -77,30 +118,29 @@ d'où la reprise dans Claude Code.
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
 
-## Pour aller plus vite avec moins de données
+## Notes techniques
 
-Le fichier unique est le principal frein : chaque édition doit relire/chercher dans un bloc de
-plusieurs milliers de lignes. Recommandé avant de continuer :
-
-- **Séparer en modules** : `engine/` (simulation, génération de joueurs), `data/rosters/`
-  (un fichier par équipe ou par division), `components/` (un fichier par écran/onglet),
-  `App.jsx` (état global + orchestration)
-- **Fournir les données de joueurs toi-même** plutôt que par recherche web équipe par équipe
-  (CSV/JSON avec nom, position, âge, stats) — la conversion en attributs est rapide, la
-  recherche web par joueur est ce qui coûte le plus cher
-- Grouper plusieurs demandes liées dans un même message plutôt qu'une à la fois
+- **Données de joueurs** : fournir un CSV ou un JSON (nom, position, âge, stats, contrat) reste
+  la façon la plus rapide d'ajouter les 16 équipes manquantes. La conversion en attributs est
+  rapide, alors que chercher chaque joueur sur le web coûte cher.
+- **Bogue connu** : `buildRealRoster` (`src/engine/players.js`) ne recopie pas `nationality`,
+  donc les joueurs réels s'affichent sans drapeau (« Nationalité — »).
+- **Code mort retiré au découpage** : une première version de `LineupPitch` était écrasée par
+  une seconde définition portant le même nom. C'est interdit dans un module ES, où la
+  compilation échoue. Seule la version réellement utilisée a été gardée.
+- **Code inutilisé conservé** : `CASCADES_ROSTER_DATA` et `buildNamedRoster`.
 
 ## Fonctions clés à connaître (moteur)
 
-| Fonction | Rôle |
-|---|---|
-| `initLeague()` | Construit les 32 équipes, agents libres, personnel, repêchage au démarrage |
-| `buildRoster` / `buildRealRoster` | Génère un alignement procédural ou depuis des données réelles |
-| `simulateGame` / `simulateChunk` | Simule un match complet ou une tranche de 5 min |
-| `computeOvr`, `starsFor`, `attr20` | Conversion attributs internes (0-99) → cote → étoiles/  20 |
-| `getScoutInfo` | Détermine si un joueur est "connu" et avec quelle qualité |
-| `getStrategyMultipliers` / `STRATEGY_ENGINE` | Effet des stratégies selon le profil d'effectif |
-| `computeGameFinance` | Revenus/dépenses d'un match local |
+| Fonction | Fichier | Rôle |
+|---|---|---|
+| `initLeague()` | `engine/league.js` | Construit les 32 équipes, agents libres, personnel, repêchage au démarrage |
+| `buildRoster` / `buildRealRoster` | `engine/players.js` | Génère un alignement procédural ou depuis des données réelles |
+| `simulateGame` / `simulateChunk` | `engine/simulation.js` | Simule un match complet ou une tranche de 5 min |
+| `computeOvr`, `starsFor`, `attr20` | `engine/attributes.js` | Conversion attributs internes (0-99) → cote → étoiles / 20 |
+| `getScoutInfo` | `engine/scouting.js` | Détermine si un joueur est "connu" et avec quelle qualité |
+| `getStrategyMultipliers` / `STRATEGY_ENGINE` | `engine/strategy.js` | Effet des stratégies selon le profil d'effectif |
+| `computeGameFinance` | `engine/finance.js` | Revenus/dépenses d'un match local |
 
 ## Structure des données principales
 
@@ -113,10 +153,8 @@ lines  = { forwards:[{LW,C,RW}x4], defense:[{LD,RD}x3], goalies:{starter,backup}
 business = { cash, ticketTiers, facilities, parking, concessionItems, staff, delegation, log }
 ```
 
-## Comment reprendre dans Claude Code
+## Prochaines étapes
 
-1. Récupère `hockey_gm_prototype.jsx` depuis cette conversation.
-2. Demande à Claude Code de le scinder selon la structure suggérée ci-dessus avant d'ajouter
-   de nouvelles fonctionnalités — ça réduira le coût de chaque édition future.
-3. Priorité suggérée : terminer le délai de dépistage (section "incomplet" ci-dessus), puis
-   le clic universel sur les joueurs, avant d'attaquer les équipes manquantes.
+1. Terminer le délai de dépistage (voir « Ce qui reste incomplet », point 1).
+2. Rendre un joueur cliquable partout (point 2).
+3. Ajouter les 16 équipes des divisions Centrale et Pacifique (point 3).
