@@ -2,7 +2,7 @@ import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS } from 
 import { h2Style, btnStyle, inputStyle } from "../ui/theme";
 
 export function MentalitySlider({ label, hint, value, onChange }) {
-  const tone = value >= 65 ? "var(--red)" : value <= 35 ? "var(--win)" : "#D9A404";
+  const tone = value >= 65 ? "var(--red)" : value <= 35 ? "var(--win)" : "var(--gold)";
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2 }}>

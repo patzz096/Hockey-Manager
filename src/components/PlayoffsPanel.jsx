@@ -15,7 +15,7 @@ function SeriesCard({ s, teamsById, myTeamId, rankOf, open, onToggle }) {
   );
   const involved = s.high === myTeamId || s.low === myTeamId;
   return (
-    <div onClick={onToggle} style={{ background: "var(--navy)", border: `1px solid ${involved ? "#D9A40488" : "#ffffff1a"}`, borderRadius: 4, padding: "8px 10px", cursor: "pointer", minWidth: 220 }}>
+    <div onClick={onToggle} style={{ background: "var(--navy)", border: `1px solid ${involved ? "rgba(255,194,71,0.55)" : "#ffffff1a"}`, borderRadius: 4, padding: "8px 10px", cursor: "pointer", minWidth: 220 }}>
       {row(s.high, s.winsHigh)}
       {row(s.low, s.winsLow)}
       <div style={{ fontSize: 11, color: s.winner ? "var(--win)" : "var(--iceMuted)", marginTop: 3 }}>
@@ -38,7 +38,7 @@ export function PlayoffsPanel({ playoffs, teamsById, myTeamId, linesByTeam, onSe
       {playoffs.champion && (
         <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--navy2)", border: "1px solid #D9A404", borderRadius: 6, padding: 14, marginBottom: 16 }}>
           <TeamCrest team={teamsById[playoffs.champion]} size={44} />
-          <div><div style={{ fontSize: 11, color: "#D9A404", letterSpacing: 1 }}>CHAMPIONS DE LA COUPE STANLEY</div><div style={{ fontFamily: "Oswald, sans-serif", fontSize: 22 }}>{teamsById[playoffs.champion].name}</div></div>
+          <div><div style={{ fontSize: 11, color: "var(--gold)", letterSpacing: 1 }}>CHAMPIONS DE LA COUPE STANLEY</div><div style={{ fontFamily: "Oswald, sans-serif", fontSize: 22 }}>{teamsById[playoffs.champion].name}</div></div>
         </div>
       )}
       <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8 }}>

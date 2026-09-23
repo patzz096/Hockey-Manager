@@ -36,7 +36,7 @@ export function PlayerFace({ player, size = 44, color = "#5C7080" }) {
   return <div style={{ ...box, background: `${color}66` }}><span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: size * 0.36, color: "#ffffffcc" }}>{initials}</span></div>;
 }
 
-export function StarRating({ value, size = 14, color = "#D9A404" }) {
+export function StarRating({ value, size = 14, color = "var(--gold)" }) {
   const items = [];
   for (let i = 1; i <= 5; i++) {
     const fillPct = value >= i ? 100 : value >= i - 0.5 ? 50 : 0;

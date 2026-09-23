@@ -46,8 +46,8 @@ export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer,
   const homeHits = Object.values(accum.home.hitsBy || {}).reduce((a, v) => a + v, 0);
   const awayHits = Object.values(accum.away.hitsBy || {}).reduce((a, v) => a + v, 0);
   return (
-    <div style={{ background: "var(--navy2)", border: `1px solid ${done ? "var(--win)" : "#D9A404"}66`, borderRadius: 6, padding: 16, marginBottom: 22 }}>
-      <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, marginBottom: 10, color: "#D9A404" }}>SIMULATION EN DIRECT{liveMatch.game.playoff ? " · SÉRIES ÉLIMINATOIRES" : ""}</div>
+    <div style={{ background: "var(--navy2)", border: `1px solid ${done ? "var(--win)" : "var(--gold)"}66`, borderRadius: 6, padding: 16, marginBottom: 22 }}>
+      <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, marginBottom: 10, color: "var(--gold)" }}>SIMULATION EN DIRECT{liveMatch.game.playoff ? " · SÉRIES ÉLIMINATOIRES" : ""}</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
         <div style={{ textAlign: "center" }}><TeamCrest team={home} size={34} /><div style={{ fontSize: 11, marginTop: 3 }}>{home.name}</div></div>
         <div style={{ textAlign: "center" }}>
@@ -62,7 +62,7 @@ export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer,
           <div style={{ display: "flex", gap: 3, marginBottom: 6 }}>
             {[0, 1, 2].map((p) => (
               <div key={p} style={{ flex: 1, height: 5, borderRadius: 2, background: "#ffffff1a", overflow: "hidden" }}>
-                <div style={{ width: `${Math.max(0, Math.min(1, (minute - p * 20) / 20)) * 100}%`, height: "100%", background: minute >= (p + 1) * 20 ? "var(--win)" : "#D9A404" }} />
+                <div style={{ width: `${Math.max(0, Math.min(1, (minute - p * 20) / 20)) * 100}%`, height: "100%", background: minute >= (p + 1) * 20 ? "var(--win)" : "var(--gold)" }} />
               </div>
             ))}
           </div>

@@ -1,0 +1,52 @@
+/* Retour visuel des interactions : ce que les styles en ligne ne peuvent pas faire
+   (survol, clic, focus). Les couleurs viennent des variables définies dans theme.js. */
+html, body { background: #0A1627; color: #EAF2FB; }
+body { font-family: Barlow, "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+::selection { background: rgba(92, 200, 255, 0.35); }
+
+button { font-family: inherit; transition: transform 0.09s ease, filter 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease; }
+button:not(:disabled):hover { filter: brightness(1.14) saturate(1.05); transform: translateY(-1px); }
+button:not(:disabled):active { transform: translateY(1px) scale(0.98); filter: brightness(0.95); box-shadow: 0 0 0 rgba(0, 0, 0, 0) !important; }
+button:disabled { opacity: 0.42; cursor: not-allowed !important; filter: grayscale(0.4); }
+button:focus-visible, select:focus-visible, input:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--accent, #5CC8FF); outline-offset: 2px; }
+
+select, input[type="text"], input[type="number"], input:not([type]) { transition: border-color 0.15s, box-shadow 0.15s; }
+select:focus, input:focus { border-color: var(--accent, #5CC8FF) !important; box-shadow: 0 0 0 3px rgba(92, 200, 255, 0.18); outline: none; }
+select { cursor: pointer; }
+input[type="range"] { accent-color: var(--accent, #5CC8FF); cursor: pointer; }
+input[type="checkbox"] { accent-color: var(--accent, #5CC8FF); width: 16px; height: 16px; cursor: pointer; }
+
+/* Tableaux : chiffres alignés, lignes qui réagissent au survol. */
+table { font-variant-numeric: tabular-nums; }
+tbody tr { transition: background-color 0.12s ease, box-shadow 0.12s ease; }
+tbody tr:hover { background-color: rgba(92, 200, 255, 0.07) !important; box-shadow: inset 3px 0 0 var(--accent, #5CC8FF); }
+tbody tr[style*="cursor: pointer"]:active { background-color: rgba(92, 200, 255, 0.14) !important; }
+
+/* Liens vers les joueurs. */
+[role="button"] { transition: color 0.12s; }
+[role="button"]:hover { color: var(--accent, #5CC8FF) !important; text-decoration-style: solid !important; }
+
+/* Navigation latérale. */
+.nav-btn { position: relative; }
+.nav-btn:not(.is-active):hover { background: rgba(92, 200, 255, 0.08) !important; color: #EAF2FB !important; transform: translateX(2px) !important; filter: none !important; }
+.nav-btn.is-active { box-shadow: inset 3px 0 0 var(--accent, #5CC8FF); }
+
+/* Cartes d'équipe (écran de départ) : lueur aux couleurs de l'équipe. */
+.team-card { transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease !important; }
+.team-card:hover { transform: translateY(-3px) !important; box-shadow: 0 10px 26px -8px var(--team), 0 0 0 1px var(--team) !important; filter: none !important; }
+.team-card:active { transform: translateY(0) scale(0.99) !important; }
+
+/* Barres de défilement discrètes. */
+* { scrollbar-width: thin; scrollbar-color: #2A4163 transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #2A4163; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Entrée douce des onglets. */
+.tab-view { animation: tab-in 0.18s ease-out; }
+@keyframes tab-in { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  button:not(:disabled):hover, button:not(:disabled):active { transform: none; }
+}

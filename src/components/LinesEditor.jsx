@@ -35,8 +35,8 @@ export function decodeDrag(str) {
 export function LineupPitch({ team, lines, onSelectPlayer, onAssign, onSwap, armed, onArm, onConsumeArmed }) {
   const findP = (id) => team.roster.find((x) => x.id === id);
   const nameOf = (id) => { const p = findP(id); return p ? p.name.split(" ").slice(-1)[0] : "—"; };
-  const lineTone = ["#D9A404", "#C7D2DD", "#C08A4E", "#8C97A3"];
-  const pairTone = ["#D9A404", "#C7D2DD", "#C08A4E"];
+  const lineTone = ["var(--gold)", "#C7D2DD", "#C08A4E", "#8C97A3"];
+  const pairTone = ["var(--gold)", "#C7D2DD", "#C08A4E"];
   function handleDrop(e, section, idx, key) {
     e.preventDefault();
     const decoded = decodeDrag(e.dataTransfer.getData("text/plain"));

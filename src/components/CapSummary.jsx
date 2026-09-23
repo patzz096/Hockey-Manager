@@ -5,7 +5,7 @@ export function CapSummary({ roster, year, compact = false }) {
   const s = capStatus(roster, year);
   const pct = Math.min(100, (s.used / s.cap) * 100);
   const nextYear = roster.filter((p) => (p.contract?.years ?? 0) > 1).reduce((a, p) => a + (p.contract?.salary || 0), 0);
-  const color = s.overCap ? "var(--loss)" : s.space < 2000 ? "#D9A404" : "var(--win)";
+  const color = s.overCap ? "var(--loss)" : s.space < 2000 ? "var(--gold)" : "var(--win)";
   if (compact) return <span style={{ color }}>{formatMoney(s.space)} d'espace</span>;
   return (
     <div style={{ background: "var(--navy2)", border: "1px solid #ffffff1a", borderRadius: 4, padding: 12, marginBottom: 16 }}>

@@ -28,13 +28,13 @@ function Table({ rows, teamsById, myTeamId, marks, cutAfter = [], title }) {
         </tr></thead>
         <tbody>
           {rows.map((s, i) => (
-            <tr key={s.id} style={{ borderBottom: cutAfter.includes(i) ? "2px dashed #D9A40488" : "1px solid #ffffff11", background: s.id === myTeamId ? "#ffffff0d" : "transparent" }}>
+            <tr key={s.id} style={{ borderBottom: cutAfter.includes(i) ? "2px dashed rgba(255,194,71,0.55)" : "1px solid #ffffff11", background: s.id === myTeamId ? "#ffffff0d" : "transparent" }}>
               <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 16, color: "var(--iceMuted)", fontSize: 11 }}>{i + 1}</span>
                   <TeamCrest team={teamsById[s.id]} size={20} />
                   <span style={{ color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400 }}>{teamsById[s.id].name}</span>
-                  {marks[s.id] && <span title={MARK_LABEL[marks[s.id]]} style={{ fontSize: 10, color: "#D9A404", fontWeight: 700 }}>{marks[s.id]}</span>}
+                  {marks[s.id] && <span title={MARK_LABEL[marks[s.id]]} style={{ fontSize: 10, color: "var(--gold)", fontWeight: 700 }}>{marks[s.id]}</span>}
                 </span>
               </td>
               {COLS.map(([k]) => <td key={k} style={{ padding: "6px", textAlign: "center", fontWeight: k === "pts" ? 700 : 400, color: k === "diff" ? (s.gf - s.ga > 0 ? "var(--win)" : s.gf - s.ga < 0 ? "var(--loss)" : "var(--ice)") : "var(--ice)", whiteSpace: "nowrap" }}>{cell(s, k)}</td>)}
@@ -62,7 +62,7 @@ export function StandingsTable({ standings, teamsById, myTeamId, history = [] })
       </div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 14 }}>
         Modèle LNH : victoire 2 pts, défaite en prolongation ou tirs de barrage (DP) 1 pt, défaite 0. Départage : points, % de points, victoires en temps réglementaire (VR), en temps réglementaire + prolongation (VRP), victoires, différentiel.
-        Séries : 3 premiers de chaque division + 2 équipes repêchées par association. <strong style={{ color: "#D9A404" }}>y</strong> champion de division · <strong style={{ color: "#D9A404" }}>x</strong> qualifié · <strong style={{ color: "#D9A404" }}>w</strong> équipe repêchée.
+        Séries : 3 premiers de chaque division + 2 équipes repêchées par association. <strong style={{ color: "var(--gold)" }}>y</strong> champion de division · <strong style={{ color: "var(--gold)" }}>x</strong> qualifié · <strong style={{ color: "var(--gold)" }}>w</strong> équipe repêchée.
       </p>
       {view === "league" && <Table rows={standings} teamsById={teamsById} myTeamId={myTeamId} marks={marks} />}
       {view === "division" && Object.values(CONFERENCES).flat().map((d) => (

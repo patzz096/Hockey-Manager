@@ -29,7 +29,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
             <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", fontSize: 13, borderBottom: "1px solid #ffffff11", cursor: "pointer", background: selected.includes(p.id) ? "#ffffff14" : "transparent" }}>
               <input type="checkbox" checked={selected.includes(p.id)} onChange={() => onToggle(p.id)} />
               <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}><PlayerLink player={p} team={team} onSelect={onSelectPlayer} /> <span style={{ color: "var(--iceMuted)" }}>({p.pos})</span>
-                {scoutInfo.known ? <StarRating value={starsFor(shown.ovr, benchmark)} size={11} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "#D9A404" }}>Dépistage · {formatDay(pending.dueDay)}</span> : <button onClick={(e) => { e.preventDefault(); onRequestScout(p); }} style={{ ...btnStyle("var(--steel)"), fontSize: 10, padding: "2px 6px" }}>Dépister</button>}
+                {scoutInfo.known ? <StarRating value={starsFor(shown.ovr, benchmark)} size={11} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "var(--gold)" }}>Dépistage · {formatDay(pending.dueDay)}</span> : <button onClick={(e) => { e.preventDefault(); onRequestScout(p); }} style={{ ...btnStyle("var(--steel)"), fontSize: 10, padding: "2px 6px" }}>Dépister</button>}
               </span>
             </label>
           );

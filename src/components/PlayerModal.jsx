@@ -73,7 +73,7 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
   }
   return (
     <div>
-      <label style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "var(--navy)", border: `1px solid ${pending ? "#D9A40488" : "#ffffff22"}`, borderRadius: 4, padding: 12, cursor: "pointer" }}>
+      <label style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "var(--navy)", border: `1px solid ${pending ? "rgba(255,194,71,0.55)" : "#ffffff22"}`, borderRadius: 4, padding: 12, cursor: "pointer" }}>
         <input type="checkbox" checked={!!pending} onChange={toggle} style={{ marginTop: 3 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>{hasReport ? "Demander un nouveau rapport" : "Demander un dépistage"}</div>
@@ -81,7 +81,7 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
             Dépisteur: <span style={{ color: "var(--ice)" }}>{scout.name}</span> <Grade20 value={scout.rating} />
             {scout.offSpecialty && <span>· hors spécialité</span>}
           </div>
-          <div style={{ fontSize: 12, marginTop: 4, color: pending ? "#D9A404" : "var(--iceMuted)" }}>
+          <div style={{ fontSize: 12, marginTop: 4, color: pending ? "var(--gold)" : "var(--iceMuted)" }}>
             {pending
               ? `Mission en cours — rapport attendu le ${formatDay(pending.dueDay)} (dans ${Math.max(0, pending.dueDay - currentDay)} jour${pending.dueDay - currentDay > 1 ? "s" : ""}). Décoche pour annuler.`
               : `Délai estimé : ${delay} jours de calendrier (rapport vers le ${formatDay(currentDay + delay)}). Un meilleur dépisteur est plus rapide et plus précis.`}
@@ -93,7 +93,7 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
         <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderTop: "3px solid #D9A404", borderRadius: 4, padding: 14, marginTop: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: 11, color: "#D9A404", fontWeight: 600, letterSpacing: 0.5 }}>RAPPORT DE DÉPISTAGE · {formatDay(report.day).toUpperCase()}</div>
+              <div style={{ fontSize: 11, color: "var(--gold)", fontWeight: 600, letterSpacing: 0.5 }}>RAPPORT DE DÉPISTAGE · {formatDay(report.day).toUpperCase()}</div>
               <div style={{ fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{report.scoutName} <Grade20 value={report.quality} /></div>
             </div>
             <div style={{ fontSize: 11, color: "var(--iceMuted)", textAlign: "right" }}>Fiabilité<br /><span style={{ color: "var(--ice)", fontWeight: 600 }}>{reliabilityLabel(report.quality)}</span></div>
@@ -158,8 +158,8 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
             <ScoutingTab player={player} report={scoutInfo} pending={pending} currentDay={currentDay} staff={staff} benchmark={benchmark} isMine={isMine} onRequestScout={onRequestScout} onCancelScout={onCancelScout} />
           ) : (<>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-            <InfoCard label="CÔTE ACTUELLE / POTENTIELLE" accent={known ? "#D9A404" : "var(--steel)"}>
-              {known ? (<><StarRating value={starsFor(shown.ovr, benchmark)} size={13} color={qColor} /><div style={{ marginTop: 4 }}><StarRating value={starsFor(shown.potential, benchmark)} size={13} color={qColor === "#D9A404" ? "#6FA8DC" : "var(--iceMuted)"} /></div></>) : (<div style={{ fontSize: 13, color: "var(--iceMuted)" }}>Non dépisté</div>)}
+            <InfoCard label="CÔTE ACTUELLE / POTENTIELLE" accent={known ? "var(--gold)" : "var(--steel)"}>
+              {known ? (<><StarRating value={starsFor(shown.ovr, benchmark)} size={13} color={qColor} /><div style={{ marginTop: 4 }}><StarRating value={starsFor(shown.potential, benchmark)} size={13} color={qColor === "var(--gold)" ? "#6FA8DC" : "var(--iceMuted)"} /></div></>) : (<div style={{ fontSize: 13, color: "var(--iceMuted)" }}>Non dépisté</div>)}
             </InfoCard>
             <InfoCard label="SOUS CONTRAT" accent="var(--win)">
               <div style={{ fontSize: 13, fontWeight: 600 }}>{known ? contractLabel(player.contract) : "?"}</div>
@@ -225,8 +225,8 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
                   {careerStats[player.id].map((c) => (
                     <tr key={`${c.season}-${c.playoffs ? "p" : "r"}`}>{[`${c.season}-${String(c.season + 1).slice(2)}`, c.playoffs ? "SÉ" : "S", c.team, c.gp, c.g, c.a, c.pts, c.plusMinus > 0 ? `+${c.plusMinus}` : c.plusMinus, c.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>
                   ))}
-                  {playoffStats[player.id]?.gp > 0 && (() => { const ps = playoffStats[player.id]; return <tr style={{ color: "#D9A404" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, "SÉ", owner.name, ps.gp, ps.g, ps.a, ps.pts, ps.plusMinus > 0 ? `+${ps.plusMinus}` : ps.plusMinus, ps.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>; })()}
-                  {stat?.gp > 0 && <tr style={{ color: "#D9A404" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, "S", owner.name, stat.gp, stat.g, stat.a, stat.pts, stat.plusMinus > 0 ? `+${stat.plusMinus}` : stat.plusMinus, stat.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>}
+                  {playoffStats[player.id]?.gp > 0 && (() => { const ps = playoffStats[player.id]; return <tr style={{ color: "var(--gold)" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, "SÉ", owner.name, ps.gp, ps.g, ps.a, ps.pts, ps.plusMinus > 0 ? `+${ps.plusMinus}` : ps.plusMinus, ps.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>; })()}
+                  {stat?.gp > 0 && <tr style={{ color: "var(--gold)" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, "S", owner.name, stat.gp, stat.g, stat.a, stat.pts, stat.plusMinus > 0 ? `+${stat.plusMinus}` : stat.plusMinus, stat.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>}
                 </tbody>
               </table>
             </div>

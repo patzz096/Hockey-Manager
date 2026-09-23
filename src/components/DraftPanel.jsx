@@ -28,7 +28,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
   return (
     <div>
       <h2 style={h2Style}>Repêchage {draft.year + 1} — {formatDay(draftDay)}</h2>
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", background: "var(--navy2)", border: `1px solid ${myTurn ? "#D9A404" : "#ffffff1a"}`, borderRadius: 6, padding: 12, marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", background: "var(--navy2)", border: `1px solid ${myTurn ? "var(--gold)" : "#ffffff1a"}`, borderRadius: 6, padding: 12, marginBottom: 14 }}>
         {done ? <strong>Repêchage terminé.</strong> : (
           <>
             <TeamCrest team={teamsById[current.teamId]} size={34} />
@@ -54,7 +54,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
             <tbody>{rows.map((r, i) => (
               <tr key={r.p.id} style={{ borderBottom: "1px solid #ffffff11" }}>
                 <td style={{ padding: "5px 8px", color: "var(--iceMuted)" }}>{i + 1}</td>
-                <td style={{ padding: "5px 8px" }}>{NATION_FLAG[r.p.nationality] || ""} <PlayerLink player={r.p} onSelect={(p) => onSelectPlayer(p, null)} />{r.report && <span title="Rapport de dépistage reçu" style={{ color: "#D9A404", fontSize: 10 }}> ●</span>}</td>
+                <td style={{ padding: "5px 8px" }}>{NATION_FLAG[r.p.nationality] || ""} <PlayerLink player={r.p} onSelect={(p) => onSelectPlayer(p, null)} />{r.report && <span title="Rapport de dépistage reçu" style={{ color: "var(--gold)", fontSize: 10 }}> ●</span>}</td>
                 <td style={{ padding: "5px 8px" }}>{r.p.pos}</td>
                 <td style={{ padding: "5px 8px" }}>{r.p.age}</td>
                 <td style={{ padding: "5px 8px" }}><StarRating value={starsFor(r.ovr, benchmark)} size={11} /></td>
@@ -66,8 +66,8 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
         </div>
         <div>
           {draft.lottery && (
-            <div style={{ background: "var(--navy2)", border: "1px solid #D9A40466", borderRadius: 4, padding: 10, marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: "#D9A404", marginBottom: 6 }}>LOTERIE</div>
+            <div style={{ background: "var(--navy2)", border: "1px solid rgba(255,194,71,0.4)", borderRadius: 4, padding: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 6 }}>LOTERIE</div>
               {draft.lottery.draws.map((d) => (
                 <div key={d.pick} style={{ fontSize: 12, padding: "2px 0" }}>
                   Choix n° {d.pick} : <strong>{teamsById[d.winner].name}</strong> <span style={{ color: "var(--iceMuted)" }}>({d.from}e pire dossier)</span>

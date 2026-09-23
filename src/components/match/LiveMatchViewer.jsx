@@ -95,7 +95,7 @@ export function LiveMatchViewer({ game, home, away, onClose, onSelectPlayer }) {
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: team.color }} />
                 <span style={{ fontSize: 11, color: "var(--iceMuted)", width: 30 }}>{periodLabel(g.period)}</span>
                 <span style={{ flex: 1 }}><PlayerLink player={scorer} team={team} onSelect={onSelectPlayer} /> {assists.length > 0 && <span style={{ color: "var(--iceMuted)" }}>({assists.map((a, j) => <Fragment key={a.id}>{j > 0 && ", "}<PlayerLink player={a} team={team} onSelect={onSelectPlayer} /></Fragment>)})</span>}</span>
-                {g.type === "PP" && <span style={{ fontSize: 10, background: "#D9A40433", color: "#D9A404", padding: "1px 6px", borderRadius: 3 }}>AN</span>}
+                {g.type === "PP" && <span style={{ fontSize: 10, background: "rgba(255,194,71,0.2)", color: "var(--gold)", padding: "1px 6px", borderRadius: 3 }}>AN</span>}
               </div>
             );
           })}

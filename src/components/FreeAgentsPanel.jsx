@@ -40,7 +40,7 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
               <td style={{ padding: "7px 10px" }}><PlayerLink player={p} onSelect={onSelectPlayer} /></td>
               <td style={{ padding: "7px 10px" }}>{p.pos}</td>
               <td style={{ padding: "7px 10px" }}>{p.age}</td>
-              <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(perceivedRatings(p, scoutInfo).ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "#D9A404" }}>Dépistage · {formatDay(pending.dueDay)}</span> : <button onClick={() => onRequestScout(p)} style={{ ...btnStyle("var(--steel)"), fontSize: 11 }}>Dépister</button>}</td>
+              <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(perceivedRatings(p, scoutInfo).ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "var(--gold)" }}>Dépistage · {formatDay(pending.dueDay)}</span> : <button onClick={() => onRequestScout(p)} style={{ ...btnStyle("var(--steel)"), fontSize: 11 }}>Dépister</button>}</td>
               <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{scoutInfo.known ? draftLabel(p) : "?"}</td>
               <td style={{ padding: "7px 10px" }}><button onClick={() => onSign(p)} style={{ ...btnStyle("var(--win)"), opacity: scoutInfo.known && txWindow.open ? 1 : 0.5 }} disabled={!scoutInfo.known || !txWindow.open} title={txWindow.open ? "" : txWindow.reason}>Offrir un contrat</button></td>
             </tr>

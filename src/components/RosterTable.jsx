@@ -48,7 +48,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowl
             <td style={{ padding: "7px 10px" }}>{p.age}</td>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{lineLabel(p.id, lines)}</td>
             <td style={{ padding: "7px 10px" }}><StarRating value={starsFor(p.ovr, benchmark)} size={12} color={qColor} /></td>
-            <td style={{ padding: "7px 10px" }}><StarRating value={starsFor(p.potential, benchmark)} size={12} color={qColor === "#D9A404" ? "#7A9EDB" : "var(--iceMuted)"} /></td>
+            <td style={{ padding: "7px 10px" }}><StarRating value={starsFor(p.potential, benchmark)} size={12} color={qColor === "var(--gold)" ? "#7A9EDB" : "var(--iceMuted)"} /></td>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)", fontSize: 12 }}>{contractLabel(p.contract)}</td>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)", fontSize: 12 }}>Profil ›</td>
           </tr>
