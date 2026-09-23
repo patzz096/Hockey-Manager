@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, Fragment } from "react";
 import { X } from "lucide-react";
 import { btnStyle } from "../../ui/theme";
 import { TeamCrest, PlayerLink } from "../common";
-import { LIVE_PERIOD_MS, LIVE_TOTAL_MS, scheduleGoalTimeline } from "./LiveSimPanel";
+import { LIVE_PERIOD_MS, LIVE_TOTAL_MS, scheduleGoalTimeline, periodLabel } from "./LiveSimPanel";
 
 export function LiveMatchViewer({ game, home, away, onClose, onSelectPlayer }) {
   const scheduled = useMemo(() => scheduleGoalTimeline(game.box.goalLog), [game]);
@@ -29,6 +29,7 @@ export function LiveMatchViewer({ game, home, away, onClose, onSelectPlayer }) {
   const revealed = scheduled.slice(0, revealedCount);
   const liveHomeScore = revealed.filter((g) => g.side === "home").length;
   const liveAwayScore = revealed.filter((g) => g.side === "away").length;
+  // (les tirs de barrage comptent un point au score, sans buteur)
   const finished = elapsed >= LIVE_TOTAL_MS;
   const dHome = finished ? game.homeScore : liveHomeScore;
   const dAway = finished ? game.awayScore : liveAwayScore;
@@ -88,10 +89,11 @@ export function LiveMatchViewer({ game, home, away, onClose, onSelectPlayer }) {
             const team = g.side === "home" ? home : away;
             const scorer = team.roster.find((p) => p.id === g.scorerId);
             const assists = g.assistIds.map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
+            if (g.type === "SO") return <div key={i} style={{ fontSize: 13, padding: "3px 0" }}>Tirs de barrage : victoire de {team.name}</div>;
             return (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "3px 0" }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: team.color }} />
-                <span style={{ fontSize: 11, color: "var(--iceMuted)", width: 24 }}>P{g.period}</span>
+                <span style={{ fontSize: 11, color: "var(--iceMuted)", width: 30 }}>{periodLabel(g.period)}</span>
                 <span style={{ flex: 1 }}><PlayerLink player={scorer} team={team} onSelect={onSelectPlayer} /> {assists.length > 0 && <span style={{ color: "var(--iceMuted)" }}>({assists.map((a, j) => <Fragment key={a.id}>{j > 0 && ", "}<PlayerLink player={a} team={team} onSelect={onSelectPlayer} /></Fragment>)})</span>}</span>
                 {g.type === "PP" && <span style={{ fontSize: 10, background: "#D9A40433", color: "#D9A404", padding: "1px 6px", borderRadius: 3 }}>AN</span>}
               </div>

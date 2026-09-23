@@ -3,6 +3,30 @@ import { FORWARD_BONUS, DEFENSE_BONUS, lineInfo } from "./lines";
 import { poisson, weightedPick } from "./random";
 import { DEFAULT_STRATEGY, computeTeamProfile, getStrategyMultipliers } from "./strategy";
 
+// ---------------------------------------------------------------------------------------
+// Modèle de match : tout découle des tirs, pour que la feuille de match soit cohérente.
+//  1. Volume de tirs à forces égales : attaque de l'équipe contre défense adverse, puis
+//     stratégies (volume pour / contre).
+//  2. Chaque tir devient un but avec une probabilité qui dépend de la finition des tireurs
+//     contre le gardien adverse, puis des stratégies (qualité pour / contre).
+//  3. Les avantages numériques viennent des punitions adverses ; mêmes étapes pour l'unité AN.
+//  4. Les tirs sont répartis entre les joueurs, et chaque but est attribué à un joueur qui a
+//     tiré (donc jamais plus de buts que de tirs). Corsi = tirs + tirs ratés + tirs bloqués.
+// Calibrage (vérifié par tests/simulation-calibration.test.js) : ~30 tirs et ~3 buts par
+// équipe, % d'arrêts ~.905, AN ~20 %, et une équipe qui domine aux tirs gagne plus souvent.
+// ---------------------------------------------------------------------------------------
+export const SIM = {
+  esShots: 24.5,       // tirs à forces égales par équipe et par match, à forces égales
+  shotExp: 1.8,        // sensibilité du volume de tirs à l'écart attaque / défense
+  esGoalProb: 0.116,   // probabilité qu'un tir à forces égales soit un but
+  finishExp: 1.6,      // sensibilité à l'écart finition / gardien
+  ppShotsPerOpp: 1.8,  // tirs par avantage numérique
+  ppGoalProb: 0.105,
+  homeEdge: 1.08,      // avantage de la glace (volume de tirs)
+  missedRate: 0.40,    // tirs ratés par tir cadré
+  blockRate: 0.36,     // tirs bloqués par tir cadré (modulé par le blocage adverse)
+};
+
 export function weightedAvg(players, valueFn, weightFn) {
   let wsum = 0, vsum = 0;
   players.forEach((p) => { const w = weightFn(p); wsum += w; vsum += valueFn(p) * w; });
@@ -28,10 +52,24 @@ export function teamStrength(team, lines, staff) {
   return { offense, defense };
 }
 
-export function goalieLine(goalie, goalsAgainst, rng, scale = 1) {
-  const lambda = (16 + ((goalie?.attrs.reflexes || 70) / 99) * 16) * scale;
-  const saves = poisson(Math.max(0.3, lambda), rng);
-  return { playerId: goalie?.id, saves, shotsAgainst: saves + goalsAgainst };
+// Cotes d'équipe utilisées par le modèle de tirs (pondérées par le temps de glace des trios).
+export function teamRatings(team, lines, staff) {
+  const safeLines = lines || { forwards: [], defense: [], goalies: {} };
+  const skaters = team.roster.filter((p) => p.pos !== "G");
+  const bonus = (p) => lineInfo(p.id, safeLines).bonus;
+  const isD = (p) => p.pos === "LD" || p.pos === "RD";
+  const goalie = team.roster.find((p) => p.id === safeLines.goalies.starter) || team.roster.find((p) => p.pos === "G");
+  let attack = weightedAvg(skaters, (p) => avg(p.attrs, OFFENSIVE), bonus);
+  let defense = weightedAvg(skaters, (p) => avg(p.attrs, DEFENSIVE), (p) => bonus(p) * (isD(p) ? 1.6 : 1));
+  let finish = weightedAvg(skaters, offenseSkillScore, bonus);
+  const goalieQ = goalie ? avg(goalie.attrs, GOALIE_TECH) : 60;
+  if (staff) {
+    const coach = 1 + (((staff.headCoach?.rating || 50) - 50) / 50) * 0.03;
+    attack *= coach * (1 + (((staff.assistantOff?.rating || 50) - 50) / 50) * 0.025);
+    finish *= 1 + (((staff.assistantOff?.rating || 50) - 50) / 50) * 0.015;
+    defense *= coach * (1 + (((staff.assistantDef?.rating || 50) - 50) / 50) * 0.025);
+  }
+  return { attack, defense, finish, goalieQ, goalie };
 }
 
 export function unitRating(ids, roster, keys) {
@@ -62,71 +100,176 @@ export const CHUNKS_PER_PERIOD = 4;
 
 export const TOTAL_CHUNKS = 12;
 
-export function simulateChunk(home, away, linesHome, linesAway, staffByTeam, chunkIndex, rng) {
-  const SCALE = CHUNK_MIN / 60;
-  const periodNum = Math.min(3, Math.ceil(chunkIndex / CHUNKS_PER_PERIOD));
-  const stratHome = getStrategyMultipliers(linesHome.strategy || DEFAULT_STRATEGY, computeTeamProfile(home), linesHome.mentality);
-  const stratAway = getStrategyMultipliers(linesAway.strategy || DEFAULT_STRATEGY, computeTeamProfile(away), linesAway.mentality);
-  const hs = teamStrength(home, linesHome, staffByTeam[home.id]), as = teamStrength(away, linesAway, staffByTeam[away.id]);
-  const leagueAvg = 74;
-  const homeExpected = 2.75 * SCALE * (hs.offense / leagueAvg) * (leagueAvg / as.defense) * 1.06 * stratHome.own * stratAway.opp;
-  const awayExpected = 2.75 * SCALE * (as.offense / leagueAvg) * (leagueAvg / hs.defense) * stratAway.own * stratHome.opp;
-  const homeES = poisson(Math.max(0.04, homeExpected), rng);
-  const awayES = poisson(Math.max(0.04, awayExpected), rng);
+function binomial(n, p, rng) { let k = 0; for (let i = 0; i < n; i++) if (rng() < p) k++; return k; }
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-  const homePenCount = poisson(Math.max(0.025, teamPenaltyLambda(home, stratHome.pen) * SCALE), rng);
-  const awayPenCount = poisson(Math.max(0.025, teamPenaltyLambda(away, stratAway.pen) * SCALE), rng);
-  const homePimBy = assignPenalties(home, homePenCount, rng);
-  const awayPimBy = assignPenalties(away, awayPenCount, rng);
+// Répartit `shots` tirs et `goals` buts entre les tireurs, puis les passes.
+function distributeAttack(shooters, shots, goals, rng, weightOf, type, bonusOf = () => 1) {
+  const shotsBy = {}, goalsBy = {}, assistsBy = {}, events = [];
+  if (shooters.length === 0) return { shotsBy, goalsBy, assistsBy, events };
+  const weights = shooters.map(weightOf);
+  for (let s = 0; s < shots; s++) { const p = weightedPick(shooters, weights, rng); shotsBy[p.id] = (shotsBy[p.id] || 0) + 1; }
+  for (let g = 0; g < goals; g++) {
+    // Seuls les joueurs ayant encore des tirs « non convertis » peuvent marquer.
+    const candidates = shooters.filter((p) => (shotsBy[p.id] || 0) > (goalsBy[p.id] || 0));
+    if (candidates.length === 0) break;
+    const scorer = weightedPick(candidates, candidates.map((p) => ((shotsBy[p.id] || 0) - (goalsBy[p.id] || 0)) * skillPower(offenseSkillScore(p), 1.5)), rng);
+    goalsBy[scorer.id] = (goalsBy[scorer.id] || 0) + 1;
+    const roll = rng();
+    const assistCount = roll < (type === "PP" ? 0.08 : 0.12) ? 0 : roll < 0.55 ? 1 : 2;
+    const mates = shooters.filter((p) => p.id !== scorer.id);
+    const passW = mates.map((p) => skillPower(playmakingScore(p), 1.8) * bonusOf(p));
+    const chosen = new Set();
+    for (let a = 0; a < assistCount && chosen.size < mates.length; a++) {
+      let pick, tries = 0;
+      do { pick = weightedPick(mates, passW, rng); tries++; } while (chosen.has(pick.id) && tries < 10);
+      if (!chosen.has(pick.id)) { chosen.add(pick.id); assistsBy[pick.id] = (assistsBy[pick.id] || 0) + 1; }
+    }
+    events.push({ scorerId: scorer.id, assistIds: [...chosen], type });
+  }
+  return { shotsBy, goalsBy, assistsBy, events };
+}
 
-  const homeGoalie = home.roster.find((p) => p.id === linesHome.goalies.starter) || home.roster.find((p) => p.pos === "G");
-  const awayGoalie = away.roster.find((p) => p.id === linesAway.goalies.starter) || away.roster.find((p) => p.pos === "G");
+function generateHits(team, lines, rng, scale) {
+  const hitsBy = {};
+  team.roster.filter((p) => p.pos !== "G").forEach((p) => {
+    const lambda = (0.3 + Math.pow(p.attrs.hitting / 99, 1.6) * 3.6) * lineInfo(p.id, lines).bonus * scale;
+    const h = poisson(Math.max(0.05, lambda), rng);
+    if (h > 0) hitsBy[p.id] = h;
+  });
+  return hitsBy;
+}
 
-  const homePPOpp = awayPenCount, awayPPOpp = homePenCount;
-  const homePPOff = unitRating(linesHome.pp, home.roster, OFFENSIVE);
-  const awayPKComposite = unitRating(linesAway.pk, away.roster, DEFENSIVE) * 0.7 + (awayGoalie?.attrs.reflexes || 70) * 0.3;
-  const homePPConv = Math.max(0.04, Math.min(0.5, 0.16 * (homePPOff / 70) * (72 / awayPKComposite)));
-  const homePPGoals = poisson(homePPOpp * homePPConv, rng);
+// Attaque d'une équipe pendant un segment de match (scale = fraction de 60 minutes).
+function simulateAttack(team, lines, rt, oppRt, strat, oppStrat, oppTeam, oppLines, ppOpps, rng, scale, isHome) {
+  const skaters = team.roster.filter((p) => p.pos !== "G");
+  const bonusOf = (p) => lineInfo(p.id, lines).bonus;
+  const dump = lines.strategy?.entry === "dump";
 
-  const awayPPOff = unitRating(linesAway.pp, away.roster, OFFENSIVE);
-  const homePKComposite = unitRating(linesHome.pk, home.roster, DEFENSIVE) * 0.7 + (homeGoalie?.attrs.reflexes || 70) * 0.3;
-  const awayPPConv = Math.max(0.04, Math.min(0.5, 0.16 * (awayPPOff / 70) * (72 / homePKComposite)));
-  const awayPPGoals = poisson(awayPPOpp * awayPPConv, rng);
+  const shotRatio = Math.pow(rt.attack / oppRt.defense, SIM.shotExp);
+  const esLambda = SIM.esShots * scale * shotRatio * strat.vol * oppStrat.volA * (isHome ? SIM.homeEdge : 1);
+  const esShots = poisson(Math.max(0.05, esLambda), rng);
+  const esProb = clamp(SIM.esGoalProb * Math.pow(rt.finish / oppRt.goalieQ, SIM.finishExp) * strat.q * oppStrat.qA, 0.03, 0.2);
+  const esGoals = binomial(esShots, esProb, rng);
+  const es = distributeAttack(skaters, esShots, esGoals, rng, (p) => skillPower(offenseSkillScore(p) + (dump ? p.attrs.hitting * 0.12 : 0)) * bonusOf(p), "ES", bonusOf);
 
-  const periodHomeScore = homeES + homePPGoals;
-  const periodAwayScore = awayES + awayPPGoals;
+  const unit = (lines.pp || []).map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
+  const ppOff = unitRating(lines.pp, team.roster, OFFENSIVE);
+  const pkDef = unitRating(oppLines.pk, oppTeam.roster, DEFENSIVE);
+  const ppShots = ppOpps > 0 ? poisson(ppOpps * SIM.ppShotsPerOpp * Math.pow(ppOff / pkDef, 1.5), rng) : 0;
+  const ppFinish = unit.length ? unit.reduce((a, p) => a + offenseSkillScore(p), 0) / unit.length : rt.finish;
+  const ppProb = clamp(SIM.ppGoalProb * Math.pow(ppFinish / oppRt.goalieQ, 2) * Math.pow(ppOff / pkDef, 0.8), 0.05, 0.3);
+  const ppGoals = binomial(ppShots, ppProb, rng);
+  const pp = distributeAttack(unit.length ? unit : skaters, ppShots, ppGoals, rng, (p) => skillPower(offenseSkillScore(p)), "PP");
 
-  const homeGoalieLine = goalieLine(homeGoalie, periodAwayScore, rng, SCALE);
-  const awayGoalieLine = goalieLine(awayGoalie, periodHomeScore, rng, SCALE);
-  const homeShots = awayGoalieLine.shotsAgainst;
-  const awayShots = homeGoalieLine.shotsAgainst;
-
-  const homeBox = generateBoxscore(home, homeES, homeShots, rng, linesHome, linesHome.strategy, SCALE);
-  const awayBox = generateBoxscore(away, awayES, awayShots, rng, linesAway, linesAway.strategy, SCALE);
-  const homePPBox = generatePPGoals(home, homePPGoals, rng, linesHome.pp);
-  const awayPPBox = generatePPGoals(away, awayPPGoals, rng, linesAway.pp);
-  const goalLogRaw = buildGoalLog(homeBox.events, awayBox.events, homePPBox.events, awayPPBox.events, rng);
-  const goalLog = goalLogRaw.map((g) => ({ ...g, period: periodNum }));
-  mergeCount(homeBox.goalsBy, homePPBox.goalsBy);
-  mergeCount(homeBox.assistsBy, homePPBox.assistsBy);
-  mergeCount(awayBox.goalsBy, awayPPBox.goalsBy);
-  mergeCount(awayBox.assistsBy, awayPPBox.assistsBy);
-
-  const faceoffs = simulateFaceoffs(home, away, rng, SCALE);
-  const shotMetrics = simulateBlocksAndCorsi(homeShots, awayShots, home, away, rng);
-  const homeToiBy = computeTOI(linesHome, rng, SCALE);
-  const awayToiBy = computeTOI(linesAway, rng, SCALE);
-
-  const homePM = {}, awayPM = {};
-  applyPlusMinus(homeBox.events, linesHome, linesAway, rng, homePM, awayPM);
-  applyPlusMinus(awayBox.events, linesAway, linesHome, rng, awayPM, homePM);
-
+  const shotsBy = { ...es.shotsBy }; mergeCount(shotsBy, pp.shotsBy);
+  const goalsBy = { ...es.goalsBy }; mergeCount(goalsBy, pp.goalsBy);
+  const assistsBy = { ...es.assistsBy }; mergeCount(assistsBy, pp.assistsBy);
   return {
-    periodHomeScore, periodAwayScore, goalLog,
-    home: { ...homeBox, pimBy: homePimBy, ppGoals: homePPGoals, penalties: homePenCount, shots: homeShots, corsiFor: shotMetrics.homeCorsiFor, faceoffsWon: faceoffs.homeWins, faceoffsTotal: faceoffs.total, faceoffsWonBy: faceoffs.homeWinsBy, blocksBy: shotMetrics.homeBlocksBy, plusMinusBy: homePM, toiBy: homeToiBy },
-    away: { ...awayBox, pimBy: awayPimBy, ppGoals: awayPPGoals, penalties: awayPenCount, shots: awayShots, corsiFor: shotMetrics.awayCorsiFor, faceoffsWon: faceoffs.awayWins, faceoffsTotal: faceoffs.total, faceoffsWonBy: faceoffs.awayWinsBy, blocksBy: shotMetrics.awayBlocksBy, plusMinusBy: awayPM, toiBy: awayToiBy },
-    homeGoalieLine, awayGoalieLine,
+    shots: esShots + ppShots, goals: es.events.length + pp.events.length, ppGoals: pp.events.length,
+    shotsBy, goalsBy, assistsBy, esEvents: es.events, events: [...es.events, ...pp.events],
+    hitsBy: generateHits(team, lines, rng, scale),
   };
+}
+
+// Place les buts dans le temps : minute aléatoire dans le segment, triés chronologiquement.
+function timeline(events, rng, startMin, lengthMin) {
+  return events
+    .map((e) => ({ ...e, minute: startMin + rng() * lengthMin }))
+    .sort((a, b) => a.minute - b.minute)
+    .map((e) => ({ ...e, period: Math.min(3, Math.floor(e.minute / 20) + 1) }));
+}
+
+// Simule un segment (match complet : scale 1 ; tranche du direct : 5/60).
+function simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, scale, startMin, lead = 0) {
+  const stratHome = scoreEffect(getStrategyMultipliers(linesHome.strategy || DEFAULT_STRATEGY, computeTeamProfile(home), linesHome.mentality), lead, startMin);
+  const stratAway = scoreEffect(getStrategyMultipliers(linesAway.strategy || DEFAULT_STRATEGY, computeTeamProfile(away), linesAway.mentality), -lead, startMin);
+  const rtH = teamRatings(home, linesHome, staffByTeam[home.id]);
+  const rtA = teamRatings(away, linesAway, staffByTeam[away.id]);
+
+  const homePen = poisson(Math.max(0.02, teamPenaltyLambda(home, stratHome.pen) * scale), rng);
+  const awayPen = poisson(Math.max(0.02, teamPenaltyLambda(away, stratAway.pen) * scale), rng);
+  const homePimBy = assignPenalties(home, homePen, rng);
+  const awayPimBy = assignPenalties(away, awayPen, rng);
+
+  const H = simulateAttack(home, linesHome, rtH, rtA, stratHome, stratAway, away, linesAway, awayPen, rng, scale, true);
+  const A = simulateAttack(away, linesAway, rtA, rtH, stratAway, stratHome, home, linesHome, homePen, rng, scale, false);
+
+  const goalLog = timeline([
+    ...H.events.map((e) => ({ ...e, side: "home" })),
+    ...A.events.map((e) => ({ ...e, side: "away" })),
+  ], rng, startMin, 60 * scale);
+
+  const faceoffs = simulateFaceoffs(home, away, rng, scale);
+  const shotMetrics = simulateBlocksAndCorsi(H.shots, A.shots, home, away, rng);
+  const homePM = {}, awayPM = {};
+  applyPlusMinus(H.esEvents, linesHome, linesAway, rng, homePM, awayPM);
+  applyPlusMinus(A.esEvents, linesAway, linesHome, rng, awayPM, homePM);
+
+  const side = (X, pimBy, pens, fo, foBy, corsi, blocksBy, pm, toiBy) => ({
+    goalsBy: X.goalsBy, assistsBy: X.assistsBy, hitsBy: X.hitsBy, shotsBy: X.shotsBy, events: X.events,
+    pimBy, ppGoals: X.ppGoals, penalties: pens, shots: X.shots, corsiFor: corsi,
+    faceoffsWon: fo, faceoffsTotal: faceoffs.total, faceoffsWonBy: foBy, blocksBy, plusMinusBy: pm, toiBy,
+  });
+  return {
+    homeGoals: H.goals, awayGoals: A.goals, goalLog,
+    home: side(H, homePimBy, homePen, faceoffs.homeWins, faceoffs.homeWinsBy, shotMetrics.homeCorsiFor, shotMetrics.homeBlocksBy, homePM, computeTOI(linesHome, rng, scale)),
+    away: side(A, awayPimBy, awayPen, faceoffs.awayWins, faceoffs.awayWinsBy, shotMetrics.awayCorsiFor, shotMetrics.awayBlocksBy, awayPM, computeTOI(linesAway, rng, scale)),
+    homeGoalieLine: { playerId: rtH.goalie?.id, saves: A.shots - A.goals, shotsAgainst: A.shots },
+    awayGoalieLine: { playerId: rtA.goalie?.id, saves: H.shots - H.goals, shotsAgainst: H.shots },
+    rtH, rtA,
+  };
+}
+
+// Effet de pointage : l'équipe menée pousse (plus de tirs), celle qui mène protège son avance.
+// lead = avance de l'équipe (négatif si elle tire de l'arrière) ; plus marqué en 3e période.
+function scoreEffect(strat, lead, minute) {
+  if (lead === 0) return strat;
+  const late = minute >= 40 ? 1.3 : 1;
+  const size = Math.min(Math.abs(lead), 3);
+  const k = (lead > 0 ? -1 : 1) * size * 0.025 * late;
+  return { ...strat, vol: strat.vol * (1 + k), q: strat.q * (lead > 0 ? 1 - size * 0.02 : 1), volA: strat.volA * (1 - k * 0.3) };
+}
+
+export function simulateChunk(home, away, linesHome, linesAway, staffByTeam, chunkIndex, rng, score = { home: 0, away: 0 }) {
+  const seg = simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, CHUNK_MIN / 60, (chunkIndex - 1) * CHUNK_MIN, score.home - score.away);
+  return { ...seg, periodHomeScore: seg.homeGoals, periodAwayScore: seg.awayGoals };
+}
+
+// Prolongation (3 contre 3) puis, au besoin, tirs de barrage. La meilleure équipe a l'avantage.
+// En prolongation, le but est attribué à un joueur (avec un tir) ; en tirs de barrage, le
+// point est ajouté au score final sans être crédité à un joueur, comme dans la LNH.
+export function resolveOvertime(home, away, linesHome, linesAway, staffByTeam, rng) {
+  const rtH = teamRatings(home, linesHome, staffByTeam[home.id]);
+  const rtA = teamRatings(away, linesAway, staffByTeam[away.id]);
+  const edge = (rtH.attack * rtH.finish) / rtH.goalieQ - (rtA.attack * rtA.finish) / rtA.goalieQ;
+  const pHome = clamp(0.52 + edge * 0.004, 0.3, 0.72);
+  const winner = rng() < pHome ? "home" : "away";
+  if (rng() < 0.6) {
+    const team = winner === "home" ? home : away, lines = winner === "home" ? linesHome : linesAway;
+    const top = [lines.forwards[0]?.C, lines.forwards[0]?.LW, lines.forwards[0]?.RW, lines.defense[0]?.LD, lines.defense[0]?.RD, lines.forwards[1]?.C]
+      .map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
+    const pool = top.length ? top : team.roster.filter((p) => p.pos !== "G");
+    const att = distributeAttack(pool, 1, 1, rng, (p) => skillPower(offenseSkillScore(p)), "OT");
+    return { winner, shootout: false, event: { ...att.events[0], side: winner, period: 4, minute: 60 + rng() * 5 } };
+  }
+  return { winner, shootout: true, event: { side: winner, type: "SO", period: 5, minute: 65, assistIds: [] } };
+}
+
+// Ajoute le résultat de la prolongation à une feuille de match (copie).
+export function applyOvertime(box, ot) {
+  const next = { ...box, home: { ...box.home }, away: { ...box.away }, goalLog: [...box.goalLog, ot.event] };
+  if (!ot.shootout) {
+    const s = next[ot.winner];
+    s.goalsBy = { ...s.goalsBy, [ot.event.scorerId]: (s.goalsBy[ot.event.scorerId] || 0) + 1 };
+    s.shotsBy = { ...s.shotsBy, [ot.event.scorerId]: (s.shotsBy[ot.event.scorerId] || 0) + 1 };
+    s.assistsBy = { ...s.assistsBy }; ot.event.assistIds.forEach((id) => { s.assistsBy[id] = (s.assistsBy[id] || 0) + 1; });
+    s.shots += 1;
+    s.corsiFor = (s.corsiFor || 0) + 1;
+    const g = ot.winner === "home" ? "awayGoalie" : "homeGoalie";
+    if (next[g]) next[g] = { ...next[g], shotsAgainst: next[g].shotsAgainst + 1 };
+  }
+  return next;
 }
 
 export function emptyLiveAccum() {
@@ -152,29 +295,6 @@ export function mergeLivePeriod(accum, periodResult) {
   return next;
 }
 
-export function generatePPGoals(team, ppGoalsCount, rng, ppUnitIds) {
-  const unit = (ppUnitIds || []).map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
-  const goalsBy = {}, assistsBy = {}, events = [];
-  if (unit.length === 0 || ppGoalsCount === 0) return { goalsBy, assistsBy, events };
-  const scoreWeights = unit.map((p) => skillPower(offenseSkillScore(p)));
-  for (let g = 0; g < ppGoalsCount; g++) {
-    const scorer = weightedPick(unit, scoreWeights, rng);
-    goalsBy[scorer.id] = (goalsBy[scorer.id] || 0) + 1;
-    const roll = rng();
-    const assistCount = roll < 0.1 ? 0 : roll < 0.55 ? 1 : 2;
-    const candidates = unit.filter((p) => p.id !== scorer.id);
-    const passWeights = candidates.map((p) => skillPower(playmakingScore(p), 1.8));
-    const chosen = new Set();
-    for (let a = 0; a < assistCount && chosen.size < candidates.length; a++) {
-      let pick, tries = 0;
-      do { pick = weightedPick(candidates, passWeights, rng); tries++; } while (chosen.has(pick.id) && tries < 10);
-      if (!chosen.has(pick.id)) { chosen.add(pick.id); assistsBy[pick.id] = (assistsBy[pick.id] || 0) + 1; }
-    }
-    events.push({ scorerId: scorer.id, assistIds: [...chosen] });
-  }
-  return { goalsBy, assistsBy, events };
-}
-
 export function mergeCount(target, source) { Object.entries(source).forEach(([k, v]) => { target[k] = (target[k] || 0) + v; }); }
 
 export function skillPower(val, exp = 2.2) { return Math.pow(Math.max(1, val) / 99, exp) * 100; }
@@ -182,44 +302,6 @@ export function skillPower(val, exp = 2.2) { return Math.pow(Math.max(1, val) / 
 export function offenseSkillScore(p) { return p.attrs.shotAccuracy * 0.30 + p.attrs.shotRange * 0.15 + p.attrs.puckhandling * 0.20 + p.attrs.offensiveRead * 0.20 + p.attrs.gettingOpen * 0.15; }
 
 export function playmakingScore(p) { return p.attrs.passing * 0.6 + p.attrs.offensiveRead * 0.4; }
-
-export function generateBoxscore(team, goals, shots, rng, lines, strategy, hitScale = 1) {
-  const skaters = team.roster.filter((p) => p.pos !== "G");
-  const bonusOf = (p) => lineInfo(p.id, lines).bonus;
-  const dumpMode = strategy?.entry === "dump";
-  const scoreWeights = skaters.map((p) => {
-    const skill = offenseSkillScore(p) + (dumpMode ? p.attrs.hitting * 0.12 : 0);
-    return skillPower(skill) * bonusOf(p);
-  });
-  const goalsBy = {}, assistsBy = {}, events = [];
-  for (let g = 0; g < goals; g++) {
-    const scorer = weightedPick(skaters, scoreWeights, rng);
-    goalsBy[scorer.id] = (goalsBy[scorer.id] || 0) + 1;
-    const roll = rng();
-    const assistCount = roll < 0.12 ? 0 : roll < 0.58 ? 1 : 2;
-    const candidates = skaters.filter((p) => p.id !== scorer.id);
-    const passWeights = candidates.map((p) => skillPower(playmakingScore(p), 1.8) * bonusOf(p));
-    const chosen = new Set();
-    for (let a = 0; a < assistCount && chosen.size < candidates.length; a++) {
-      let pick, tries = 0;
-      do { pick = weightedPick(candidates, passWeights, rng); tries++; } while (chosen.has(pick.id) && tries < 10);
-      if (!chosen.has(pick.id)) { chosen.add(pick.id); assistsBy[pick.id] = (assistsBy[pick.id] || 0) + 1; }
-    }
-    events.push({ scorerId: scorer.id, assistIds: [...chosen] });
-  }
-  const shotsBy = {};
-  for (let s = 0; s < shots; s++) {
-    const shooter = weightedPick(skaters, scoreWeights, rng);
-    shotsBy[shooter.id] = (shotsBy[shooter.id] || 0) + 1;
-  }
-  const hitsBy = {};
-  skaters.forEach((p) => {
-    const lambda = (0.3 + Math.pow(p.attrs.hitting / 99, 1.6) * 3.6) * bonusOf(p) * hitScale;
-    const h = poisson(Math.max(0.05, lambda), rng);
-    if (h > 0) hitsBy[p.id] = h;
-  });
-  return { goalsBy, assistsBy, hitsBy, shotsBy, events };
-}
 
 export function simulateFaceoffs(home, away, rng, scale = 1) {
   const homeC = home.roster.filter((p) => p.pos === "C");
@@ -248,10 +330,10 @@ export function simulateBlocksAndCorsi(homeShots, awayShots, home, away, rng) {
   const homeD = home.roster.filter((p) => p.pos === "LD" || p.pos === "RD");
   const awayD = away.roster.filter((p) => p.pos === "LD" || p.pos === "RD");
   const blockSkill = (D) => (D.length ? D.reduce((a, p) => a + p.attrs.shotBlocking, 0) / D.length / 99 : 0.6);
-  const homeMissed = Math.round(homeShots * 0.32 * (0.7 + rng() * 0.6));
-  const awayMissed = Math.round(awayShots * 0.32 * (0.7 + rng() * 0.6));
-  const blockedByHome = Math.round(awayShots * 0.12 * (0.6 + blockSkill(homeD)));
-  const blockedByAway = Math.round(homeShots * 0.12 * (0.6 + blockSkill(awayD)));
+  const homeMissed = Math.round(homeShots * SIM.missedRate * (0.8 + rng() * 0.4));
+  const awayMissed = Math.round(awayShots * SIM.missedRate * (0.8 + rng() * 0.4));
+  const blockedByHome = Math.round(awayShots * SIM.blockRate * (0.6 + blockSkill(homeD)) * (0.85 + rng() * 0.3));
+  const blockedByAway = Math.round(homeShots * SIM.blockRate * (0.6 + blockSkill(awayD)) * (0.85 + rng() * 0.3));
   const distributeBlocks = (D, count) => {
     if (D.length === 0 || count === 0) return {};
     const by = {};
@@ -298,19 +380,6 @@ export function pickOnIcePair(lines, rng) {
   return [l.LD, l.RD].filter(Boolean);
 }
 
-export function buildGoalLog(homeEvents, awayEvents, homePPEvents, awayPPEvents, rng) {
-  const all = [
-    ...homeEvents.map((e) => ({ ...e, side: "home", type: "ES" })),
-    ...homePPEvents.map((e) => ({ ...e, side: "home", type: "PP" })),
-    ...awayEvents.map((e) => ({ ...e, side: "away", type: "ES" })),
-    ...awayPPEvents.map((e) => ({ ...e, side: "away", type: "PP" })),
-  ];
-  for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
-  const n = all.length;
-  const per = Math.max(1, Math.ceil(n / 3));
-  return all.map((e, i) => ({ ...e, period: Math.min(3, Math.floor(i / per) + 1) }));
-}
-
 export function applyPlusMinus(events, scoringLines, concedingLines, rng, scoringPM, concedingPM) {
   events.forEach((ev) => {
     const plusIds = [ev.scorerId, ...ev.assistIds];
@@ -323,70 +392,26 @@ export function applyPlusMinus(events, scoringLines, concedingLines, rng, scorin
 export function simulateGame(game, teamsById, rng, linesByTeam, staffByTeam = {}) {
   const home = teamsById[game.home], away = teamsById[game.away];
   const linesHome = linesByTeam[home.id], linesAway = linesByTeam[away.id];
-  const stratHome = getStrategyMultipliers(linesHome.strategy || DEFAULT_STRATEGY, computeTeamProfile(home), linesHome.mentality);
-  const stratAway = getStrategyMultipliers(linesAway.strategy || DEFAULT_STRATEGY, computeTeamProfile(away), linesAway.mentality);
-  const hs = teamStrength(home, linesHome, staffByTeam[home.id]), as = teamStrength(away, linesAway, staffByTeam[away.id]);
-  const leagueAvg = 74;
-  const homeExpected = 2.75 * (hs.offense / leagueAvg) * (leagueAvg / as.defense) * 1.06 * stratHome.own * stratAway.opp;
-  const awayExpected = 2.75 * (as.offense / leagueAvg) * (leagueAvg / hs.defense) * stratAway.own * stratHome.opp;
-  const homeES = poisson(Math.max(0.5, homeExpected), rng);
-  const awayES = poisson(Math.max(0.5, awayExpected), rng);
-
-  const homePenCount = poisson(teamPenaltyLambda(home, stratHome.pen), rng);
-  const awayPenCount = poisson(teamPenaltyLambda(away, stratAway.pen), rng);
-  const homePimBy = assignPenalties(home, homePenCount, rng);
-  const awayPimBy = assignPenalties(away, awayPenCount, rng);
-
-  const homeGoalie = home.roster.find((p) => p.id === linesHome.goalies.starter) || home.roster.find((p) => p.pos === "G");
-  const awayGoalie = away.roster.find((p) => p.id === linesAway.goalies.starter) || away.roster.find((p) => p.pos === "G");
-
-  const homePPOpp = awayPenCount, awayPPOpp = homePenCount;
-  const homePPOff = unitRating(linesHome.pp, home.roster, OFFENSIVE);
-  const awayPKComposite = unitRating(linesAway.pk, away.roster, DEFENSIVE) * 0.7 + (awayGoalie?.attrs.reflexes || 70) * 0.3;
-  const homePPConv = Math.max(0.04, Math.min(0.5, 0.16 * (homePPOff / 70) * (72 / awayPKComposite)));
-  const homePPGoals = poisson(homePPOpp * homePPConv, rng);
-
-  const awayPPOff = unitRating(linesAway.pp, away.roster, OFFENSIVE);
-  const homePKComposite = unitRating(linesHome.pk, home.roster, DEFENSIVE) * 0.7 + (homeGoalie?.attrs.reflexes || 70) * 0.3;
-  const awayPPConv = Math.max(0.04, Math.min(0.5, 0.16 * (awayPPOff / 70) * (72 / homePKComposite)));
-  const awayPPGoals = poisson(awayPPOpp * awayPPConv, rng);
-
-  let homeScore = homeES + homePPGoals;
-  let awayScore = awayES + awayPPGoals;
-  if (homeScore === awayScore) { if (rng() > 0.45) homeScore++; else awayScore++; }
-
-  const homeGoalieLine = goalieLine(homeGoalie, awayScore, rng);
-  const awayGoalieLine = goalieLine(awayGoalie, homeScore, rng);
-  const homeShots = awayGoalieLine.shotsAgainst; // tirs du domicile au filet adverse
-  const awayShots = homeGoalieLine.shotsAgainst;
-
-  const homeBox = generateBoxscore(home, homeES, homeShots, rng, linesHome, linesHome.strategy);
-  const awayBox = generateBoxscore(away, awayES, awayShots, rng, linesAway, linesAway.strategy);
-  const homePPBox = generatePPGoals(home, homePPGoals, rng, linesHome.pp);
-  const awayPPBox = generatePPGoals(away, awayPPGoals, rng, linesAway.pp);
-  const goalLog = buildGoalLog(homeBox.events, awayBox.events, homePPBox.events, awayPPBox.events, rng);
-  mergeCount(homeBox.goalsBy, homePPBox.goalsBy);
-  mergeCount(homeBox.assistsBy, homePPBox.assistsBy);
-  mergeCount(awayBox.goalsBy, awayPPBox.goalsBy);
-  mergeCount(awayBox.assistsBy, awayPPBox.assistsBy);
-
-  const faceoffs = simulateFaceoffs(home, away, rng);
-  const shotMetrics = simulateBlocksAndCorsi(homeShots, awayShots, home, away, rng);
-  const homeToiBy = computeTOI(linesHome, rng);
-  const awayToiBy = computeTOI(linesAway, rng);
-
-  const homePM = {}, awayPM = {};
-  applyPlusMinus(homeBox.events, linesHome, linesAway, rng, homePM, awayPM);
-  applyPlusMinus(awayBox.events, linesAway, linesHome, rng, awayPM, homePM);
-
-  return {
-    ...game, played: true, homeScore, awayScore,
-    box: {
-      home: { ...homeBox, pimBy: homePimBy, ppGoals: homePPGoals, penalties: homePenCount, shots: homeShots, corsiFor: shotMetrics.homeCorsiFor, faceoffsWon: faceoffs.homeWins, faceoffsTotal: faceoffs.total, faceoffsWonBy: faceoffs.homeWinsBy, blocksBy: shotMetrics.homeBlocksBy, plusMinusBy: homePM, toiBy: homeToiBy },
-      away: { ...awayBox, pimBy: awayPimBy, ppGoals: awayPPGoals, penalties: awayPenCount, shots: awayShots, corsiFor: shotMetrics.awayCorsiFor, faceoffsWon: faceoffs.awayWins, faceoffsTotal: faceoffs.total, faceoffsWonBy: faceoffs.awayWinsBy, blocksBy: shotMetrics.awayBlocksBy, plusMinusBy: awayPM, toiBy: awayToiBy },
-      goalLog,
-      homeGoalie: homeGoalieLine,
-      awayGoalie: awayGoalieLine,
-    },
+  // Trois périodes simulées l'une après l'autre, pour appliquer l'effet de pointage.
+  let accum = emptyLiveAccum();
+  let homeScore = 0, awayScore = 0;
+  for (let period = 0; period < 3; period++) {
+    const seg = simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, 1 / 3, period * 20, homeScore - awayScore);
+    accum = mergeLivePeriod(accum, seg);
+    homeScore += seg.homeGoals; awayScore += seg.awayGoals;
+  }
+  const goalie = (lines, team) => team.roster.find((p) => p.id === lines.goalies.starter) || team.roster.find((p) => p.pos === "G");
+  let box = {
+    home: accum.home, away: accum.away, goalLog: accum.goalLog,
+    homeGoalie: { playerId: goalie(linesHome, home)?.id, saves: accum.home.saves, shotsAgainst: accum.home.shotsAgainst },
+    awayGoalie: { playerId: goalie(linesAway, away)?.id, saves: accum.away.saves, shotsAgainst: accum.away.shotsAgainst },
   };
+  let decidedIn = "REG";
+  if (homeScore === awayScore) {
+    const ot = resolveOvertime(home, away, linesHome, linesAway, staffByTeam, rng);
+    box = applyOvertime(box, ot);
+    if (ot.winner === "home") homeScore++; else awayScore++;
+    decidedIn = ot.shootout ? "SO" : "OT";
+  }
+  return { ...game, played: true, homeScore, awayScore, decidedIn, box };
 }

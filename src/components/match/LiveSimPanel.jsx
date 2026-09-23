@@ -8,15 +8,23 @@ export const LIVE_PERIOD_MS = 9000;
 
 export const LIVE_TOTAL_MS = LIVE_PERIOD_MS * 3;
 
+// Moment d'apparition de chaque but dans le visionneur, selon sa minute de jeu.
+// La prolongation et les tirs de barrage apparaissent juste avant la fin.
 export function scheduleGoalTimeline(goalLog) {
-  const byPeriod = { 1: [], 2: [], 3: [] };
-  (goalLog || []).forEach((g) => { if (byPeriod[g.period]) byPeriod[g.period].push(g); });
-  const scheduled = [];
-  [1, 2, 3].forEach((p) => {
-    const list = byPeriod[p];
-    list.forEach((g, i) => { scheduled.push({ ...g, t: (p - 1) * LIVE_PERIOD_MS + ((i + 1) / (list.length + 1)) * LIVE_PERIOD_MS }); });
-  });
-  return scheduled.sort((a, b) => a.t - b.t);
+  return (goalLog || [])
+    .map((g, i) => {
+      const minute = g.minute ?? (g.period - 1) * 20 + 10 + i * 0.01;
+      return { ...g, t: (Math.min(minute, 59.5 + (g.period - 3) * 0.1) / 60) * LIVE_TOTAL_MS };
+    })
+    .sort((a, b) => a.t - b.t);
+}
+
+export function periodLabel(period) { return period === 4 ? "Prol." : period === 5 ? "TB" : `P${period}`; }
+export function goalTime(g) {
+  if (g.minute == null || g.period > 4) return "";
+  const inPeriod = g.period === 4 ? g.minute - 60 : g.minute - (g.period - 1) * 20;
+  const m = Math.floor(inPeriod), s = Math.floor((inPeriod - m) * 60);
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export function clockDisplay(min) { return `${String(min).padStart(2, "0")}:00`; }

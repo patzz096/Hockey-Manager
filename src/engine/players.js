@@ -39,10 +39,12 @@ export function pickNationality(rng) {
 }
 
 export function buildRoster(teamIndex, rng) {
+  // Niveau d'équipe tiré au hasard dans une plage étroite (avant : il baissait selon l'ordre
+  // alphabétique, jusqu'à ~30 pour la dernière équipe), calé sur les alignements réels.
+  const teamBase = 60 + rng() * 4;
   return ROSTER_POSITIONS.map((pos, i) => {
     const fn = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)];
     const ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
-    const teamBase = 68 - teamIndex * 1.3;
     const allAttrs = pos === "G" ? [...GOALIE_TECH, ...MENTAL, ...GOALIE_PHYSICAL] : [...OFFENSIVE, ...DEFENSIVE, ...MENTAL, ...PHYSICAL];
     const attrs = {};
     allAttrs.forEach((a) => (attrs[a] = randAttr(rng, teamBase)));

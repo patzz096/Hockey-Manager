@@ -92,11 +92,22 @@ tests/engine.test.js       tests du moteur
 **Moteur de simulation**
 - Simulation par match complet (`simulateGame`) ou par tranche de 5 minutes en mode direct
   (`simulateChunk`, 12 tranches/match) pour ajuster trios/stratégie en cours de match
+- **Modèle fondé sur les tirs** (`src/engine/simulation.js`, constantes dans `SIM`) : volume de
+  tirs (attaque contre défense adverse), puis probabilité de but par tir (finition contre
+  gardien), puis avantages numériques issus des punitions. Chaque but est attribué à un joueur
+  qui a tiré ; Corsi = tirs + tirs ratés + tirs bloqués. Le match est simulé période par
+  période avec un effet de pointage (l'équipe menée pousse, celle qui mène protège). Égalité :
+  prolongation (but crédité à un joueur) ou tirs de barrage (+1 au score, sans buteur)
+- Calibrage vérifié par `tests/simulation-calibration.test.js` sur 3 saisons : ~3,1 buts et
+  ~31 tirs par équipe, % d'arrêts ~.901, AN ~20 %, ~55 % de victoires à domicile, ~7 % de
+  matchs à 5 buts d'écart ou plus, et le gagnant d'un écrasement domine nettement aux tirs
 - Buts, passes, tirs, mises en échec, punitions, avantage/désavantage numérique, mises au jeu,
   tirs bloqués, +/-, temps de glace — tous simulés par joueur selon ses attributs réels
 - Stratégies façon coaching NHL (forecheck, système défensif, entrée/sortie de zone) +
-  curseurs de mentalité (agressivité, pincement, discipline), avec effet réellement dépendant
-  du profil de l'effectif (pas de constantes fixes)
+  curseurs de mentalité (agressivité, pincement, discipline). Chaque système agit séparément
+  sur le volume de tirs (pour/contre), la qualité des chances (pour/contre) et les punitions,
+  selon son adéquation aux attributs de l'effectif (ex. : dégagement et chasse = plus de tirs
+  de moindre qualité ; trappe = peu de tirs de part et d'autre)
 - Auto-optimisation (meilleures lignes, meilleure stratégie, meilleur alignement spécial)
 
 **Gestion**
@@ -125,8 +136,7 @@ tests/engine.test.js       tests du moteur
 1. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
 2. **Statistiques de carrière multi-saisons** — pas d'historique d'une saison à l'autre (pas
    de mécanique de fin de saison/nouvelle saison implémentée du tout).
-3. Quelques approximations assumées : ordre chronologique des buts non réellement chronométré
-   (réparti aléatoirement par période), +/- approximatif (pas de simulation ligne par ligne
+3. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
 

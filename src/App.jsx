@@ -7,7 +7,7 @@ import { initLeague, buildSchedule, computeStandings } from "./engine/league";
 import { buildLines } from "./engine/lines";
 import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
-import { teamStrength, penaltyPropensity, TOTAL_CHUNKS, simulateChunk, emptyLiveAccum, mergeLivePeriod, simulateGame } from "./engine/simulation";
+import { teamStrength, penaltyPropensity, TOTAL_CHUNKS, simulateChunk, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
 import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS, computeTeamProfile, getStrategyMultipliers } from "./engine/strategy";
@@ -167,7 +167,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setLiveMatch((prev) => {
       if (!prev || prev.chunk > TOTAL_CHUNKS) return prev;
       const staffByTeam = { [myTeamId]: business.staff };
-      const result = simulateChunk(prev.home, prev.away, linesByTeam[prev.home.id], linesByTeam[prev.away.id], staffByTeam, prev.chunk, Math.random);
+      const result = simulateChunk(prev.home, prev.away, linesByTeam[prev.home.id], linesByTeam[prev.away.id], staffByTeam, prev.chunk, Math.random, { home: prev.homeScore, away: prev.awayScore });
       const accum = mergeLivePeriod(prev.accum, result);
       return { ...prev, accum, homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, chunk: prev.chunk + 1 };
     });
@@ -175,11 +175,15 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function finishLiveMatch() {
     if (!liveMatch) return;
     let { homeScore, awayScore } = liveMatch;
-    if (homeScore === awayScore) { if (Math.random() > 0.45) homeScore++; else awayScore++; }
-    const finalGame = {
-      ...liveMatch.game, played: true, homeScore, awayScore,
-      box: { home: liveMatch.accum.home, away: liveMatch.accum.away, goalLog: liveMatch.accum.goalLog, homeGoalie: { saves: liveMatch.accum.home.saves, shotsAgainst: liveMatch.accum.home.shotsAgainst }, awayGoalie: { saves: liveMatch.accum.away.saves, shotsAgainst: liveMatch.accum.away.shotsAgainst } },
-    };
+    let box = { home: liveMatch.accum.home, away: liveMatch.accum.away, goalLog: liveMatch.accum.goalLog, homeGoalie: { saves: liveMatch.accum.home.saves, shotsAgainst: liveMatch.accum.home.shotsAgainst }, awayGoalie: { saves: liveMatch.accum.away.saves, shotsAgainst: liveMatch.accum.away.shotsAgainst } };
+    let decidedIn = "REG";
+    if (homeScore === awayScore) {
+      const ot = resolveOvertime(liveMatch.home, liveMatch.away, linesByTeam[liveMatch.home.id], linesByTeam[liveMatch.away.id], { [myTeamId]: business.staff }, Math.random);
+      box = applyOvertime(box, ot);
+      if (ot.winner === "home") homeScore++; else awayScore++;
+      decidedIn = ot.shootout ? "SO" : "OT";
+    }
+    const finalGame = { ...liveMatch.game, played: true, homeScore, awayScore, decidedIn, box };
     const wins = (finalGame.home === myTeamId && finalGame.homeScore > finalGame.awayScore) || (finalGame.away === myTeamId && finalGame.awayScore > finalGame.homeScore) ? 1 : 0;
     if (wins > 0) setWinsThisMonth((w) => w + wins);
     setSchedule((prev) => prev.map((g) => (g.id === finalGame.id ? finalGame : g)));
@@ -670,7 +674,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
                         <div onClick={() => g.played && setExpandedGameId(expanded ? null : g.id)} style={{ display: "flex", alignItems: "center", gap: 10, background: involved ? "var(--navy2)" : "#ffffff08", padding: "8px 12px", borderRadius: 3, fontSize: 14, cursor: g.played ? "pointer" : "default", border: involved ? `1px solid ${myTeam.color}44` : "1px solid transparent" }}>
                           {g.played ? <Circle size={6} fill={g.homeScore > g.awayScore ? "var(--win)" : "var(--loss)"} color="none" /> : <Circle size={6} fill="var(--iceMuted)" color="none" />}
                           <span style={{ flex: 1 }}>{teamsById[g.home].name}</span>
-                          <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, minWidth: 50, textAlign: "center" }}>{g.played ? `${g.homeScore} – ${g.awayScore}` : "à venir"}</span>
+                          <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, minWidth: 50, textAlign: "center" }}>{g.played ? `${g.homeScore} – ${g.awayScore}${g.decidedIn === "OT" ? " (P)" : g.decidedIn === "SO" ? " (TB)" : ""}` : "à venir"}</span>
                           <span style={{ flex: 1, textAlign: "right" }}>{teamsById[g.away].name}</span>
                           {g.played && <button onClick={(e) => { e.stopPropagation(); setWatchingGame(g); }} style={{ ...btnStyle("var(--red)"), fontSize: 11, padding: "4px 8px" }}>Regarder</button>}
                           {g.played && (expanded ? <ChevronUp size={14} color="var(--iceMuted)" /> : <ChevronDown size={14} color="var(--iceMuted)" />)}
