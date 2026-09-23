@@ -90,8 +90,10 @@ tests/engine.test.js       tests du moteur
     ces valeurs plus justes. Le moteur de simulation utilise toujours les vraies valeurs
 
 **Moteur de simulation**
-- Simulation par match complet (`simulateGame`) ou par tranche de 5 minutes en mode direct
-  (`simulateChunk`, 12 tranches/match) pour ajuster trios/stratégie en cours de match
+- Simulation par match complet (`simulateGame`) ou en mode direct : le jeu se joue jusqu'au
+  prochain coup de sifflet, à un moment variable (1 min 30 à 7 min de jeu, `nextStoppage`), ou
+  jusqu'à la fin de la période ; l'horloge descend de 20:00 à 00:00 comme à la télé. Les
+  trios et la stratégie modifiés s'appliquent dès la mise au jeu suivante
 - **Modèle fondé sur les tirs** (`src/engine/simulation.js`, constantes dans `SIM`) : volume de
   tirs (attaque contre défense adverse), puis probabilité de but par tir (finition contre
   gardien), puis avantages numériques issus des punitions. Chaque but est attribué à un joueur
@@ -109,6 +111,29 @@ tests/engine.test.js       tests du moteur
   selon son adéquation aux attributs de l'effectif (ex. : dégagement et chasse = plus de tirs
   de moindre qualité ; trappe = peu de tirs de part et d'autre)
 - Auto-optimisation (meilleures lignes, meilleure stratégie, meilleur alignement spécial)
+
+**Saison (modèle LNH)**
+- Calendrier daté (`engine/calendar.js`) : premier match le 7 octobre, un tour tous les 3 jours,
+  date limite des échanges le 1er vendredi de mars, séries un jour sur deux, repêchage le
+  24 juin, agents libres le 1er juillet, nouvelle saison en octobre. Rapport de développement
+  et primes automatiques au début de chaque mois
+- Échanges et signatures d'agents libres gelés de la date limite jusqu'au 1er juillet
+  (prolongations de contrat toujours permises)
+- Classement LNH (`engine/standings.js`) : V 2 pts, DP (défaite en prolongation ou tirs de
+  barrage) 1 pt, D 0 ; départage points, % de points, VR, VRP, victoires, différentiel.
+  Vues division, équipes repêchées (wild card) et ligue ; fiche domicile/extérieur,
+  10 derniers matchs, séquence ; palmarès des saisons
+- Séries éliminatoires (`engine/playoffs.js`) : 3 premiers de chaque division + 2 équipes
+  repêchées par association, tableau fixe de la LNH, séries 4 de 7 (2-2-1-1-1), prolongation
+  sans tirs de barrage, jusqu'à la Coupe Stanley. Tes matchs de séries peuvent se jouer en direct
+- Repêchage (`engine/draft.js`) : 7 rondes, ordre selon le classement (hors séries d'abord,
+  puis par ronde d'élimination, champion en dernier ; loterie non simulée). Classement des
+  espoirs selon ton dépisteur, rapport de dépistage possible sur chaque espoir, choix
+  automatiques des autres équipes. Les repêchés vont au club-école (contrat 3 ans, 950 k$)
+- 1er juillet (`engine/offseason.js`) : contrats avancés d'une saison, contrats échus →
+  agents libres (l'ordinateur réengage une partie des siens), les autres équipes comblent
+  leurs besoins par position. Nouvelle saison : tout le monde vieillit d'un an (déclin après
+  33 ans), nouveau calendrier, statistiques archivées dans la carrière de chaque joueur
 
 **Gestion**
 - Trios/paires/gardiens éditables par glisser-déposer ou clic-clic (échange), sur un schéma
@@ -134,9 +159,10 @@ tests/engine.test.js       tests du moteur
 ## Ce qui reste incomplet ou en cours
 
 1. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
-2. **Statistiques de carrière multi-saisons** — pas d'historique d'une saison à l'autre (pas
-   de mécanique de fin de saison/nouvelle saison implémentée du tout).
-3. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
+2. **Statistiques des séries** : les feuilles de match des séries sont consultables, mais les
+   statistiques individuelles des séries ne sont pas encore cumulées ni archivées.
+3. **Loterie du repêchage, plafond salarial, ballottage** : pas encore simulés.
+4. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
 

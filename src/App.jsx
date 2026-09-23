@@ -1,13 +1,18 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette } from "lucide-react";
+import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20 } from "./engine/attributes";
 import { evaluateOffer } from "./engine/contracts";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
-import { initLeague, buildSchedule, computeStandings } from "./engine/league";
+import { initLeague, buildSchedule } from "./engine/league";
+import { computeStandings } from "./engine/standings";
+import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow } from "./engine/calendar";
+import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, ROUND_NAMES } from "./engine/playoffs";
+import { createDraft, aiPick, makePick, draftDone } from "./engine/draft";
+import { expireContracts, aiFreeAgency, agePlayers } from "./engine/offseason";
 import { buildLines } from "./engine/lines";
 import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
-import { teamStrength, penaltyPropensity, TOTAL_CHUNKS, simulateChunk, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime } from "./engine/simulation";
+import { teamStrength, penaltyPropensity, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
 import { FORECHECK_OPTIONS, DEFENSE_OPTIONS, ENTRY_OPTIONS, EXIT_OPTIONS, computeTeamProfile, getStrategyMultipliers } from "./engine/strategy";
@@ -32,7 +37,12 @@ import { CustomizationPanel } from "./components/CustomizationPanel";
 import { useCustomization } from "./custom/CustomizationContext";
 import { BoxscoreView } from "./components/match/BoxscoreView";
 import { LiveMatchViewer } from "./components/match/LiveMatchViewer";
-import { LiveSimPanel } from "./components/match/LiveSimPanel";
+import { LiveSimPanel, clockDisplay, livePeriod } from "./components/match/LiveSimPanel";
+import { PlayoffsPanel } from "./components/PlayoffsPanel";
+import { DraftPanel } from "./components/DraftPanel";
+
+const PHASE_LABEL = { regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
+const NEXT_STEP = { regular: "", endRegular: "Saison régulière terminée : place aux séries éliminatoires.", playoffs: "Ton équipe est éliminée ou attend son prochain match.", preDraft: "Les séries sont terminées. Prochaine étape : le repêchage.", draft: "Le repêchage est en cours.", preFreeAgency: "Repêchage terminé. Le marché des agents libres ouvre le 1er juillet.", offseason: "Marché des agents libres ouvert. Prépare la prochaine saison." };
 
 export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [initial] = useState(() => initLeague(custom));
@@ -41,8 +51,15 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [staffMarket, setStaffMarket] = useState(initial.staffMarket);
   const [scoutKnowledge, setScoutKnowledge] = useState({});
   const [farmByTeam, setFarmByTeam] = useState(initial.farmByTeam);
-  const [month, setMonth] = useState(1);
-  const [currentDay, setCurrentDay] = useState(1);
+  // Temps : jours depuis le 1er octobre 2026 (voir engine/calendar.js). Un tour du calendrier
+  // régulier tous les 3 jours, séries un jour sur deux, repêchage le 24 juin, agents libres le 1er juillet.
+  const [seasonYear, setSeasonYear] = useState(FIRST_SEASON);
+  const [currentDay, setCurrentDay] = useState(() => seasonDates(FIRST_SEASON).start - 1);
+  const [playoffs, setPlayoffs] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [freeAgencyDone, setFreeAgencyDone] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [careerStats, setCareerStats] = useState({});
   const [pendingScouts, setPendingScouts] = useState([]);
   const [winsThisMonth, setWinsThisMonth] = useState(0);
   const [profitThisMonth, setProfitThisMonth] = useState(0);
@@ -88,35 +105,53 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const realPlayer = (p) => findPlayer(p.id) || p;
   const standings = useMemo(() => computeStandings(teams, schedule), [teams, schedule]);
   const currentRound = useMemo(() => { const n = schedule.find((g) => !g.played); return n ? n.round : null; }, [schedule]);
-  const nextMyGame = useMemo(() => schedule.find((g) => !g.played && (g.home === myTeamId || g.away === myTeamId)), [schedule, myTeamId]);
+  const dates = seasonDates(seasonYear);
+  const txWindow = transactionWindow(seasonYear, currentDay);
+  // Phase de la saison : régulière → séries → repêchage → agents libres → nouvelle saison.
+  const phase = currentRound !== null ? "regular" : !playoffs ? "endRegular" : !playoffs.champion ? "playoffs" : !draft ? "preDraft" : !draftDone(draft) ? "draft" : !freeAgencyDone ? "preFreeAgency" : "offseason";
+  const mySeries = useMemo(() => (playoffs ? seriesOfTeam(playoffs, myTeamId) : null), [playoffs, myTeamId]);
+  const nextMyGame = useMemo(() => {
+    if (phase === "playoffs") {
+      if (!mySeries) return null;
+      const minLen = Math.min(...activeSeries(playoffs).map((x) => x.games.length));
+      if (mySeries.games.length > minLen) return null; // attend que les autres séries rattrapent
+      const n = nextGameOf(mySeries);
+      return { id: `${mySeries.id}-G${n.number}`, home: n.home, away: n.away, round: `${ROUND_NAMES[mySeries.round]}, match ${n.number}`, playoff: true, seriesId: mySeries.id };
+    }
+    return schedule.find((g) => !g.played && (g.home === myTeamId || g.away === myTeamId));
+  }, [schedule, myTeamId, phase, mySeries, playoffs]);
   const rounds = useMemo(() => [...new Set(schedule.map((g) => g.round))], [schedule]);
 
+  // Statistiques de saison tirées des feuilles de match. Un joueur échangé ou parti sur le
+  // marché garde ses statistiques (équipe = sa plus récente équipe connue).
   const seasonStats = useMemo(() => {
+    const everyone = {};
+    teams.forEach((t) => t.roster.forEach((p) => { everyone[p.id] = { player: p, team: t }; }));
+    Object.entries(farmByTeam).forEach(([id, list]) => list.forEach((p) => { if (!everyone[p.id]) everyone[p.id] = { player: p, team: teamsById[id] }; }));
+    freeAgents.forEach((p) => { if (!everyone[p.id]) everyone[p.id] = { player: p, team: null }; });
     const stats = {};
-    teams.forEach((t) => t.roster.forEach((p) => { stats[p.id] = { g: 0, a: 0, pts: 0, hits: 0, pim: 0, shots: 0, plusMinus: 0, blocks: 0, faceoffWins: 0, gp: 0, player: p, team: t }; }));
+    const entry = (id, team) => {
+      if (!stats[id]) stats[id] = { g: 0, a: 0, pts: 0, hits: 0, pim: 0, shots: 0, plusMinus: 0, blocks: 0, faceoffWins: 0, gp: 0, player: everyone[id]?.player || { id, name: "?", pos: "?" }, team: everyone[id]?.team || team };
+      return stats[id];
+    };
+    teams.forEach((t) => t.roster.forEach((p) => entry(p.id, t)));
     schedule.filter((g) => g.played).forEach((g) => {
-      const home = teamsById[g.home], away = teamsById[g.away];
-      [[g.box.home, home], [g.box.away, away]].forEach(([box, team]) => {
-        team.roster.filter((p) => p.pos !== "G").forEach((p) => { stats[p.id].gp++; });
-        Object.entries(box.goalsBy).forEach(([id, c]) => { stats[id].g += c; });
-        Object.entries(box.assistsBy).forEach(([id, c]) => { stats[id].a += c; });
-        Object.entries(box.hitsBy).forEach(([id, c]) => { stats[id].hits += c; });
-        Object.entries(box.pimBy || {}).forEach(([id, c]) => { stats[id].pim += c; });
-        Object.entries(box.shotsBy || {}).forEach(([id, c]) => { stats[id].shots += c; });
-        Object.entries(box.plusMinusBy || {}).forEach(([id, c]) => { stats[id].plusMinus += c; });
-        Object.entries(box.blocksBy || {}).forEach(([id, c]) => { stats[id].blocks += c; });
-        Object.entries(box.faceoffsWonBy || {}).forEach(([id, c]) => { stats[id].faceoffWins += c; });
+      [[g.box.home, teamsById[g.home]], [g.box.away, teamsById[g.away]]].forEach(([box, team]) => {
+        Object.entries(box.toiBy || {}).forEach(([id, toi]) => { if (toi > 0) entry(id, team).gp++; });
+        const add = (field, key) => Object.entries(box[field] || {}).forEach(([id, c]) => { entry(id, team)[key] += c; });
+        add("goalsBy", "g"); add("assistsBy", "a"); add("hitsBy", "hits"); add("pimBy", "pim"); add("shotsBy", "shots");
+        add("plusMinusBy", "plusMinus"); add("blocksBy", "blocks"); add("faceoffsWonBy", "faceoffWins");
       });
     });
     Object.values(stats).forEach((s) => (s.pts = s.g + s.a));
     return stats;
-  }, [teams, schedule, teamsById]);
+  }, [teams, schedule, teamsById, farmByTeam, freeAgents]);
 
   const leaders = useMemo(() => Object.values(seasonStats).filter((s) => s.player.pos !== "G" && s.gp > 0).sort((a, b) => b.pts - a.pts || b.g - a.g), [seasonStats]);
   const teamHitTotals = useMemo(() => {
     const totals = {};
     teams.forEach((t) => (totals[t.id] = 0));
-    Object.values(seasonStats).forEach((s) => { totals[s.team.id] += s.hits; });
+    Object.values(seasonStats).forEach((s) => { if (s.team && totals[s.team.id] != null) totals[s.team.id] += s.hits; });
     return totals;
   }, [seasonStats, teams]);
   const teamAdvancedTotals = useMemo(() => {
@@ -161,16 +196,18 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function startLiveMatch(game) {
     setWatchingGame(null);
     setExpandedGameId(null);
-    setLiveMatch({ game, home: teamsById[game.home], away: teamsById[game.away], chunk: 1, homeScore: 0, awayScore: 0, accum: emptyLiveAccum() });
+    setLiveMatch({ game, home: teamsById[game.home], away: teamsById[game.away], minute: 0, homeScore: 0, awayScore: 0, accum: emptyLiveAccum(), lastStop: null });
   }
-  function simulateLiveNextPeriod() {
-    setLiveMatch((prev) => {
-      if (!prev || prev.chunk > TOTAL_CHUNKS) return prev;
-      const staffByTeam = { [myTeamId]: business.staff };
-      const result = simulateChunk(prev.home, prev.away, linesByTeam[prev.home.id], linesByTeam[prev.away.id], staffByTeam, prev.chunk, Math.random, { home: prev.homeScore, away: prev.awayScore });
-      const accum = mergeLivePeriod(prev.accum, result);
-      return { ...prev, accum, homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, chunk: prev.chunk + 1 };
-    });
+  // Joue jusqu'au prochain coup de sifflet (moment variable) ou jusqu'à la fin de la période.
+  function playLive(toPeriodEnd = false) {
+    const prev = liveMatch;
+    if (!prev || prev.minute >= 60) return;
+    const periodEnd = (Math.floor(prev.minute / 20) + 1) * 20;
+    const stop = toPeriodEnd ? { minute: periodEnd, reason: "Fin de la période" } : nextStoppage(prev.minute, Math.random);
+    const staffByTeam = { [myTeamId]: business.staff };
+    const result = simulateStretch(prev.home, prev.away, linesByTeam[prev.home.id], linesByTeam[prev.away.id], staffByTeam, prev.minute, stop.minute - prev.minute, Math.random, { home: prev.homeScore, away: prev.awayScore });
+    const at = stop.minute >= 60 ? "fin du match" : `${clockDisplay(stop.minute)} en ${livePeriod(stop.minute)}${livePeriod(stop.minute) === 1 ? "re" : "e"}`;
+    setLiveMatch({ ...prev, accum: mergeLivePeriod(prev.accum, result), homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, minute: stop.minute, lastStop: `${at} : ${result.home.penalties + result.away.penalties > 0 && stop.reason !== "Fin de la période" ? "Punition" : stop.reason}` });
   }
   function finishLiveMatch() {
     if (!liveMatch) return;
@@ -178,7 +215,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     let box = { home: liveMatch.accum.home, away: liveMatch.accum.away, goalLog: liveMatch.accum.goalLog, homeGoalie: { saves: liveMatch.accum.home.saves, shotsAgainst: liveMatch.accum.home.shotsAgainst }, awayGoalie: { saves: liveMatch.accum.away.saves, shotsAgainst: liveMatch.accum.away.shotsAgainst } };
     let decidedIn = "REG";
     if (homeScore === awayScore) {
-      const ot = resolveOvertime(liveMatch.home, liveMatch.away, linesByTeam[liveMatch.home.id], linesByTeam[liveMatch.away.id], { [myTeamId]: business.staff }, Math.random);
+      const ot = resolveOvertime(liveMatch.home, liveMatch.away, linesByTeam[liveMatch.home.id], linesByTeam[liveMatch.away.id], { [myTeamId]: business.staff }, Math.random, { noShootout: !!liveMatch.game.playoff });
       box = applyOvertime(box, ot);
       if (ot.winner === "home") homeScore++; else awayScore++;
       decidedIn = ot.shootout ? "SO" : "OT";
@@ -186,7 +223,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const finalGame = { ...liveMatch.game, played: true, homeScore, awayScore, decidedIn, box };
     const wins = (finalGame.home === myTeamId && finalGame.homeScore > finalGame.awayScore) || (finalGame.away === myTeamId && finalGame.awayScore > finalGame.homeScore) ? 1 : 0;
     if (wins > 0) setWinsThisMonth((w) => w + wins);
-    setSchedule((prev) => prev.map((g) => (g.id === finalGame.id ? finalGame : g)));
+    if (finalGame.playoff) applyPlayoffResults(playoffs, [finalGame]);
+    else setSchedule((prev) => prev.map((g) => (g.id === finalGame.id ? finalGame : g)));
     processFinance([finalGame]);
     setLiveMatch(null);
     setWatchingGame(null);
@@ -204,7 +242,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     processFinance(newlyPlayed);
     setSchedule(updated);
     setRngSeed((s) => s + 7);
-    advanceDays(1);
+    advanceTo(roundDay(seasonYear, currentRound));
   }
   function simToSeasonEnd() {
     const staffByTeam = { [myTeamId]: business.staff };
@@ -218,7 +256,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     processFinance(newlyPlayed);
     setSchedule(updated);
     setRngSeed((s) => s + 13);
-    advanceDays(new Set(newlyPlayed.map((g) => g.round)).size);
+    advanceTo(roundDay(seasonYear, Math.max(...schedule.map((g) => g.round))));
   }
   function setTierPrice(key, price) { setBusiness((prev) => ({ ...prev, ticketTiers: prev.ticketTiers.map((t) => (t.key === key ? { ...t, price } : t)) })); }
   function setParkingPrice(price) { setBusiness((prev) => ({ ...prev, parking: { ...prev.parking, price } })); }
@@ -332,6 +370,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
   function executeTrade(otherTeamId, myIds, theirIds) {
     if (myIds.length === 0 && theirIds.length === 0) return;
+    if (!txWindow.open) return;
     const theirTeamName = teamsById[otherTeamId]?.name || "l'autre équipe";
     const myT0 = teamsById[myTeamId], theirT0 = teamsById[otherTeamId];
     const myOutNames = myT0.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
@@ -361,6 +400,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setOfferTarget({ player: isRenewal ? realPlayer(player) : player, isRenewal });
   }
   function submitOffer(player, offer, isRenewal) {
+    if (!isRenewal && !txWindow.open) { setOfferTarget(null); return; }
     const result = evaluateOffer(player, offer);
     const offerSummary = `Offre: ${offer.salary.toLocaleString()}k$/an sur ${offer.years} an${offer.years > 1 ? "s" : ""}${offer.signingBonus ? `, prime de ${offer.signingBonus.toLocaleString()}k$` : ""}${offer.noTrade ? ", clause de non-échange" : ""}.`;
     if (result.accept) {
@@ -387,22 +427,26 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     return freeAgents.find((x) => x.id === playerId) || null;
   }
   // Une demande de dépistage part en mission : le rapport arrive après un délai qui dépend de
-  // la cote du dépisteur (voir scoutingDelay), mesuré en jours (1 ronde du calendrier = 1 jour).
+  // la cote du dépisteur (voir scoutingDelay), en jours de calendrier.
   function requestScouting(player) {
     if (pendingScouts.some((m) => m.playerId === player.id)) return;
     const scout = assignScout(player, business.staff);
     const delay = scoutingDelay(scout.rating);
     setPendingScouts((prev) => [...prev, { playerId: player.id, playerName: player.name, scout, requestedDay: currentDay, dueDay: currentDay + delay }]);
-    addMessage({ from: scout.name, subject: `Mission de dépistage: ${player.name}`, category: "scout", playerIds: [player.id], body: `Dépisteur assigné: ${scout.name} (${attr20(scout.rating)}/20${scout.offSpecialty ? ", hors de sa spécialité" : ""}).\nRapport attendu dans ${delay} jour${delay > 1 ? "s" : ""} (jour ${currentDay + delay}).` });
+    addMessage({ from: scout.name, subject: `Mission de dépistage: ${player.name}`, category: "scout", playerIds: [player.id], body: `Dépisteur assigné: ${scout.name} (${attr20(scout.rating)}/20${scout.offSpecialty ? ", hors de sa spécialité" : ""}).\nRapport attendu dans ${delay} jours (vers le ${formatDay(currentDay + delay)}).` });
   }
   function cancelScouting(playerId) {
     setPendingScouts((prev) => prev.filter((m) => m.playerId !== playerId));
   }
+  function advanceTo(day) { advanceDays(day - currentDay); }
   function advanceDays(n) {
     if (n <= 0) return;
     const newDay = currentDay + n;
     const due = pendingScouts.filter((m) => m.dueDay <= newDay);
     setCurrentDay(newDay);
+    // Rapport de développement et primes : au début de chaque mois.
+    const months = monthIndex(newDay) - monthIndex(currentDay);
+    if (months > 0) monthlyTick(months, monthLabel(currentDay));
     if (due.length === 0) return;
     setPendingScouts((prev) => prev.filter((m) => m.dueDay > newDay));
     const reports = {};
@@ -462,33 +506,32 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setFarmByTeam((prev) => ({ ...prev, [myTeamId]: [...(prev[myTeamId] || []), { ...player, level: "LAH" }] }));
     addMessage({ from: "Directeur du club-école", subject: `Rétrogradé: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} est renvoyé au club-école.` });
   }
-  function advanceMonth() {
+  // Progression des joueurs (répétée `months` fois si plusieurs mois passent d'un coup).
+  function monthlyTick(months, label) {
     if (business.delegation.hockeyOps === "delegated") autoManageHockeyOps();
     const coachDev = (business.staff.headCoach?.devSkill + business.staff.assistantOff?.devSkill + business.staff.assistantDef?.devSkill) / [business.staff.headCoach, business.staff.assistantOff, business.staff.assistantDef].filter(Boolean).length || 50;
     const scoutProRating = business.staff.scoutPro?.rating || 50;
     const devBonus = ((coachDev - 50) / 50) * 0.5;
     const scoutBonus = ((scoutProRating - 50) / 50) * 0.2;
     const reportEntries = [];
-    setTeams((prev) => prev.map((t) => {
-      if (t.id !== myTeamId) return t;
-      const newRoster = t.roster.map((p) => {
-        const before = p.ovr;
+    const updates = {};
+    (teamsById[myTeamId]?.roster || []).forEach((p0) => {
+      let p = p0;
+      for (let m = 0; m < months; m++) {
         const growthRoom = p.potential - p.ovr;
         const ageFactor = p.age <= 19 ? 1.0 : p.age <= 22 ? 0.7 : p.age <= 26 ? 0.3 : -0.15;
         const magnitude = growthRoom > 0 ? growthRoom : 6;
         let delta = Math.round(magnitude * 0.05 * ageFactor * (1 + devBonus + scoutBonus) * (0.4 + Math.random() * 0.8));
         delta = Math.max(-4, Math.min(5, delta));
-        if (delta === 0) return p;
+        if (delta === 0) continue;
         const attrKeys = p.pos === "G" ? [...GOALIE_TECH, ...MENTAL, ...GOALIE_PHYSICAL] : [...OFFENSIVE, ...DEFENSIVE, ...MENTAL, ...PHYSICAL];
         const newAttrs = { ...p.attrs };
-        const picks = [...attrKeys].sort(() => Math.random() - 0.5).slice(0, 3);
-        picks.forEach((k) => { newAttrs[k] = Math.max(20, Math.min(99, newAttrs[k] + delta)); });
-        const newOvr = computeOvr(p.pos, newAttrs);
-        reportEntries.push({ id: p.id, name: p.name, before, after: newOvr, delta: newOvr - before });
-        return { ...p, attrs: newAttrs, ovr: newOvr };
-      }).sort((a, b) => b.ovr - a.ovr);
-      return { ...t, roster: newRoster };
-    }));
+        [...attrKeys].sort(() => Math.random() - 0.5).slice(0, 3).forEach((k) => { newAttrs[k] = Math.max(20, Math.min(99, newAttrs[k] + delta)); });
+        p = { ...p, attrs: newAttrs, ovr: computeOvr(p.pos, newAttrs) };
+      }
+      if (p !== p0) { updates[p.id] = p; reportEntries.push({ id: p.id, name: p.name, before: p0.ovr, after: p.ovr, delta: p.ovr - p0.ovr }); }
+    });
+    setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: t.roster.map((p) => (updates[p.id] ? { ...p, attrs: updates[p.id].attrs, ovr: updates[p.id].ovr } : p)).sort((a, b) => b.ovr - a.ovr) })));
     const sorted = reportEntries.sort((a, b) => b.delta - a.delta);
     setProgressionReport(sorted);
     const coachName = business.staff.headCoach?.name || "Département de développement";
@@ -499,7 +542,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       : "";
     if (gainers.length) body += "En progression:\n" + gainers.map((r) => `- ${r.name}: ${r.before} → ${r.after} (+${r.delta})`).join("\n");
     if (decliners.length) body += (body ? "\n\n" : "") + "En baisse:\n" + decliners.map((r) => `- ${r.name}: ${r.before} → ${r.after} (${r.delta})`).join("\n");
-    addMessage({ from: coachName, subject: `Rapport de développement — Mois ${month}`, category: "scout", playerIds: [...gainers, ...decliners].map((r) => r.id), body });
+    addMessage({ from: coachName, subject: `Rapport de développement — ${label}`, category: "scout", playerIds: [...gainers, ...decliners].map((r) => r.id), body });
 
     const totalGain = sorted.filter((r) => r.delta > 0).reduce((a, r) => a + r.delta, 0);
     const bonuses = [];
@@ -521,12 +564,139 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     if (bonuses.length > 0) {
       const totalBonus = bonuses.reduce((a, b) => a + b.amt, 0);
       setBusiness((prev) => ({ ...prev, cash: prev.cash - totalBonus }));
-      addMessage({ from: "Ressources humaines", subject: `Primes de performance — Mois ${month}`, category: "finance", body: bonuses.map((b) => `${b.role} (${b.name}): +${b.amt.toLocaleString()} $ — ${b.reason}`).join("\n") });
+      addMessage({ from: "Ressources humaines", subject: `Primes de performance — ${label}`, category: "finance", body: bonuses.map((b) => `${b.role} (${b.name}): +${b.amt.toLocaleString()} $ — ${b.reason}`).join("\n") });
     }
     setProfitThisMonth(0);
     setWinsThisMonth(0);
-    setMonth((m) => m + 1);
-    advanceDays(30);
+  }
+
+  // ---------- Séries éliminatoires ----------
+  function startPlayoffs() {
+    const p = createPlayoffs(standings, teamsById, seasonYear);
+    setPlayoffs(p);
+    const qualified = p.rounds[0].some((x) => x.high === myTeamId || x.low === myTeamId);
+    addMessage({ from: "Ligue", subject: `Séries éliminatoires ${seasonYear + 1}`, category: "general", body: qualified ? `Ton équipe est qualifiée ! Adversaire au premier tour : ${teamsById[p.rounds[0].find((x) => x.high === myTeamId || x.low === myTeamId)[p.rounds[0].find((x) => x.high === myTeamId || x.low === myTeamId).high === myTeamId ? "low" : "high"]].name}.` : "Ton équipe n'est pas qualifiée pour les séries cette année." });
+    advanceTo(roundDay(seasonYear, Math.max(...schedule.map((g) => g.round))) + 3);
+    setTab("playoffs");
+  }
+  // Enregistre des matchs de séries et annonce les séries terminées.
+  function applyPlayoffResults(base, gamesPlayed) {
+    let p = base;
+    gamesPlayed.forEach((g) => { p = recordPlayoffGame(p, g.seriesId, g); });
+    const before = new Set(base.rounds.flat().filter((x) => x.winner).map((x) => x.id));
+    p.rounds.flat().filter((x) => x.winner && !before.has(x.id)).forEach((x) => {
+      if (x.high !== myTeamId && x.low !== myTeamId && x.round < 3) return;
+      const loser = x.winner === x.high ? x.low : x.high;
+      addMessage({ from: "Ligue", subject: `${ROUND_NAMES[x.round]} : ${teamsById[x.winner].name} élimine ${teamsById[loser].name}`, category: "general", body: `Série remportée ${Math.max(x.winsHigh, x.winsLow)}-${Math.min(x.winsHigh, x.winsLow)}.` });
+    });
+    if (p.champion && !base.champion) addMessage({ from: "Ligue", subject: `${teamsById[p.champion].name} remporte la Coupe Stanley !`, category: "general", body: p.champion === myTeamId ? "Félicitations, champion !" : "La saison est terminée. Prochaine étape : le repêchage." });
+    setPlayoffs(p);
+    return p;
+  }
+  // Une journée des séries : chaque série en retard joue son prochain match (un jour sur deux).
+  function simPlayoffDay(all = false) {
+    if (!playoffs || playoffs.champion) return;
+    const staffByTeam = { [myTeamId]: business.staff };
+    const r = seededRandom(rngSeed * 3 + playoffs.rounds.flat().reduce((a, x) => a + x.games.length, 0));
+    let p = playoffs, days = 0;
+    const played = [];
+    do {
+      const act = activeSeries(p);
+      if (act.length === 0) break;
+      const minLen = Math.min(...act.map((x) => x.games.length));
+      const todays = act.filter((x) => x.games.length === minLen).map((x) => {
+        const n = nextGameOf(x);
+        return simulateGame({ id: `${x.id}-G${n.number}`, home: n.home, away: n.away, playoff: true, seriesId: x.id, round: x.round }, teamsById, r, linesByTeam, staffByTeam, { playoff: true });
+      });
+      todays.forEach((g) => { p = recordPlayoffGame(p, g.seriesId, g); });
+      played.push(...todays);
+      days += 2;
+    } while (all && !p.champion);
+    applyPlayoffResults(playoffs, played);
+    processFinance(played);
+    setRngSeed((x) => x + 11);
+    advanceDays(days);
+  }
+
+  // ---------- Repêchage ----------
+  function goToDraft() {
+    advanceTo(dates.draft);
+    setDraft(createDraft(seasonYear, draftOrder(standings, playoffs)));
+    const expiring = (teamsById[myTeamId]?.roster || []).filter((p) => (p.contract?.years ?? 1) <= 1);
+    if (expiring.length) addMessage({ from: "Directeur général adjoint", subject: `Contrats échus le ${formatDay(dates.freeAgency)}`, category: "transaction", playerIds: expiring.map((p) => p.id), body: `Ces joueurs deviendront agents libres le 1er juillet si tu ne les prolonges pas (onglet Contrats) :\n${expiring.map((p) => `- ${p.name} (${p.pos})`).join("\n")}` });
+    setTab("draft");
+  }
+  // Classement du repêchage selon ton personnel (rapport de dépistage s'il existe).
+  function myDraftChoice(d) {
+    const taken = new Set(d.picks.map((k) => k.playerId).filter(Boolean));
+    return d.pool.filter((p) => !taken.has(p.id))
+      .map((p) => { const rep = scoutKnowledge[p.id]; const v = rep?.estOvr != null ? { ovr: rep.estOvr, potential: rep.estPotential } : staffViewPlayer(p, business.staff); return { p, score: v.potential * 0.8 + v.ovr * 0.2 }; })
+      .sort((a, b) => b.score - a.score)[0]?.p;
+  }
+  function runDraft({ myPlayerId = null, untilMine = false, all = false }) {
+    let d = draft;
+    const drafted = [];
+    const step = (playerId) => { const res = makePick(d, playerId); d = res.draft; if (res.player) drafted.push({ player: res.player, teamId: res.pick.teamId }); };
+    if (myPlayerId && d.picks[d.current]?.teamId === myTeamId) step(myPlayerId);
+    while (!draftDone(d)) {
+      const pick = d.picks[d.current];
+      if (pick.teamId === myTeamId) { if (!all) break; step(myDraftChoice(d).id); }
+      else { step(aiPick(d, pick.teamId).id); if (!untilMine && !all) break; }
+    }
+    setDraft(d);
+    setFarmByTeam((prev) => {
+      const next = { ...prev };
+      drafted.forEach(({ player, teamId }) => { next[teamId] = [...(next[teamId] || []), player]; });
+      return next;
+    });
+    const mine = drafted.filter((x) => x.teamId === myTeamId);
+    if (mine.length) addMessage({ from: "Dépisteur amateur", subject: `Repêchage : ${mine.length} choix de ${teamsById[myTeamId].name}`, category: "scout", playerIds: mine.map((x) => x.player.id), body: mine.map((x) => `#${x.player.draftPick} — ${x.player.name} (${x.player.pos}, ${x.player.age} ans)`).join("\n") + "\n\nIls rejoignent ton club-école (onglet Profondeur)." });
+  }
+
+  // ---------- 1er juillet : agents libres ----------
+  function goToFreeAgency() {
+    advanceTo(dates.freeAgency);
+    const exp = expireContracts(teams, myTeamId, seasonYear);
+    const fa = aiFreeAgency(exp.teams, [...freeAgents, ...exp.released], myTeamId);
+    setTeams(fa.teams);
+    setFreeAgents(fa.freeAgents);
+    setLinesByTeam((prev) => {
+      const next = { ...prev };
+      fa.teams.forEach((t) => {
+        if (t.id === myTeamId) { let l = prev[t.id]; exp.myExpired.forEach((p) => { l = cleanLinesOfPlayer(l, p.id); }); next[t.id] = l; }
+        else next[t.id] = { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality };
+      });
+      return next;
+    });
+    setFreeAgencyDone(true);
+    if (exp.myExpired.length) addMessage({ from: "Directeur général adjoint", subject: "Contrats échus : joueurs partis sur le marché", category: "transaction", playerIds: exp.myExpired.map((p) => p.id), body: exp.myExpired.map((p) => `- ${p.name} (${p.pos})`).join("\n") + "\n\nTu peux encore leur faire une offre dans l'onglet Agents libres." });
+    const top = fa.signings.sort((a, b) => b.player.ovr - a.player.ovr).slice(0, 6);
+    addMessage({ from: "Ligue", subject: "Ouverture du marché des agents libres", category: "transaction", playerIds: top.map((x) => x.player.id), body: `${exp.released.length} joueurs sont devenus agents libres, ${exp.resigned.length} ont été réengagés par leur équipe.\nPrincipales signatures :\n${top.map((x) => `- ${x.player.name} → ${teamsById[x.teamId].name}`).join("\n") || "aucune"}` });
+    setTab("freeagents");
+  }
+
+  // ---------- Nouvelle saison ----------
+  function startNewSeason() {
+    const my = standings.find((x) => x.id === myTeamId);
+    setHistory((prev) => [{ year: seasonYear, champion: playoffs?.champion ? teamsById[playoffs.champion].name : "—", presidents: teamsById[standings[0].id].name, myRecord: my ? `${my.w}-${my.l}-${my.otl}, ${my.pts} pts (${standings.indexOf(my) + 1}e)` : "—", topScorer: leaders[0] ? `${leaders[0].player.name} (${leaders[0].pts} pts)` : "—" }, ...prev]);
+    setCareerStats((prev) => {
+      const next = { ...prev };
+      Object.values(seasonStats).filter((st) => st.gp > 0).forEach((st) => { next[st.player.id] = [...(next[st.player.id] || []), { season: seasonYear, team: st.team.name, gp: st.gp, g: st.g, a: st.a, pts: st.pts, plusMinus: st.plusMinus, pim: st.pim }]; });
+      return next;
+    });
+    const aged = teams.map((t) => ({ ...t, roster: agePlayers(t.roster).sort((a, b) => b.ovr - a.ovr) }));
+    setTeams(aged);
+    setFarmByTeam((prev) => Object.fromEntries(Object.entries(prev).map(([id, list]) => [id, agePlayers(list)])));
+    setFreeAgents((prev) => agePlayers(prev));
+    setSchedule(buildSchedule(aged));
+    setLinesByTeam((prev) => Object.fromEntries(aged.map((t) => [t.id, t.id === myTeamId ? prev[t.id] : { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality }])));
+    setPlayoffs(null);
+    setDraft(null);
+    setFreeAgencyDone(false);
+    setSeasonYear(seasonYear + 1);
+    advanceTo(seasonDates(seasonYear + 1).start - 1);
+    addMessage({ from: "Ligue", subject: `Saison ${seasonYear + 1}-${seasonYear + 2}`, category: "general", body: `Premier match le ${formatDay(seasonDates(seasonYear + 1).start)}. Date limite des échanges : ${formatDay(seasonDates(seasonYear + 1).tradeDeadline)}.` });
+    setTab("roster");
   }
 
   if (!myTeamId) {
@@ -579,13 +749,15 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     { key: "staff", label: "Personnel", icon: UserCog },
     { key: "inbox", label: "Messagerie", icon: Mail },
     { key: "standings", label: "Classement", icon: Trophy },
+    { key: "playoffs", label: "Séries", icon: Award },
+    { key: "draft", label: "Repêchage", icon: ListOrdered },
     { key: "custom", label: "Personnalisation", icon: Palette },
   ];
 
   return (
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Inter, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} careerStats={careerStats} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
       {offerTarget && <ContractOfferModal player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
@@ -602,19 +774,32 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             )}
           </button>
         ))}
-        <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}>Jour <span style={{ color: "var(--ice)" }}>{currentDay}</span> · Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
+        <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}><span style={{ color: "var(--ice)" }}>{formatDay(currentDay)}</span><br />Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
       </div>
       <div style={{ flex: 1, padding: "24px 32px", overflow: "auto" }}>
-        {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={simulateLiveNextPeriod} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")} />}
+        {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={() => playLive(false)} onEndOfPeriod={() => playLive(true)} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <div>
+            <div style={{ fontSize: 12, color: "#D9A404", marginBottom: 3 }}>{formatDay(currentDay)} · Saison {seasonYear}-{seasonYear + 1} · {PHASE_LABEL[phase]}</div>
             {nextMyGame ? (
-              <div style={{ fontSize: 14 }}>Prochain match — <strong>{teamsById[nextMyGame.home].name}</strong> vs <strong>{teamsById[nextMyGame.away].name}</strong><span style={{ color: "var(--iceMuted)" }}> (ronde {nextMyGame.round})</span></div>
-            ) : (<div style={{ fontSize: 14, color: "var(--win)" }}>Saison terminée.</div>)}
+              <div style={{ fontSize: 14 }}>Prochain match — <strong>{teamsById[nextMyGame.home].name}</strong> vs <strong>{teamsById[nextMyGame.away].name}</strong><span style={{ color: "var(--iceMuted)" }}> ({typeof nextMyGame.round === "number" ? `${formatDay(roundDay(seasonYear, nextMyGame.round))}` : nextMyGame.round})</span></div>
+            ) : (<div style={{ fontSize: 14, color: "var(--iceMuted)" }}>{NEXT_STEP[phase]}</div>)}
+            <div style={{ fontSize: 11, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)", marginTop: 3 }}>{txWindow.open ? "Échanges et signatures ouverts" : "Échanges et signatures gelés"} — {txWindow.reason}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={simRound} disabled={currentRound === null || !!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler la ronde</button>
-            <button onClick={simToSeasonEnd} disabled={currentRound === null || !!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> Simuler la saison</button>
+            {phase === "regular" && <>
+              <button onClick={simRound} disabled={!!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler la ronde</button>
+              <button onClick={simToSeasonEnd} disabled={!!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> Simuler la saison</button>
+            </>}
+            {phase === "endRegular" && <button onClick={startPlayoffs} style={btnStyle("var(--red)")}><Award size={14} /> Commencer les séries</button>}
+            {phase === "playoffs" && <>
+              <button onClick={() => simPlayoffDay(false)} disabled={!!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler une journée des séries</button>
+              <button onClick={() => simPlayoffDay(true)} disabled={!!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> Simuler les séries au complet</button>
+            </>}
+            {phase === "preDraft" && <button onClick={goToDraft} style={btnStyle("var(--red)")}><ListOrdered size={14} /> Aller au repêchage ({formatDay(dates.draft)})</button>}
+            {phase === "draft" && <button onClick={() => setTab("draft")} style={btnStyle("var(--red)")}><ListOrdered size={14} /> Repêchage en cours</button>}
+            {phase === "preFreeAgency" && <button onClick={goToFreeAgency} style={btnStyle("var(--red)")}><UserPlus size={14} /> Avancer au 1er juillet (agents libres)</button>}
+            {phase === "offseason" && <button onClick={startNewSeason} style={btnStyle("var(--red)")}><Play size={14} /> Commencer la saison {seasonYear + 1}-{seasonYear + 2}</button>}
             {nextMyGame && !liveMatch && <button onClick={() => startLiveMatch(nextMyGame)} style={btnStyle("var(--win)")}>Sim en direct (mon prochain match)</button>}
           </div>
         </div>
@@ -636,13 +821,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} />}
 
-        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onSign={(p) => openOffer(p, false)} onRefreshFreeAgents={refreshFreeAgents} />}
+        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onSign={(p) => openOffer(p, false)} onRefreshFreeAgents={refreshFreeAgents} txWindow={txWindow} />}
 
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onOfferContract={(p) => openOffer(p, true)} onSelectPlayer={selectPlayer} />}
 
-        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={month} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onAdvanceMonth={advanceMonth} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
+        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
 
         {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
 
@@ -692,7 +877,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "stats" && <StatsTables leaders={leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} />}
 
-        {tab === "standings" && <StandingsTable standings={standings} teamsById={teamsById} myTeamId={myTeamId} />}
+        {tab === "standings" && <StandingsTable standings={standings} teamsById={teamsById} myTeamId={myTeamId} history={history} />}
+
+        {tab === "playoffs" && <PlayoffsPanel playoffs={playoffs} teamsById={teamsById} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
+
+        {tab === "draft" && (draft
+          ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onPick={(id) => runDraft({ myPlayerId: id, untilMine: true })} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} />
+          : <div><h2 style={h2Style}>Repêchage</h2><p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Le repêchage a lieu le {formatDay(dates.draft)}, une semaine avant l'ouverture du marché des agents libres (1er juillet), après les séries. Ordre : équipes hors séries (pire dossier d'abord), puis selon la ronde d'élimination.</p></div>)}
       </div>
     </div>
   );

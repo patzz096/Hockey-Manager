@@ -28,7 +28,7 @@ export function StaffCard({ role, hired, benchmark, onFire }) {
   );
 }
 
-export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onHire, onFire, onRefresh, onAdvanceMonth, onSetDelegation, onSelectPlayer }) {
+export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onHire, onFire, onRefresh, onSetDelegation, onSelectPlayer }) {
   const [smk, smd, smToggle] = useSort("rating");
   const smAcc = (c, key) => (key === "role" ? STAFF_ROLES[c.role] : c[key]);
   const sortedStaffMarket = sortRows(staffMarket, smk, smd, smAcc);
@@ -87,8 +87,8 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
       </table>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <h2 style={{ ...h2Style, marginBottom: 0 }}>Rapport mensuel de progression — Mois {month}</h2>
-        <button onClick={onAdvanceMonth} style={btnStyle("var(--red)")}>Avancer au mois suivant</button>
+        <h2 style={{ ...h2Style, marginBottom: 0 }}>Rapport mensuel de progression</h2>
+        <span style={{ fontSize: 12, color: "var(--iceMuted)" }}>Produit automatiquement au début de chaque mois · nous sommes en {month}</span>
       </div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 12 }}>Les jeunes joueurs progressent plus vite vers leur potentiel; les vétérans stagnent ou déclinent. Un bon dépisteur professionnel accélère le développement.</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>

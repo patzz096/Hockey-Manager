@@ -44,13 +44,5 @@ export function buildSchedule(teams) {
   return games;
 }
 
-export function computeStandings(teams, games) {
-  const table = {};
-  teams.forEach((t) => (table[t.id] = { id: t.id, w: 0, l: 0, gf: 0, ga: 0, pts: 0, gp: 0 }));
-  games.filter((g) => g.played).forEach((g) => {
-    const h = table[g.home], a = table[g.away];
-    h.gp++; a.gp++; h.gf += g.homeScore; h.ga += g.awayScore; a.gf += g.awayScore; a.ga += g.homeScore;
-    if (g.homeScore > g.awayScore) { h.w++; h.pts += 2; a.l++; } else { a.w++; a.pts += 2; h.l++; }
-  });
-  return Object.values(table).sort((x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga));
-}
+// Classement : voir standings.js (modèle de points de la LNH).
+export { computeStandings } from "./standings";

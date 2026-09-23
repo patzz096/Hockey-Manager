@@ -1,4 +1,3 @@
-import { CHUNK_MIN, CHUNKS_PER_PERIOD, TOTAL_CHUNKS } from "../../engine/simulation";
 import { btnStyle } from "../../ui/theme";
 import { TeamCrest } from "../common";
 import { StatLines } from "./BoxscoreView";
@@ -27,42 +26,57 @@ export function goalTime(g) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export function clockDisplay(min) { return `${String(min).padStart(2, "0")}:00`; }
+// Horloge de période comme à la télé : elle descend de 20:00 à 0:00.
+export function clockDisplay(minute) {
+  if (minute >= 60 || (minute > 0 && minute % 20 === 0)) return "00:00";
+  const remaining = 20 - (minute % 20);
+  const total = Math.round(remaining * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+export function livePeriod(minute) {
+  if (minute >= 60) return 3;
+  return minute > 0 && minute % 20 === 0 ? minute / 20 : Math.floor(minute / 20) + 1;
+}
 
-export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer, onNextPeriod, onFinish, onGoToLines, onGoToStrategy }) {
-  const { home, away, chunk, homeScore, awayScore, accum } = liveMatch;
-  const done = chunk > TOTAL_CHUNKS;
-  const currentPeriod = Math.min(3, Math.ceil(chunk / CHUNKS_PER_PERIOD));
-  const minuteInPeriod = ((chunk - 1) % CHUNKS_PER_PERIOD) * CHUNK_MIN;
-  const clockMinute = done ? 20 : minuteInPeriod;
+export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer, onNextPeriod, onEndOfPeriod, onFinish, onGoToLines, onGoToStrategy }) {
+  const { home, away, minute, homeScore, awayScore, accum, lastStop } = liveMatch;
+  const done = minute >= 60;
+  const currentPeriod = livePeriod(minute);
+  const intermission = !done && minute > 0 && minute % 20 === 0;
   const homeHits = Object.values(accum.home.hitsBy || {}).reduce((a, v) => a + v, 0);
   const awayHits = Object.values(accum.away.hitsBy || {}).reduce((a, v) => a + v, 0);
   return (
     <div style={{ background: "var(--navy2)", border: `1px solid ${done ? "var(--win)" : "#D9A404"}66`, borderRadius: 6, padding: 16, marginBottom: 22 }}>
-      <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, marginBottom: 10, color: "#D9A404" }}>SIMULATION EN DIRECT</div>
+      <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, marginBottom: 10, color: "#D9A404" }}>SIMULATION EN DIRECT{liveMatch.game.playoff ? " · SÉRIES ÉLIMINATOIRES" : ""}</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
         <div style={{ textAlign: "center" }}><TeamCrest team={home} size={34} /><div style={{ fontSize: 11, marginTop: 3 }}>{home.name}</div></div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 28 }}>{homeScore} – {awayScore}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center", marginTop: 2 }}>
-            <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>{done ? "FINAL" : `${currentPeriod}e période`}</span>
-            <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 15, background: "#000", color: "#0f0", padding: "1px 8px", borderRadius: 3, letterSpacing: 1 }}>{clockDisplay(clockMinute)}</span>
+            <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>{done ? "FINAL" : intermission ? `Entracte (après la ${currentPeriod}${currentPeriod === 1 ? "re" : "e"})` : `${currentPeriod}${currentPeriod === 1 ? "re" : "e"} période`}</span>
+            <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 15, background: "#000", color: "#0f0", padding: "1px 8px", borderRadius: 3, letterSpacing: 1 }}>{clockDisplay(minute)}</span>
           </div>
         </div>
         <div style={{ textAlign: "center" }}><TeamCrest team={away} size={34} /><div style={{ fontSize: 11, marginTop: 3 }}>{away.name}</div></div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <div style={{ display: "flex", gap: 3, marginBottom: 6 }}>
-            {Array.from({ length: TOTAL_CHUNKS }, (_, i) => i + 1).map((c) => (<div key={c} style={{ flex: 1, height: 5, borderRadius: 2, background: c < chunk ? "var(--win)" : c === chunk ? "#D9A404" : "#ffffff1a" }} />))}
+            {[0, 1, 2].map((p) => (
+              <div key={p} style={{ flex: 1, height: 5, borderRadius: 2, background: "#ffffff1a", overflow: "hidden" }}>
+                <div style={{ width: `${Math.max(0, Math.min(1, (minute - p * 20) / 20)) * 100}%`, height: "100%", background: minute >= (p + 1) * 20 ? "var(--win)" : "#D9A404" }} />
+              </div>
+            ))}
           </div>
           <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>Tirs {accum.home.shots || 0}–{accum.away.shots || 0} · MEC {homeHits}–{awayHits} · Pun. {accum.home.penalties || 0}–{accum.away.penalties || 0}</div>
+          {lastStop && <div style={{ fontSize: 11, color: "var(--ice)", marginTop: 4 }}>Arrêt de jeu — {lastStop}</div>}
         </div>
       </div>
       {!done ? (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
-          <button onClick={onNextPeriod} style={btnStyle("var(--red)")}>Simuler 5 minutes</button>
+          <button onClick={onNextPeriod} style={btnStyle("var(--red)")}>{intermission || minute === 0 ? "Mise au jeu" : "Jouer jusqu'au prochain arrêt"}</button>
+          <button onClick={onEndOfPeriod} style={btnStyle("var(--steel)")}>Jusqu'à la fin de la période</button>
           <button onClick={onGoToLines} style={btnStyle("var(--steel)")}>Ajuster les trios</button>
           <button onClick={onGoToStrategy} style={btnStyle("var(--steel)")}>Ajuster la stratégie</button>
-          <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>Tes changements s'appliquent aux 5 prochaines minutes.</span>
+          <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>Le jeu s'arrête au prochain coup de sifflet (moment variable). Tes changements s'appliquent dès la mise au jeu suivante.</span>
         </div>
       ) : (
         <button onClick={onFinish} style={{ ...btnStyle("var(--win)"), marginBottom: 16 }}>Confirmer le résultat final</button>

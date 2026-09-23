@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { NATION_FLAG, NATION_NAME } from "../data/names";
 import { SKATER_CATEGORIES, GOALIE_CATEGORIES, ATTR_LABELS, attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { lineLabel } from "../engine/lines";
+import { formatDay } from "../engine/calendar";
 import { getScoutInfo, perceivedRatings, assignScout, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
 import { contractLabel, draftLabel } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
@@ -39,6 +40,7 @@ function FacePicker({ player }) {
 }
 
 const FREE_AGENT_TEAM = { id: null, name: "Agent libre", color: "#5C7080", roster: [] };
+const PROSPECT_TEAM = { id: null, name: "Espoir du repêchage", color: "#7A4E9E", roster: [] };
 
 function tabStyle(active, color) {
   return { background: "none", border: "none", borderBottom: `2px solid ${active ? color : "transparent"}`, color: active ? "var(--ice)" : "var(--iceMuted)", padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" };
@@ -81,8 +83,8 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
           </div>
           <div style={{ fontSize: 12, marginTop: 4, color: pending ? "#D9A404" : "var(--iceMuted)" }}>
             {pending
-              ? `Mission en cours — rapport attendu au jour ${pending.dueDay} (dans ${Math.max(0, pending.dueDay - currentDay)} jour${pending.dueDay - currentDay > 1 ? "s" : ""}). Décoche pour annuler.`
-              : `Délai estimé: ${delay} jour${delay > 1 ? "s" : ""} (1 ronde du calendrier = 1 jour). Un meilleur dépisteur est plus rapide et plus précis.`}
+              ? `Mission en cours — rapport attendu le ${formatDay(pending.dueDay)} (dans ${Math.max(0, pending.dueDay - currentDay)} jour${pending.dueDay - currentDay > 1 ? "s" : ""}). Décoche pour annuler.`
+              : `Délai estimé : ${delay} jours de calendrier (rapport vers le ${formatDay(currentDay + delay)}). Un meilleur dépisteur est plus rapide et plus précis.`}
           </div>
         </div>
       </label>
@@ -91,7 +93,7 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
         <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderTop: "3px solid #D9A404", borderRadius: 4, padding: 14, marginTop: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: 11, color: "#D9A404", fontWeight: 600, letterSpacing: 0.5 }}>RAPPORT DE DÉPISTAGE · JOUR {report.day}</div>
+              <div style={{ fontSize: 11, color: "#D9A404", fontWeight: 600, letterSpacing: 0.5 }}>RAPPORT DE DÉPISTAGE · {formatDay(report.day).toUpperCase()}</div>
               <div style={{ fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>{report.scoutName} <Grade20 value={report.quality} /></div>
             </div>
             <div style={{ fontSize: 11, color: "var(--iceMuted)", textAlign: "right" }}>Fiabilité<br /><span style={{ color: "var(--ice)", fontWeight: 600 }}>{reliabilityLabel(report.quality)}</span></div>
@@ -114,9 +116,9 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, onOfferContract }) {
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, careerStats = {}, seasonYear, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, onOfferContract }) {
   const [tab, setTab] = useState("profile");
-  const owner = team || FREE_AGENT_TEAM;
+  const owner = team || (player.draftProspect ? PROSPECT_TEAM : FREE_AGENT_TEAM);
   const isMine = owner.id === myTeamId;
   const categories = player.pos === "G" ? GOALIE_CATEGORIES : SKATER_CATEGORIES;
   const bio = deriveBio(player);
@@ -173,11 +175,11 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
           <InfoCard label="DÉPISTAGE">
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12 }}>
               {scoutInfo.estOvr != null ? (
-                <span><span style={{ color: qColor, fontWeight: 700 }}>Rapport du jour {scoutInfo.day}</span><span style={{ color: "var(--iceMuted)" }}> · {scoutInfo.scoutName} · {attr20(scoutInfo.quality)}/20</span></span>
+                <span><span style={{ color: qColor, fontWeight: 700 }}>Rapport du {formatDay(scoutInfo.day)}</span><span style={{ color: "var(--iceMuted)" }}> · {scoutInfo.scoutName} · {attr20(scoutInfo.quality)}/20</span></span>
               ) : known ? (
                 <span><span style={{ color: qColor, fontWeight: 700 }}>Connu (personnel de l'équipe)</span><span style={{ color: "var(--iceMuted)" }}> · qualité {attr20(scoutInfo.quality)}/20</span></span>
               ) : (
-                <span style={{ color: "var(--iceMuted)" }}>{pending ? `Dépistage en cours — rapport au jour ${pending.dueDay}.` : "Ce joueur n'a pas été dépisté par ton personnel."}</span>
+                <span style={{ color: "var(--iceMuted)" }}>{pending ? `Dépistage en cours — rapport vers le ${formatDay(pending.dueDay)}.` : "Ce joueur n'a pas été dépisté par ton personnel."}</span>
               )}
               <button onClick={() => setTab("scouting")} style={{ ...btnStyle("var(--steel)"), fontSize: 12, marginLeft: "auto" }}>{scoutInfo.estOvr != null ? "Voir le rapport" : "Onglet Dépistage"}</button>
             </div>
@@ -211,6 +213,20 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
               <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
                 <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}>{["PJ", "B", "A", "PTS", "T", "+/-", "MEC", "PUN"].map((h) => (<th key={h} style={{ padding: "3px 6px", borderBottom: "1px solid #ffffff1a" }}>{h}</th>))}</tr></thead>
                 <tbody><tr>{[stat?.gp || 0, stat?.g || 0, stat?.a || 0, stat?.pts || 0, stat?.shots || 0, stat?.plusMinus || 0, stat?.hits || 0, stat?.pim || 0].map((v, i) => (<td key={i} style={{ padding: "5px 6px", textAlign: "center" }}>{i === 5 && v > 0 ? `+${v}` : v}</td>))}</tr></tbody>
+              </table>
+            </div>
+          )}
+          {known && (careerStats[player.id] || []).length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6 }}>CARRIÈRE (SAISON RÉGULIÈRE)</div>
+              <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
+                <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}>{["Saison", "Équipe", "PJ", "B", "A", "PTS", "+/-", "PUN"].map((h) => <th key={h} style={{ padding: "3px 6px", textAlign: "left", borderBottom: "1px solid #ffffff1a" }}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {careerStats[player.id].map((c) => (
+                    <tr key={c.season}>{[`${c.season}-${String(c.season + 1).slice(2)}`, c.team, c.gp, c.g, c.a, c.pts, c.plusMinus > 0 ? `+${c.plusMinus}` : c.plusMinus, c.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>
+                  ))}
+                  {stat?.gp > 0 && <tr style={{ color: "#D9A404" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, owner.name, stat.gp, stat.g, stat.a, stat.pts, stat.plusMinus > 0 ? `+${stat.plusMinus}` : stat.plusMinus, stat.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>}
+                </tbody>
               </table>
             </div>
           )}

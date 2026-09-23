@@ -232,20 +232,36 @@ function scoreEffect(strat, lead, minute) {
 }
 
 export function simulateChunk(home, away, linesHome, linesAway, staffByTeam, chunkIndex, rng, score = { home: 0, away: 0 }) {
-  const seg = simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, CHUNK_MIN / 60, (chunkIndex - 1) * CHUNK_MIN, score.home - score.away);
+  return simulateStretch(home, away, linesHome, linesAway, staffByTeam, (chunkIndex - 1) * CHUNK_MIN, CHUNK_MIN, rng, score);
+}
+
+// Simule le jeu de la minute `startMin` pendant `lengthMin` minutes (mode direct).
+export function simulateStretch(home, away, linesHome, linesAway, staffByTeam, startMin, lengthMin, rng, score = { home: 0, away: 0 }) {
+  const seg = simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, lengthMin / 60, startMin, score.home - score.away);
   return { ...seg, periodHomeScore: seg.homeGoals, periodAwayScore: seg.awayGoals };
+}
+
+// Prochain arrêt de jeu en mode direct : au hockey, le sifflet ne tombe pas à heure fixe.
+// Entre 1 min 30 et 7 min de jeu continu, jamais au-delà de la fin de la période.
+const STOPPAGE_REASONS = ["Hors-jeu", "Dégagement refusé", "Arrêt du gardien", "Rondelle hors de la patinoire", "Filet déplacé", "Mise en échec illégale évitée de justesse, jeu arrêté", "Rondelle gelée le long de la bande"];
+export function nextStoppage(minute, rng) {
+  const periodEnd = (Math.floor(minute / 20) + 1) * 20;
+  const at = Math.min(periodEnd, minute + 1.5 + rng() * 5.5);
+  const end = periodEnd - at < 0.75 ? periodEnd : Math.round(at * 60) / 60;
+  return { minute: end, reason: end === periodEnd ? "Fin de la période" : STOPPAGE_REASONS[Math.floor(rng() * STOPPAGE_REASONS.length)] };
 }
 
 // Prolongation (3 contre 3) puis, au besoin, tirs de barrage. La meilleure équipe a l'avantage.
 // En prolongation, le but est attribué à un joueur (avec un tir) ; en tirs de barrage, le
 // point est ajouté au score final sans être crédité à un joueur, comme dans la LNH.
-export function resolveOvertime(home, away, linesHome, linesAway, staffByTeam, rng) {
+export function resolveOvertime(home, away, linesHome, linesAway, staffByTeam, rng, { noShootout = false } = {}) {
   const rtH = teamRatings(home, linesHome, staffByTeam[home.id]);
   const rtA = teamRatings(away, linesAway, staffByTeam[away.id]);
   const edge = (rtH.attack * rtH.finish) / rtH.goalieQ - (rtA.attack * rtA.finish) / rtA.goalieQ;
   const pHome = clamp(0.52 + edge * 0.004, 0.3, 0.72);
   const winner = rng() < pHome ? "home" : "away";
-  if (rng() < 0.6) {
+  // En séries, la prolongation se poursuit jusqu'au but (pas de tirs de barrage).
+  if (noShootout || rng() < 0.6) {
     const team = winner === "home" ? home : away, lines = winner === "home" ? linesHome : linesAway;
     const top = [lines.forwards[0]?.C, lines.forwards[0]?.LW, lines.forwards[0]?.RW, lines.defense[0]?.LD, lines.defense[0]?.RD, lines.forwards[1]?.C]
       .map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
@@ -389,7 +405,7 @@ export function applyPlusMinus(events, scoringLines, concedingLines, rng, scorin
   });
 }
 
-export function simulateGame(game, teamsById, rng, linesByTeam, staffByTeam = {}) {
+export function simulateGame(game, teamsById, rng, linesByTeam, staffByTeam = {}, { playoff = false } = {}) {
   const home = teamsById[game.home], away = teamsById[game.away];
   const linesHome = linesByTeam[home.id], linesAway = linesByTeam[away.id];
   // Trois périodes simulées l'une après l'autre, pour appliquer l'effet de pointage.
@@ -408,7 +424,7 @@ export function simulateGame(game, teamsById, rng, linesByTeam, staffByTeam = {}
   };
   let decidedIn = "REG";
   if (homeScore === awayScore) {
-    const ot = resolveOvertime(home, away, linesHome, linesAway, staffByTeam, rng);
+    const ot = resolveOvertime(home, away, linesHome, linesAway, staffByTeam, rng, { noShootout: playoff });
     box = applyOvertime(box, ot);
     if (ot.winner === "home") homeScore++; else awayScore++;
     decidedIn = ot.shootout ? "SO" : "OT";

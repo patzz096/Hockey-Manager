@@ -21,7 +21,7 @@ describe("dépistage", () => {
   });
 
   it("un meilleur dépisteur est plus rapide", () => {
-    expect(scoutingDelay(99)).toBe(1);
+    expect(scoutingDelay(99)).toBe(2);
     expect(scoutingDelay(20)).toBeGreaterThan(scoutingDelay(80));
   });
 

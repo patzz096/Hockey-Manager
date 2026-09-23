@@ -15,9 +15,9 @@ export function assignScout(player, staff) {
   return { id: "internal", name: "Personnel interne (aucun dépisteur dédié)", rating: INTERNAL_SCOUT_RATING, offSpecialty: false };
 }
 
-// Délai en jours (1 ronde du calendrier = 1 jour) : 1 jour pour un dépisteur 20/20, 6 pour un 1/20.
+// Délai en jours de calendrier : 2 jours pour un dépisteur 20/20, jusqu'à 14 pour un très faible.
 export function scoutingDelay(rating) {
-  return Math.max(1, Math.min(6, Math.round(6 - (rating / 99) * 5)));
+  return Math.max(2, Math.min(14, Math.round(14 - (rating / 99) * 12)));
 }
 
 export function reliabilityLabel(rating) {
