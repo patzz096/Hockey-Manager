@@ -6,7 +6,7 @@ import { formatDay } from "../engine/calendar";
 import { h2Style, btnStyle } from "../ui/theme";
 import { StarRating, PlayerLink, TeamCrest } from "./common";
 
-export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKnowledge, onPick, onSimToMyPick, onSimAll, onSelectPlayer }) {
+export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKnowledge, onSimToMyPick, onSimAll, onSelectPlayer }) {
   const [posFilter, setPosFilter] = useState("Tous");
   const taken = useMemo(() => new Set(draft.picks.map((k) => k.playerId).filter(Boolean)), [draft]);
   const benchmark = teamOvrBenchmark(myTeam);
@@ -44,22 +44,21 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(220px, 1fr)", gap: 16 }}>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Classement de ton dépisteur amateur (clique un nom pour son profil et demander un rapport)</div>
+            <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Classement de ton dépisteur amateur (clique un espoir pour ouvrir son profil : rapport de dépistage et « Repêcher »)</div>
             <select value={posFilter} onChange={(e) => setPosFilter(e.target.value)} style={{ background: "var(--navy)", color: "var(--ice)", border: "1px solid #ffffff33", borderRadius: 3, padding: "4px 6px", fontSize: 12 }}>
               {["Tous", "C", "LW", "RW", "LD", "RD", "G"].map((p) => <option key={p}>{p}</option>)}
             </select>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr>{["#", "Espoir", "Pos", "Âge", "Actuel", "Potentiel", ""].map((h) => <th key={h} style={{ textAlign: "left", padding: "5px 8px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid #ffffff22" }}>{h}</th>)}</tr></thead>
+            <thead><tr>{["#", "Espoir", "Pos", "Âge", "Actuel", "Potentiel"].map((h) => <th key={h} style={{ textAlign: "left", padding: "5px 8px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid #ffffff22" }}>{h}</th>)}</tr></thead>
             <tbody>{rows.map((r, i) => (
-              <tr key={r.p.id} style={{ borderBottom: "1px solid #ffffff11" }}>
+              <tr key={r.p.id} onClick={() => onSelectPlayer(r.p, null)} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }}>
                 <td style={{ padding: "5px 8px", color: "var(--iceMuted)" }}>{i + 1}</td>
                 <td style={{ padding: "5px 8px" }}>{NATION_FLAG[r.p.nationality] || ""} <PlayerLink player={r.p} onSelect={(p) => onSelectPlayer(p, null)} />{r.report && <span title="Rapport de dépistage reçu" style={{ color: "var(--gold)", fontSize: 10 }}> ●</span>}</td>
                 <td style={{ padding: "5px 8px" }}>{r.p.pos}</td>
                 <td style={{ padding: "5px 8px" }}>{r.p.age}</td>
                 <td style={{ padding: "5px 8px" }}><StarRating value={starsFor(r.ovr, benchmark)} size={11} /></td>
                 <td style={{ padding: "5px 8px" }}><StarRating value={starsFor(r.potential, benchmark)} size={11} color="#7A9EDB" /></td>
-                <td style={{ padding: "5px 8px" }}>{myTurn && <button onClick={() => onPick(r.p.id)} style={{ ...btnStyle("var(--win)"), fontSize: 11, padding: "3px 8px" }}>Repêcher</button>}</td>
               </tr>
             ))}</tbody>
           </table>

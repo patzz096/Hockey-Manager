@@ -108,7 +108,7 @@ export function PlayerLink({ player, team, onSelect, children, style }) {
 export function ConfirmButton({ label, confirmLabel, color, onConfirm, small = false, title }) {
   const [armed, setArmed] = useState(false);
   return (
-    <button title={title} onClick={(e) => { e.stopPropagation(); if (armed) { setArmed(false); onConfirm(); } else setArmed(true); }} onBlur={() => setArmed(false)} style={{ ...btnStyle(armed ? "var(--red)" : color), fontSize: small ? 11 : 12, padding: small ? "3px 8px" : undefined }}>
+    <button title={title} onClick={(e) => { e.stopPropagation(); if (armed) { setArmed(false); onConfirm(); } else setArmed(true); }} onBlur={() => setArmed(false)} style={{ ...btnStyle(armed ? "var(--red)" : color), fontSize: small ? 11 : 12, ...(small ? { padding: "3px 8px" } : {}) }}>
       {armed ? confirmLabel : label}
     </button>
   );

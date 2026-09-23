@@ -6,7 +6,7 @@ import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 
-export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, freeAgents, onSign, onRefreshFreeAgents, txWindow = { open: true } }) {
+export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendingScouts, onSelectPlayer, freeAgents, onRefreshFreeAgents, txWindow = { open: true } }) {
   const [fak, fad, faToggle] = useSort("ovr");
   const faAcc = (p, key) => {
     if (key === "draft") return p.draftPick || 9999;
@@ -19,7 +19,7 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
     <div>
       <h2 style={h2Style}>Agents libres</h2>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: -8, marginBottom: 12 }}>
-        <p style={{ fontSize: 12, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)" }}>{txWindow.open ? "Joueurs sans contrat, disponibles pour négociation." : txWindow.reason}</p>
+        <p style={{ fontSize: 12, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)" }}>{txWindow.open ? "Joueurs sans contrat. Clique un joueur pour le dépister ou lui offrir un contrat depuis son profil." : txWindow.reason}</p>
         <button onClick={onRefreshFreeAgents} style={btnStyle("var(--steel)")}>Rafraîchir le marché</button>
       </div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
@@ -29,7 +29,6 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
           <SortTh label="Âge" sortKey="age" activeKey={fak} activeDir={fad} onSort={faToggle} />
           <SortTh label="Cote" sortKey="ovr" activeKey={fak} activeDir={fad} onSort={faToggle} />
           <SortTh label="Repêché" sortKey="draft" activeKey={fak} activeDir={fad} onSort={faToggle} />
-          <th></th>
         </tr></thead>
         <tbody>
           {sortedFreeAgents.map((p) => {
@@ -40,13 +39,12 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
               <td style={{ padding: "7px 10px" }}><PlayerLink player={p} onSelect={onSelectPlayer} /></td>
               <td style={{ padding: "7px 10px" }}>{p.pos}</td>
               <td style={{ padding: "7px 10px" }}>{p.age}</td>
-              <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(perceivedRatings(p, scoutInfo).ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "var(--gold)" }}>Dépistage · {formatDay(pending.dueDay)}</span> : <button onClick={() => onRequestScout(p)} style={{ ...btnStyle("var(--steel)"), fontSize: 11 }}>Dépister</button>}</td>
+              <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(perceivedRatings(p, scoutInfo).ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "var(--gold)" }}>Dépistage · {formatDay(pending.dueDay)}</span> : <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>Non dépisté</span>}</td>
               <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{scoutInfo.known ? draftLabel(p) : "?"}</td>
-              <td style={{ padding: "7px 10px" }}><button onClick={() => onSign(p)} style={{ ...btnStyle("var(--win)"), opacity: scoutInfo.known && txWindow.open ? 1 : 0.5 }} disabled={!scoutInfo.known || !txWindow.open} title={txWindow.open ? "" : txWindow.reason}>Offrir un contrat</button></td>
             </tr>
             );
           })}
-          {sortedFreeAgents.length === 0 && <tr><td colSpan={6} style={{ padding: 12, color: "var(--iceMuted)" }}>Marché des joueurs autonomes vide.</td></tr>}
+          {sortedFreeAgents.length === 0 && <tr><td colSpan={5} style={{ padding: 12, color: "var(--iceMuted)" }}>Marché des joueurs autonomes vide.</td></tr>}
         </tbody>
       </table>
     </div>

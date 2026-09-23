@@ -113,6 +113,9 @@ tests/engine.test.js       tests du moteur
   avertissements (rôle mal placé dans l'alignement) et conseils de composition des trios et
   paires. En match, le rôle change qui tire, passe, frappe, bloque et gagne les mises au jeu ;
   un contre-emploi est joué à moitié et moins bien
+- Gestion du joueur dans son profil : rappel, renvoi au club-école ou ballottage, LTIR, nouveau
+  contrat, rachat, réclamation au ballottage, offre à un agent libre et repêchage se font dans
+  le volet « Gestion du joueur » (les listes n'ont plus de boutons à côté des joueurs)
 - Planificateur tactique (onglet Trios, à la Football Manager) : schéma de la patinoire à
   gauche, tableau Poste / Rôle / Aptitude / Joueur à droite, réservistes en bas. On glisse un
   joueur sur un poste (ou clic-clic) ; un joueur déjà placé échange sa place. Trois vues :

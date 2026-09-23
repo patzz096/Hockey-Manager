@@ -8,7 +8,7 @@ import { ROLES, naturalRole, roleFit, roleOf } from "../engine/roles";
 import { getScoutInfo, perceivedRatings, assignScout, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
 import { contractLabel, draftLabel } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
-import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge } from "./common";
+import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge, ConfirmButton } from "./common";
 import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
 
 export function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
@@ -117,7 +117,34 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, onOfferContract }) {
+// Volet « Gestion du joueur » : rappel, renvoi / ballottage, LTIR, contrat, rachat, réclamation,
+// signature, repêchage. Les actions sont calculées par l'application selon le statut du joueur.
+function ActionsPanel({ actions, known, onClose }) {
+  if (!actions.length) return null;
+  const run = (a) => { a.onClick(); if (a.close) onClose(); };
+  return (
+    <div style={{ background: "var(--navy)", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", margin: "12px 16px 0" }}>
+      <div style={{ fontSize: 11, letterSpacing: 0.5, color: "var(--iceMuted)", marginBottom: 8 }}>GESTION DU JOUEUR</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {actions.map((a) => {
+          if (a.status) return <div key={a.key} style={{ fontSize: 12, color: "#C9A6E8" }}>{a.status}</div>;
+          const disabled = a.disabled || (a.requiresKnown && !known);
+          const hint = a.requiresKnown && !known ? "Dépiste-le d'abord (onglet Dépistage) pour connaître sa valeur." : a.hint;
+          return (
+            <div key={a.key} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {a.confirmLabel && !disabled
+                ? <ConfirmButton label={a.label} confirmLabel={a.confirmLabel} color={a.color} onConfirm={() => run(a)} />
+                : <button onClick={() => !disabled && run(a)} disabled={disabled} style={{ ...btnStyle(a.color), fontSize: 12, opacity: disabled ? 0.45 : 1, cursor: disabled ? "not-allowed" : "pointer" }}>{a.label}</button>}
+              {hint && <span style={{ fontSize: 11, color: "var(--iceMuted)", flex: "1 1 180px", lineHeight: 1.35 }}>{hint}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [] }) {
   const [tab, setTab] = useState("profile");
   const owner = team || (player.draftProspect ? PROSPECT_TEAM : FREE_AGENT_TEAM);
   const isMine = owner.id === myTeamId;
@@ -148,6 +175,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}><X size={18} /></button>
         </div>
+        <ActionsPanel actions={actions} known={known || isMine} onClose={onClose} />
         <div style={{ display: "flex", borderBottom: "1px solid #ffffff1a", padding: "0 8px" }}>
           <button onClick={() => setTab("profile")} style={tabStyle(tab === "profile", owner.color)}>Profil</button>
           <button onClick={() => setTab("scouting")} style={tabStyle(tab === "scouting", owner.color)}>
@@ -245,10 +273,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
           )}
           <FacePicker player={player} />
           {editable && (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => onEdit(player)} style={{ ...btnStyle("var(--steel)"), flex: 1, justifyContent: "center" }}>Modifier ce joueur</button>
-              <button onClick={() => onOfferContract(player)} style={{ ...btnStyle("var(--win)"), flex: 1, justifyContent: "center" }}>Nouveau contrat</button>
-            </div>
+            <button onClick={() => onEdit(player)} style={{ ...btnStyle("var(--steel)"), width: "100%", justifyContent: "center" }}>Modifier ce joueur</button>
           )}
           </>)}
         </div>

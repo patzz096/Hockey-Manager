@@ -651,6 +651,51 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setDeadCap((prev) => [...prev, { label: `Rachat — ${player.name}`, amount: terms.perYear, seasons: terms.seasons, kind: "buyout", playerId: player.id }]);
     addMessage({ from: "Directeur général adjoint", subject: `Rachat de contrat : ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.age} ans) est racheté : ${Math.round(terms.fraction * 3)}/3 du salaire restant, étalé sur ${terms.seasons.length} saisons.\nImpact sur le plafond : ${formatMoney(terms.perYear)} par saison de ${terms.seasons[0]}-${String(terms.seasons[0] + 1).slice(2)} à ${terms.seasons[terms.seasons.length - 1]}-${String(terms.seasons[terms.seasons.length - 1] + 1).slice(2)} (économie de ${formatMoney(terms.saving)} par saison pendant la durée restante du contrat).\nIl devient agent libre.` });
   }
+  // Actions possibles sur un joueur, affichées dans le volet « Gestion du joueur » de son profil
+  // (au lieu de boutons dans chaque liste). close : ferme le profil après l'action.
+  function playerActions(player) {
+    if (!player || !myTeamId) return [];
+    const out = [];
+    const myRoster = teamsById[myTeamId]?.roster || [];
+    const onRoster = myRoster.find((p) => p.id === player.id);
+    const inFarm = (farmByTeam[myTeamId] || []).find((p) => p.id === player.id);
+    const onWaivers = waivers.find((w) => w.player.id === player.id);
+    const isFreeAgent = freeAgents.some((p) => p.id === player.id);
+    const draftCurrent = draft?.picks[draft.current];
+    const inDraft = draft && draftCurrent && draft.pool.some((p) => p.id === player.id) && !draft.picks.some((k) => k.playerId === player.id);
+    if (onRoster) {
+      const exempt = waiverExempt(onRoster, careerGames(onRoster.id), seasonYear);
+      out.push(exempt
+        ? { key: "down", label: "Renvoyer au club-école", color: "var(--steel)", confirmLabel: "Confirmer le renvoi", hint: "Exempté du ballottage : il rejoint directement la LAH.", onClick: () => sendDownPlayer(onRoster), close: true }
+        : { key: "down", label: "Placer au ballottage", color: "var(--steel)", confirmLabel: "Confirmer : 24 h au ballottage", hint: `Non exempté (${onRoster.age} ans, ${careerGames(onRoster.id)} matchs LNH) : les autres équipes peuvent le réclamer pendant 24 h.`, onClick: () => sendDownPlayer(onRoster), close: true });
+      const inj = injuries[onRoster.id];
+      if (inj && inj.until > currentDay) {
+        if (inj.ltir) out.push({ key: "ltir", status: `En LTIR jusqu'au ${formatDay(inj.until)} : place libérée, ${formatMoney(onRoster.contract?.salary || 0)} d'allègement.` });
+        else if (ltirEligible(inj, currentDay)) out.push({ key: "ltir", label: "Placer sur la LTIR", color: "#7A4E9E", hint: "Libère sa place et permet de dépasser le plafond de son salaire pendant son absence.", onClick: () => placeOnLtir(onRoster.id) });
+        else out.push({ key: "ltir", label: "Placer sur la LTIR", color: "#7A4E9E", disabled: true, hint: "LTIR : absence prévue d'au moins 24 jours." });
+      }
+      out.push({ key: "contract", label: "Nouveau contrat", color: "var(--win)", hint: onRoster.contract ? `Contrat actuel : ${formatMoney(onRoster.contract.salary)} × ${onRoster.contract.years} an${onRoster.contract.years > 1 ? "s" : ""}.` : "", onClick: () => openOffer(onRoster, true) });
+      const t = buyoutTerms(onRoster, seasonYear);
+      if (["preDraft", "draft", "preFreeAgency"].includes(phase) && t) out.push({ key: "buyout", label: "Racheter le contrat", color: "var(--loss)", confirmLabel: `Confirmer : ${formatMoney(t.perYear)} × ${t.seasons.length} saisons`, hint: `Cap mort de ${formatMoney(t.perYear)} par saison pendant ${t.seasons.length} saisons ; il devient agent libre.`, onClick: () => buyoutPlayer(onRoster), close: true });
+    } else if (inFarm) {
+      const full = rosterCount(myRoster) >= ROSTER_MAX;
+      const noCap = !fitsUnderCap(myRoster, seasonYear, inFarm.contract?.salary || 0, 0, myCapOpts);
+      out.push({ key: "up", label: "Rappeler dans la LNH", color: "var(--win)", disabled: full || noCap, hint: full ? `Alignement complet (${ROSTER_MAX} joueurs) : renvoie quelqu'un d'abord.` : noCap ? "Pas assez d'espace sous le plafond." : `Salaire : ${formatMoney(inFarm.contract?.salary || 0)}.`, onClick: () => callUpPlayer(inFarm), close: true });
+    } else if (onWaivers) {
+      if (onWaivers.fromTeamId === myTeamId) out.push({ key: "waivers", status: `Au ballottage jusqu'au ${formatDay(onWaivers.expiresDay)}. S'il n'est pas réclamé, il rejoindra ton club-école.` });
+      else {
+        const claimed = myClaims.includes(player.id);
+        const fits = fitsUnderCap(myRoster, seasonYear, onWaivers.player.contract?.salary || 0, 0, myCapOpts) && rosterCount(myRoster) < ROSTER_MAX;
+        out.push({ key: "claim", label: claimed ? "Annuler la réclamation" : "Réclamer au ballottage", color: claimed ? "var(--red)" : "var(--win)", disabled: !claimed && !fits, hint: claimed ? `Réclamation déposée. Attribution le ${formatDay(onWaivers.expiresDay)}, priorité à la pire équipe.` : fits ? `Tu reprends son contrat (${formatMoney(onWaivers.player.contract?.salary || 0)}). Priorité à la pire équipe au classement.` : "Pas de place ou d'espace sous le plafond.", onClick: () => toggleClaim(player.id) });
+      }
+    } else if (isFreeAgent) {
+      out.push({ key: "sign", label: "Offrir un contrat", color: "var(--win)", requiresKnown: true, disabled: !txWindow.open, hint: txWindow.open ? "Dépiste-le d'abord pour connaître sa valeur." : txWindow.reason, onClick: () => openOffer(player, false) });
+    } else if (inDraft) {
+      const myTurn = draftCurrent.teamId === myTeamId;
+      out.push({ key: "draft", label: `Repêcher (choix n° ${draftCurrent.overall})`, color: "var(--win)", disabled: !myTurn, hint: myTurn ? "C'est ton tour au micro." : `${teamsById[draftCurrent.teamId].name} est au micro : avance jusqu'à ton choix.`, onClick: () => runDraft({ myPlayerId: player.id, untilMine: true }), close: true });
+    }
+    return out;
+  }
   function toggleClaim(playerId) {
     setMyClaims((prev) => (prev.includes(playerId) ? prev.filter((x) => x !== playerId) : [...prev, playerId]));
   }
@@ -947,7 +992,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   return (
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} />}
       {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? offerTarget.player.contract?.salary || 0 : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
@@ -1008,7 +1053,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "lines" && <TacticsPlanner team={myTeam} lines={myLines} onAssign={updateLine} onSwap={swapLineSlots} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onAutoLines={autoOptimizeLines} onChangeSystem={updateSpecialSystem} onBestSystem={bestSpecialSystem} onAutoUnits={autoSpecialUnits} onSelectPlayer={selectPlayer} />}
 
-        {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} injuries={injuries} day={currentDay} onLtir={placeOnLtir} onSendDown={sendDownPlayer} />}
+        {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} injuries={injuries} day={currentDay} />}
 
         {tab === "roles" && <RolesPanel team={myTeam} lines={myLines} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onSelectPlayer={selectPlayer} />}
 
@@ -1016,12 +1061,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
-        {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onToggleClaim={toggleClaim} onSelectPlayer={selectPlayer} />}
+        {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 
-        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onSign={(p) => openOffer(p, false)} onRefreshFreeAgents={refreshFreeAgents} txWindow={txWindow} />}
+        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onRefreshFreeAgents={refreshFreeAgents} txWindow={txWindow} />}
 
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
-        {tab === "contracts" && <ContractsPanel myTeam={myTeam} onOfferContract={(p) => openOffer(p, true)} onSelectPlayer={selectPlayer} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} onBuyout={buyoutPlayer} deadCap={deadCap} />}
+        {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
         {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
 
@@ -1082,7 +1127,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "playoffs" && <PlayoffsPanel playoffs={playoffs} teamsById={teamsById} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
 
         {tab === "draft" && (draft
-          ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onPick={(id) => runDraft({ myPlayerId: id, untilMine: true })} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} />
+          ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} />
           : <div><h2 style={h2Style}>Repêchage</h2><p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Le repêchage a lieu le {formatDay(dates.draft)}, une semaine avant l'ouverture du marché des agents libres (1er juillet), après les séries. Ordre : équipes hors séries (pire dossier d'abord ; loterie pour les 2 premiers choix), puis selon la ronde d'élimination.</p></div>)}
       </div>
     </div>
