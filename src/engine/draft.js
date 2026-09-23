@@ -3,9 +3,10 @@ import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, c
 import { pickNationality } from "./players";
 import { randAttr, seededRandom } from "./random";
 import { assignJuniorLeague } from "./minorLeagues";
+import { entryLevelContract } from "./contracts";
 
 export const DRAFT_ROUNDS = 7;
-export const ENTRY_CONTRACT = { years: 3, salary: 950 };
+// Contrat d'entrée : voir entryLevelContract (durée selon l'âge, salaire selon le rang).
 const POSITIONS = ["C", "C", "LW", "RW", "LD", "RD", "C", "LW", "RW", "LD", "RD", "G"];
 
 // Cuvée du repêchage : 18-19 ans, habileté actuelle faible, potentiel très variable.
@@ -66,7 +67,7 @@ export function makePick(draft, playerId) {
   const p = draft.pool.find((x) => x.id === playerId);
   if (!pick || !p) return { draft, player: null };
   const picks = draft.picks.map((k, i) => (i === draft.current ? { ...k, playerId } : k));
-  const player = { ...p, draftProspect: false, draftPick: pick.overall, draftYear: draft.year + 1, contract: { ...ENTRY_CONTRACT }, signedAge: p.age, signedYear: draft.year + 1, level: "LAH", id: `${p.id}-${pick.teamId}` };
+  const player = { ...p, draftProspect: false, draftPick: pick.overall, draftYear: draft.year + 1, contract: entryLevelContract(pick.overall, p.age, draft.year + 1), signedAge: p.age, signedYear: draft.year + 1, level: "LAH", id: `${p.id}-${pick.teamId}` };
   return { draft: { ...draft, picks, current: draft.current + 1 }, player, pick };
 }
 

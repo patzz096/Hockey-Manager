@@ -13,7 +13,7 @@ export function buildRealRoster(data, teamIndex, rng) {
     allAttrs.forEach((a) => { attrs[a] = (d.attrs && d.attrs[a] != null) ? d.attrs[a] : 60; });
     const ovr = computeOvr(d.pos, attrs);
     const potential = d.potential != null ? Math.max(ovr, Math.min(99, d.potential)) : Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
-    const contract = d.contract || randomContract(rng);
+    const contract = d.contract ? { type: "one", ...d.contract } : { ...randomContract(rng, { age: d.age, ovr, potential, pos: d.pos }), generated: true };
     return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, shoots: d.shoots, heightCm: d.heightCm, weightKg: d.weightKg, nhlId: d.nhlId, attrs, ovr, potential, contract };
   }).sort((a, b) => b.ovr - a.ovr);
 }
@@ -27,7 +27,7 @@ export function buildNamedRoster(data, teamIndex, rng) {
     const age = Math.round(16 + rng() * 2);
     const ovr = computeOvr(d.pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng));
-    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age, attrs, ovr, potential, contract: randomContract(rng) };
+    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age, attrs, ovr, potential, contract: { ...randomContract(rng, { age, ovr, potential, pos: d.pos }), generated: true } };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
@@ -51,7 +51,7 @@ export function buildRoster(teamIndex, rng) {
     const age = Math.round(17 + rng() * 20);
     const ovr = computeOvr(pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng));
-    return { id: `${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: randomContract(rng), nationality: pickNationality(rng) };
+    return { id: `${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: { ...randomContract(rng, { age, ovr, potential, pos }), generated: true }, nationality: pickNationality(rng) };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
@@ -88,7 +88,7 @@ export function buildFarmRoster(teamIndex, rng, count = 10) {
     const age = Math.round(18 + rng() * 3);
     const ovr = computeOvr(pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng) + Math.round(rng() * 6));
-    list.push({ id: `FARM-${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: randomContract(rng), nationality: pickNationality(rng), level: "LAH" });
+    list.push({ id: `FARM-${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: randomContract(rng, { age, ovr, potential, pos, level: "LAH" }), nationality: pickNationality(rng), level: "LAH" });
   }
   return list;
 }

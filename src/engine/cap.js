@@ -16,27 +16,30 @@ export function capFor(year) {
 export function floorFor(year) { return Math.round(capFor(year) * 0.74 / 100) * 100; }
 
 // Masse salariale de l'alignement. Les joueurs en LTIR comptent toujours (comme dans la LNH).
-export function payroll(roster) { return roster.reduce((a, p) => a + (p.contract?.salary || 0), 0); }
+// Primes de rendement : leur montant maximal compte sur le plafond (comme dans la LNH).
+const hitOf = (c) => (c?.salary || 0) + (c?.bonuses || []).reduce((a, b) => a + (b.amount || 0), 0);
+export function payroll(roster) { return roster.reduce((a, p) => a + hitOf(p.contract), 0); }
 
 // Cap mort de la saison `year` : [{ label, amount, seasons: [2027, 2028, ...], kind }].
 export function deadCapFor(entries = [], year) {
   return entries.filter((e) => e.seasons.includes(year)).reduce((a, e) => a + e.amount, 0);
 }
 
-// opts : { dead: k$ de cap mort, relief: allègement LTIR (k$), ltirIds: joueurs en LTIR }.
+// opts : { dead: k$ de cap mort, relief: allègement LTIR (k$), ltirIds: joueurs en LTIR,
+//         buried: part des contrats à un volet envoyés dans la LAH qui compte encore (k$) }.
 export function capStatus(roster, year, opts = {}) {
   const cap = capFor(year), floor = floorFor(year);
-  const dead = opts.dead || 0, relief = opts.relief || 0;
-  const used = payroll(roster) + dead;
+  const dead = opts.dead || 0, relief = opts.relief || 0, buried = opts.buried || 0;
+  const used = payroll(roster) + dead + buried;
   const limit = cap + relief;
   const ltir = new Set(opts.ltirIds || []);
-  return { cap, floor, dead, relief, limit, used, space: limit - used, overCap: used > limit, underFloor: used < floor, rosterSize: roster.filter((p) => !ltir.has(p.id)).length };
+  return { cap, floor, dead, buried, relief, limit, used, space: limit - used, overCap: used > limit, underFloor: used < floor, rosterSize: roster.filter((p) => !ltir.has(p.id)).length };
 }
 
 // Vérifie si l'alignement peut ajouter `addSalary` et retirer `removeSalary` (k$).
 // Une équipe déjà au-dessus du plafond peut seulement réduire sa masse salariale.
 export function fitsUnderCap(roster, year, addSalary, removeSalary = 0, opts = {}) {
-  const used = payroll(roster) + (opts.dead || 0);
+  const used = payroll(roster) + (opts.dead || 0) + (opts.buried || 0);
   const after = used + addSalary - removeSalary;
   return after <= capFor(year) + (opts.relief || 0) || after <= used;
 }

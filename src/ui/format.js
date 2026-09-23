@@ -14,7 +14,13 @@ export function starsText(value) {
 
 export function contractLabel(contract) {
   if (!contract) return "Agent libre";
-  return `${contract.years} an${contract.years > 1 ? "s" : ""} · ${contract.salary}k$${contract.noTrade ? " · NTC" : ""}`;
+  const bonus = (contract.bonuses || []).reduce((a, b) => a + b.amount, 0);
+  const parts = [`${contract.years} an${contract.years > 1 ? "s" : ""}`, `${contract.salary.toLocaleString("fr-CA")} k$`];
+  if (contract.elc) parts.push("contrat d'entrée");
+  parts.push(contract.type === "two" ? `2 volets (LAH ${(contract.ahlSalary || 80).toLocaleString("fr-CA")} k$)` : "1 volet");
+  if (bonus) parts.push(`primes jusqu'à ${bonus.toLocaleString("fr-CA")} k$`);
+  if (contract.noTrade) parts.push("NTC");
+  return parts.join(" · ");
 }
 
 export function draftLabel(player) {

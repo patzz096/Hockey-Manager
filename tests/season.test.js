@@ -86,7 +86,7 @@ describe("repêchage et saison morte", () => {
     expect(d.picks).toHaveLength(32 * DRAFT_ROUNDS);
     expect(new Set(d.picks.map((k) => k.playerId)).size).toBe(d.picks.length);
     const res = makePick(createDraft(2026, ["MTL"]), "DRAFT-2026-0");
-    expect(res.player).toMatchObject({ contract: { years: 3, salary: 950 }, draftPick: 1, level: "LAH" });
+    expect(res.player).toMatchObject({ contract: { years: 3, salary: 1025, elc: true, type: "two" }, draftPick: 1, level: "LAH" });
   });
   it("fait expirer les contrats le 1er juillet et comble les alignements", () => {
     const exp = expireContracts(lg.teams, "MTL", 2026);

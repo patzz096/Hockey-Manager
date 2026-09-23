@@ -4,6 +4,19 @@ import { buildLines } from "./lines";
 import { buildRealRoster, buildRoster, buildFreeAgentPool, buildFarmRoster, assignDraftInfo } from "./players";
 import { seededRandom } from "./random";
 import { buildStaffMarket } from "./staff";
+import { capFor, payroll } from "./cap";
+import { CURRENT_YEAR, minSalaryFor } from "./contracts";
+
+// Les contrats générés (joueurs sans vrai contrat) sont réduits au besoin pour que chaque équipe
+// commence à 96 % du plafond au plus.
+function fitUnderCap(roster) {
+  const over = payroll(roster) - capFor(CURRENT_YEAR) * 0.96;
+  const gen = roster.filter((p) => p.contract?.generated);
+  const genTotal = gen.reduce((a, p) => a + p.contract.salary, 0);
+  if (over <= 0 || !genTotal) return roster;
+  const k = Math.max(0.3, 1 - over / genTotal);
+  return roster.map((p) => (p.contract?.generated ? { ...p, contract: { ...p.contract, salary: Math.max(minSalaryFor(CURRENT_YEAR), Math.round((p.contract.salary * k) / 25) * 25) } } : p));
+}
 
 // custom : base de données personnalisée ({ teams: { ID: [joueurs] }, teamInfo: { ID: {...} } }).
 // Ses alignements remplacent ceux par défaut ; teamInfo renomme ou recolore les équipes.
@@ -12,7 +25,7 @@ export function initLeague(custom = null) {
   const teams = TEAM_SEED.map((seed, idx) => {
     const t = { ...seed, ...(custom?.teamInfo?.[seed.id] || {}), id: seed.id };
     const realData = custom?.teams?.[t.id]?.length ? custom.teams[t.id] : REAL_ROSTERS[t.id];
-    const roster = realData ? buildRealRoster(realData, idx, rng) : buildRoster(idx, rng);
+    const roster = fitUnderCap(realData ? buildRealRoster(realData, idx, rng) : buildRoster(idx, rng));
     return { ...t, roster, lines: buildLines(roster) };
   });
   const farmByTeam = {};

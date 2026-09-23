@@ -24,7 +24,7 @@ export function PlayerEditorModal({ initial, isNew, team, onSave, onClose }) {
     const finalPotential = Math.max(ovr, Math.min(99, Number(potentialOverride) || ovr));
     onSave({
       id: initial.id, name: name.trim(), pos, age: Number(age) || 20, attrs, ovr, potential: finalPotential,
-      number: initial.number, contract: initial.contract || randomContractRT(), draftPick: initial.draftPick ?? null, draftYear: initial.draftYear ?? null, nationality: nationality,
+      number: initial.number, contract: initial.contract || randomContractRT(initial.ovr ? initial : null), draftPick: initial.draftPick ?? null, draftYear: initial.draftYear ?? null, nationality: nationality,
     });
   }
 

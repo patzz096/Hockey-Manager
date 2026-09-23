@@ -1,4 +1,4 @@
-import { expectedSalary, expectedYears } from "./contracts";
+import { marketValue, expectedYears } from "./contracts";
 import { computeOvr } from "./attributes";
 import { seededRandom } from "./random";
 import { fitsUnderCap } from "./cap";
@@ -16,7 +16,7 @@ export function expireContracts(teams, myTeamId, year) {
       const years = (p.contract?.years ?? 1) - 1;
       if (years > 0) { roster.push({ ...p, contract: { ...p.contract, years } }); return; }
       if (t.id !== myTeamId && rng() < (p.ovr >= 65 ? 0.7 : 0.45) && p.age < 36) {
-        const np = { ...p, contract: { years: expectedYears(p), salary: expectedSalary(p) } };
+        const np = { ...p, contract: { years: expectedYears(p), salary: marketValue(p, year + 1), type: "one" } };
         roster.push(np); resigned.push({ player: np, teamId: t.id });
       } else {
         const fa = { ...p, contract: null };
@@ -40,10 +40,10 @@ export function aiFreeAgency(teams, freeAgents, myTeamId, year = 2027) {
     Object.entries(ROSTER_NEEDS).forEach(([pos, need]) => {
       let have = roster.filter((p) => p.pos === pos).length;
       while (have < need) {
-        const fa = pool.find((p) => p.pos === pos && fitsUnderCap(roster, year, expectedSalary(p)));
+        const fa = pool.find((p) => p.pos === pos && fitsUnderCap(roster, year, marketValue(p, year)));
         if (!fa) break;
         pool = pool.filter((p) => p.id !== fa.id);
-        const signed = { ...fa, contract: { years: expectedYears(fa), salary: expectedSalary(fa) } };
+        const signed = { ...fa, contract: { years: expectedYears(fa), salary: marketValue(fa, year), type: "one" } };
         roster.push(signed); signings.push({ player: signed, teamId: t.id });
         have++;
       }
