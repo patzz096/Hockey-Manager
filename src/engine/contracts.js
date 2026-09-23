@@ -2,9 +2,9 @@ import { capFor } from "./cap";
 
 // ---------------------------------------------------------------------------------------
 // Contrats à la LNH (montants en milliers de $).
-//  - Valeur marchande calibrée sur les vrais contrats des alignements réels du jeu : ≈ 1,6 M$
-//    à une cote de 60, 2,8 M$ à 62, 4 M$ à 64, 5,9 M$ à 66, 9 M$ à 68, 14 M$ à 70 ; plafonnée
-//    à 20 % du plafond salarial (salaire maximal de la LNH), jamais sous le salaire minimum.
+//  - Valeur marchande selon l'échelle de la LNH (voir SALARY_CURVE) : ≈ 1,8 M$ à une cote de 60,
+//    3,2 M$ à 62, 5,3 M$ à 64, 7,8 M$ à 66, 10,3 M$ à 68, 13,2 M$ à 70 ; plafonnée à 20 % du
+//    plafond salarial (salaire maximal de la LNH), jamais sous le salaire minimum.
 //  - Contrat d'entrée (recrue, « ELC ») : durée selon l'âge à la signature, salaire de base
 //    selon le rang au repêchage, primes de rendement de l'annexe A pour les 1ers tours.
 //  - Un volet (même salaire en LNH et en LAH) ou deux volets (salaire réduit dans la LAH).
@@ -36,10 +36,25 @@ export const isTwoWay = (contract) => contract?.type === "two";
 
 // Valeur marchande (k$/an) d'un joueur, selon sa cote, son âge et son potentiel. `perf` :
 // production de la dernière saison (points par match), qui fait monter ou baisser les attentes.
+// Points d'ancrage cote → salaire (k$, plafond 2026-27 de 104 M$) : cotes du jeu p10 = 59,
+// médiane 62, p90 = 66, p99 = 70 ; salaires de la LNH : un bon joueur de premier trio touche
+// 8-10 M$, une vedette 10-13 M$, une supervedette 14-17 M$.
+const SALARY_CURVE = [[55, 850], [57, 900], [59, 1300], [60, 1800], [61, 2400], [62, 3200], [63, 4200], [64, 5300], [65, 6500], [66, 7800], [67, 9000], [68, 10300], [69, 11700], [70, 13200], [72, 15500], [75, 18500]];
+function curve(q) {
+  if (q <= SALARY_CURVE[0][0]) return SALARY_CURVE[0][1];
+  for (let i = 1; i < SALARY_CURVE.length; i++) {
+    const [x1, y1] = SALARY_CURVE[i], [x0, y0] = SALARY_CURVE[i - 1];
+    if (q <= x1) return y0 + ((q - x0) / (x1 - x0)) * (y1 - y0);
+  }
+  return 20800;
+}
 export function marketValue(player, year = CURRENT_YEAR, perf = null) {
   const young = player.age <= 24 ? (player.potential - player.ovr) * (player.age <= 21 ? 0.35 : 0.2) : 0;
   const q = player.ovr + Math.max(0, young);
-  let v = 850 + 466 * Math.exp(0.2384 * (q - 56));
+  // Les salaires suivent la croissance du plafond.
+  let v = curve(q) * (capFor(year) / 104000);
+  // Les cotes des gardiens s'étalent davantage ; le marché les paie un peu moins (élite : 8-11 M$).
+  if (player.pos === "G") v *= 0.85;
   if (player.age >= 32) v *= Math.max(0.5, 1 - 0.08 * (player.age - 31));
   if (perf != null && player.pos !== "G") v *= clamp(0.85 + perf * 0.3, 0.85, 1.25);
   return round25(clamp(v, minSalaryFor(year), maxSalaryFor(year)));
@@ -91,7 +106,8 @@ export function bonusRules(player, offer, year) {
   if (veteran) return { allowed: true, max: VETERAN_BONUS_MAX, why: "Joueur de 35 ans et plus sur un contrat d'un an : primes permises." };
   return { allowed: false, max: 0, why: `Primes de rendement réservées aux contrats d'entrée et aux joueurs de 35 ans et plus sur un contrat d'un an (${player.age} ans, ${offer.years} an${offer.years > 1 ? "s" : ""}).` };
 }
-export function bonusLabel(b) { return `${b.target} ${BONUS_KINDS[b.kind]?.short || b.kind} : ${b.amount.toLocaleString("fr-CA")} k$`; }
+const fmt = (k) => (k >= 1000 ? `${(k / 1000).toLocaleString("fr-CA", { maximumFractionDigits: 3 })} M$` : `${Math.round(k * 1000).toLocaleString("fr-CA")} $`);
+export function bonusLabel(b) { return `${b.target} ${BONUS_KINDS[b.kind]?.short || b.kind} : ${fmt(b.amount)}`; }
 // Primes gagnées selon les statistiques de la saison (st : { gp, g, a, pts, plusMinus }).
 export function earnedBonuses(contract, st) {
   return (contract?.bonuses || []).filter((b) => (st?.[b.kind] ?? 0) >= b.target);

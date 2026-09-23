@@ -5,6 +5,7 @@ import { agentAsk, evaluateOffer, interestFactors, interestLabel, bonusRules, BO
 import { formatMoney } from "../engine/cap";
 import { btnStyle } from "../ui/theme";
 import { StarRating } from "./common";
+import { money as k$ } from "../ui/format";
 
 // ---------------------------------------------------------------------------------------
 // Offre de contrat. L'intérêt du joueur (équipe gagnante, proximité, rôle, attachement) fixe
@@ -12,7 +13,6 @@ import { StarRating } from "./common";
 // une chance d'acceptation affichée en direct, calculée comme lors de l'envoi.
 // ---------------------------------------------------------------------------------------
 
-const k$ = (v) => `${Math.round(v).toLocaleString("fr-CA")} k$`;
 const factorColor = (v) => (v >= 0.4 ? "var(--win)" : v >= 0.1 ? "#7FD6A0" : v > -0.1 ? "var(--gold)" : v > -0.4 ? "#F59A4A" : "var(--loss)");
 const label = { display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--iceMuted)", marginBottom: 4 };
 const input = { background: "var(--navy)", color: "var(--ice)", border: "1px solid var(--line)", borderRadius: 5, padding: "4px 6px", fontSize: 12, fontFamily: "inherit" };
@@ -136,8 +136,8 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
                 <span style={{ fontSize: 12 }}>≥</span>
                 <input aria-label="Seuil" type="number" min={1} value={b.target} onChange={(e) => setBonuses(bonuses.map((x, j) => (j === i ? { ...x, target: Number(e.target.value) } : x)))} style={{ ...input, width: 64 }} />
                 <span style={{ fontSize: 12 }}>→</span>
-                <input aria-label="Montant (k$)" type="number" min={25} step={25} value={b.amount} onChange={(e) => setBonuses(bonuses.map((x, j) => (j === i ? { ...x, amount: Number(e.target.value) } : x)))} style={{ ...input, width: 80 }} />
-                <span style={{ fontSize: 12 }}>k$</span>
+                <input aria-label="Montant (milliers de $)" type="number" min={25} step={25} value={b.amount} onChange={(e) => setBonuses(bonuses.map((x, j) => (j === i ? { ...x, amount: Number(e.target.value) } : x)))} style={{ ...input, width: 80 }} />
+                <span style={{ fontSize: 12 }}>k$ ({k$(b.amount)})</span>
                 <button aria-label="Retirer la prime" onClick={() => setBonuses(bonuses.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--iceMuted)", cursor: "pointer" }}><X size={14} /></button>
               </div>
             ))}

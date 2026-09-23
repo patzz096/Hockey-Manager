@@ -12,13 +12,20 @@ export function starsText(value) {
   return "★".repeat(full) + (half ? "⯨" : "") + "☆".repeat(Math.max(0, 5 - full - (half ? 1 : 0)));
 }
 
+// Montant en milliers de $ (unité des contrats) affiché comme dans la LNH : 7,875 M$ ou 850 000 $.
+export function money(k) {
+  if (k == null || isNaN(k)) return "—";
+  if (Math.abs(k) >= 1000) return `${(k / 1000).toLocaleString("fr-CA", { minimumFractionDigits: 1, maximumFractionDigits: 3 })} M$`;
+  return `${Math.round(k * 1000).toLocaleString("fr-CA")} $`;
+}
+
 export function contractLabel(contract) {
   if (!contract) return "Agent libre";
   const bonus = (contract.bonuses || []).reduce((a, b) => a + b.amount, 0);
-  const parts = [`${contract.years} an${contract.years > 1 ? "s" : ""}`, `${contract.salary.toLocaleString("fr-CA")} k$`];
+  const parts = [`${contract.years} an${contract.years > 1 ? "s" : ""}`, `${money(contract.salary)} par saison`];
   if (contract.elc) parts.push("contrat d'entrée");
-  parts.push(contract.type === "two" ? `2 volets (LAH ${(contract.ahlSalary || 80).toLocaleString("fr-CA")} k$)` : "1 volet");
-  if (bonus) parts.push(`primes jusqu'à ${bonus.toLocaleString("fr-CA")} k$`);
+  parts.push(contract.type === "two" ? `2 volets (LAH ${money(contract.ahlSalary || 80)})` : "1 volet");
+  if (bonus) parts.push(`primes jusqu'à ${money(bonus)}`);
   if (contract.noTrade) parts.push("NTC");
   return parts.join(" · ");
 }

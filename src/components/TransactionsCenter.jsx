@@ -4,6 +4,7 @@ import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { h2Style, btnStyle, inputStyle, scoutQualityColor } from "../ui/theme";
 import { StarRating, PlayerLink } from "./common";
+import { money } from "../ui/format";
 
 export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true } }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);
@@ -63,9 +64,9 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>Rétention de salaire (optionnelle) : tu gardes une part du salaire jusqu'à la fin du contrat (cap mort), l'autre équipe reçoit le joueur moins cher. Maximum 50 %, 3 contrats retenus à la fois.</div>
           {myTeam.roster.filter((p) => myIds.includes(p.id)).map((p) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "3px 0" }}>
-              <span style={{ flex: 1 }}>{p.name} <span style={{ color: "var(--iceMuted)" }}>({(p.contract?.salary || 0).toLocaleString()}k$ × {p.contract?.years ?? "?"} an{(p.contract?.years ?? 1) > 1 ? "s" : ""})</span></span>
+              <span style={{ flex: 1 }}>{p.name} <span style={{ color: "var(--iceMuted)" }}>({money(p.contract?.salary || 0)} × {p.contract?.years ?? "?"} an{(p.contract?.years ?? 1) > 1 ? "s" : ""})</span></span>
               <select aria-label={`Rétention ${p.name}`} value={retention[p.id] || 0} onChange={(e) => setRetention({ ...retention, [p.id]: Number(e.target.value) })} style={{ ...inputStyle, width: "auto" }}>
-                {[0, 0.25, 0.5].map((r) => <option key={r} value={r}>{r === 0 ? "Aucune" : `${r * 100} % retenu (${Math.round((p.contract?.salary || 0) * r).toLocaleString()}k$)`}</option>)}
+                {[0, 0.25, 0.5].map((r) => <option key={r} value={r}>{r === 0 ? "Aucune" : `${r * 100} % retenu (${money(Math.round((p.contract?.salary || 0) * r))})`}</option>)}
               </select>
             </div>
           ))}

@@ -130,12 +130,16 @@ tests/engine.test.js       tests du moteur
   ordre de l'alignement réel, compteur de joueurs LNH en santé), tableau par position classé
   par cote, et rapport d'équipe (besoins, meneurs par catégorie, meilleurs espoirs, infirmerie)
 - Contrats LNH (`engine/contracts.js`) : valeur marchande calibrée sur les vrais contrats du jeu
-  (≈ 2,8 M$ à une cote de 62, 9 M$ à 68, maximum 20 % du plafond, minimum 850 k$ en 2026-27) ;
+  (≈ 3,2 M$ à une cote de 62, 10,3 M$ à 68, 13,2 M$ à 70, maximum 20 % du plafond, minimum 850 k$ en 2026-27) ;
   contrats d'entrée selon le rang au repêchage (durée selon l'âge, primes de l'annexe A pour les
   1ers tours) ; un ou deux volets (salaire LAH, enfouissement au-delà de minimum + 375 k$) ; primes
   de rendement (recrues, 35 ans et plus sur un an) comptées sur le plafond et versées en fin de
   saison. Intérêt du joueur : équipe gagnante, proximité de sa région d'origine, rôle et temps de
   glace, attachement ; il fixe la demande de l'agent, la chance d'acceptation et la contre-offre
+- Pack de personnalisation (`src/custom/pack.js`, `docs/pack-personnalisation.md`) : un seul fichier
+  .json partageable (alignements, contrats en M$, attributs, équipes, logos, facepack). Export et
+  import dans l'onglet Personnalisation, export CSV pour tableur (Excel en français), et éditeur
+  autonome hors jeu (`npm run build:editor` → `dist/editeur-pack.html`)
 - Gestion du joueur dans son profil : rappel, renvoi au club-école ou ballottage, LTIR, nouveau
   contrat, rachat, réclamation au ballottage, offre à un agent libre et repêchage se font dans
   le volet « Gestion du joueur » (les listes n'ont plus de boutons à côté des joueurs)

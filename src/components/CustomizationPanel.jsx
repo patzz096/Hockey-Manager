@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { useCustomization } from "../custom/CustomizationContext";
-import { parseRosterFile, exportLeagueDb } from "../custom/rosterFile";
+import { exportLeagueDb } from "../custom/rosterFile";
+import { buildPack, parsePackFile, exportSheetCsv } from "../custom/pack";
+import { saveFile } from "../ui/saveFile";
 import { faceKeys } from "../custom/images";
 import { h2Style, btnStyle, inputStyle } from "../ui/theme";
 import { TeamCrest, ConfirmButton } from "./common";
@@ -20,12 +22,8 @@ function FileButton({ label, accept, multiple, directory, onFiles, color = "var(
   );
 }
 
-function download(filename, data) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+// Lien vers l'éditeur de pack (page séparée, utilisable hors du jeu).
+export const PACK_EDITOR_URL = "https://claude.ai/artifact/JTwgSfDMH5jbhBbcRUWZHa";
 
 // teams : équipes de la partie en cours (pour l'export et la couverture du facepack).
 export function CustomizationPanel({ teams, inGame, onNewGame }) {
@@ -39,18 +37,40 @@ export function CustomizationPanel({ teams, inGame, onNewGame }) {
   const dbTeams = c.rosterDb ? Object.keys(c.rosterDb.teams) : [];
   const dbPlayers = c.rosterDb ? Object.values(c.rosterDb.teams).reduce((a, l) => a + l.length, 0) : 0;
 
+  // Import d'un pack complet, d'une base (.json) ou d'un CSV (tableur ou script LNH).
   async function importDb(files) {
     try {
       const file = files[0];
-      const db = parseRosterFile(await file.text(), file.name);
-      const known = Object.keys(db.teams).filter((id) => teamIds.includes(id));
-      if (known.length === 0) throw new Error("Aucune équipe reconnue (identifiants attendus : MTL, TOR, BOS...).");
-      const ignored = Object.keys(db.teams).filter((id) => !teamIds.includes(id));
-      await c.saveRosterDb({ ...db, source: file.name, importedAt: new Date().toISOString().slice(0, 10) });
-      setStatus({ ok: true, text: `${file.name} : ${known.length} équipes chargées${ignored.length ? ` (ignorées : ${ignored.join(", ")})` : ""}. ${inGame ? "Lance une nouvelle partie pour l'appliquer." : ""}` });
+      const pack = await parsePackFile(await file.text(), file.name);
+      const done = [];
+      if (pack.db) {
+        const known = Object.keys(pack.db.teams).filter((id) => teamIds.includes(id));
+        if (known.length === 0) throw new Error("Aucune équipe reconnue (identifiants attendus : MTL, TOR, BOS...).");
+        const ignored = Object.keys(pack.db.teams).filter((id) => !teamIds.includes(id));
+        await c.saveRosterDb({ ...pack.db, source: pack.meta?.name || file.name, importedAt: new Date().toISOString().slice(0, 10) });
+        done.push(`${known.length} équipes${ignored.length ? ` (ignorées : ${ignored.join(", ")})` : ""}`);
+      }
+      const info = Object.fromEntries(Object.entries(pack.teamInfo || {}).filter(([id]) => teamIds.includes(id)).map(([id, v]) => [id, { name: v.name, city: v.city, color: v.color }]));
+      if (Object.keys(info).length) { await c.saveTeamInfo({ ...c.teamInfo, ...info }); done.push(`${Object.keys(info).length} fiches d'équipe`); }
+      const img = await c.importPackImages({ logos: Object.fromEntries(Object.entries(pack.logos).filter(([id]) => teamIds.includes(id))), faces: pack.faces });
+      if (img.logos) done.push(`${img.logos} logos`);
+      if (img.faces) done.push(`${img.faces} photos`);
+      if (!done.length) throw new Error("le fichier ne contient ni alignements, ni logos, ni photos.");
+      setStatus({ ok: true, text: `${pack.meta?.name || file.name}${pack.meta?.author ? ` (par ${pack.meta.author})` : ""} : ${done.join(", ")} importés.${pack.db && inGame ? " Lance une nouvelle partie pour appliquer les alignements." : ""}` });
     } catch (e) {
       setStatus({ ok: false, text: `Import impossible : ${e.message}` });
     }
+  }
+  async function exportPack() {
+    setStatus({ ok: true, text: "Préparation du pack…" });
+    const pack = await buildPack(teams, c.exportImages(), { name: "Mon pack Hockey GM" });
+    const text = JSON.stringify(pack);
+    const r = await saveFile("hockey-gm-pack.json", text);
+    setStatus(r === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: `Pack enregistré (${Math.round(text.length / 1024)} Ko) : ${teams.length} équipes, ${Object.keys(pack.logos).length} logos, ${Object.keys(pack.faces).length} photos. Modifie-le, partage-le, puis réimporte-le ici.` });
+  }
+  async function exportCsv() {
+    const r = await saveFile("hockey-gm-alignements.csv", exportSheetCsv(teams), "text/csv");
+    setStatus(r === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: "CSV enregistré : ouvre-le dans Excel, LibreOffice ou Google Sheets (une ligne par joueur, salaires en millions), puis réimporte-le ici." });
   }
   function setTeamField(id, field, value) {
     c.saveTeamInfo({ ...info, [id]: { ...(info[id] || {}), [field]: value } });
@@ -66,18 +86,24 @@ export function CustomizationPanel({ teams, inGame, onNewGame }) {
       {status && <div style={{ ...section, borderColor: status.ok ? "var(--win)" : "var(--loss)", fontSize: 13, padding: 12 }}>{status.text}</div>}
 
       <div style={section}>
-        <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Base de données (alignements)</div>
+        <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Pack de personnalisation (alignements, contrats, logos, photos)</div>
+        <div style={{ ...hint, marginBottom: 10 }}>
+          Un pack est <strong style={{ color: "var(--ice)" }}>un seul fichier .json</strong> qui réunit tes alignements (joueurs, attributs, contrats en millions de $), les noms et couleurs des équipes, tes logos et ton facepack. Prépare-le hors du jeu, partage-le, puis importe-le ici. Trois façons de le modifier :
+          <br />1. {PACK_EDITOR_URL ? <a href={PACK_EDITOR_URL} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>l'éditeur de pack</a> : "l'éditeur de pack"} (tableau par équipe, photos et logos par glisser-déposer) ;
+          <br />2. un tableur (Excel, Google Sheets) avec « Exporter en CSV » : une ligne par joueur ;
+          <br />3. un éditeur de texte, directement dans le fichier .json.
+        </div>
         <div style={{ ...hint, marginBottom: 10 }}>
           Actuelle : <strong style={{ color: "var(--ice)" }}>{c.rosterDb ? `${c.rosterDb.source || "personnalisée"} — ${dbTeams.length} équipes, ${dbPlayers} joueurs (importée le ${c.rosterDb.importedAt})` : "par défaut"}</strong><br />
-          Formats acceptés : fichier exporté par le jeu (.json), ou le JSON/CSV de <code>scripts/fetch_nhl_rosters.py</code>. Les équipes absentes du fichier gardent leur alignement par défaut.
-          Astuce : exporte la base actuelle, modifie-la dans un éditeur de texte (noms, attributs, contrats), puis réimporte-la.
+          Formats acceptés : pack (.json), base du jeu (.json), CSV du tableur, ou le JSON/CSV de <code>scripts/fetch_nhl_rosters.py</code>. Les équipes absentes du fichier gardent leur alignement par défaut ; un pack qui ne contient que des logos ou des photos les ajoute sans toucher aux alignements.
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <FileButton label="Importer une base (.json / .csv)" accept=".json,.csv,application/json,text/csv" onFiles={importDb} color="var(--red)" />
-          <button onClick={() => download("hockey-gm-base.json", exportLeagueDb(teams))} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Exporter la base actuelle</button>
+          <FileButton label="Importer un pack, une base ou un CSV" accept=".json,.csv,application/json,text/csv" onFiles={importDb} color="var(--red)" />
+          <button onClick={exportPack} style={{ ...btnStyle("var(--win)"), fontSize: 12 }}>Exporter mon pack complet</button>
+          <button onClick={exportCsv} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Exporter en CSV (tableur)</button>
           <button onClick={() => {
             const text = JSON.stringify(exportLeagueDb(teams), null, 1);
-            navigator.clipboard?.writeText(text).then(() => setStatus({ ok: true, text: "Base copiée dans le presse-papiers : colle-la dans un fichier .json." }), () => setStatus({ ok: false, text: "Copie refusée par le navigateur : utilise « Exporter la base actuelle »." }));
+            navigator.clipboard?.writeText(text).then(() => setStatus({ ok: true, text: "Base copiée dans le presse-papiers : colle-la dans un fichier .json." }), () => setStatus({ ok: false, text: "Copie refusée par le navigateur : utilise « Exporter mon pack complet »." }));
           }} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Copier la base (JSON)</button>
           {c.rosterDb && <button onClick={() => { c.saveRosterDb(null); setStatus({ ok: true, text: `Base par défaut rétablie.${inGame ? " Lance une nouvelle partie pour l'appliquer." : ""}` }); }} style={{ ...btnStyle("var(--loss)"), fontSize: 12 }}>Revenir à la base par défaut</button>}
           {onNewGame && (inGame

@@ -3,6 +3,7 @@ import { STAFF_ROLES } from "../engine/staff";
 import { h2Style, btnStyle, attr20Color } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
+import { money } from "../ui/format";
 
 export function StaffCard({ role, hired, benchmark, onFire }) {
   return (
@@ -18,7 +19,7 @@ export function StaffCard({ role, hired, benchmark, onFire }) {
           {hired.devSkill != null && (
             <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 4 }}>Développement: <span style={{ background: attr20Color(attr20(hired.devSkill)), color: "#0B1B2E", fontWeight: 700, fontSize: 10, borderRadius: 3, padding: "1px 6px" }}>{attr20(hired.devSkill)}</span></div>
           )}
-          <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>{hired.salary.toLocaleString()}k$/an</div>
+          <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>{money(hired.salary)} par saison</div>
           <button onClick={() => onFire(role)} style={{ ...btnStyle("var(--loss)"), width: "100%", justifyContent: "center", fontSize: 12 }}>Congédier</button>
         </>
       ) : (
@@ -78,7 +79,7 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
               <td style={{ padding: "7px 10px" }}>{c.name}</td>
               <td style={{ padding: "7px 10px" }}>{STAFF_ROLES[c.role]}</td>
               <td style={{ padding: "7px 10px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><StarRating value={starsFor(c.rating, benchmark)} size={12} /><span style={{ background: attr20Color(attr20(c.rating)), color: "#0B1B2E", fontWeight: 700, fontSize: 11, borderRadius: 3, padding: "1px 7px" }}>{attr20(c.rating)}</span>{c.devSkill != null && <span style={{ fontSize: 10, color: "var(--iceMuted)" }}>· dév. {attr20(c.devSkill)}</span>}</div></td>
-              <td style={{ padding: "7px 10px" }}>{c.salary.toLocaleString()}k$/an</td>
+              <td style={{ padding: "7px 10px" }}>{money(c.salary)} par saison</td>
               <td style={{ padding: "7px 10px" }}><button onClick={() => onHire(c)} style={btnStyle("var(--win)")}>Embaucher</button></td>
             </tr>
           ))}

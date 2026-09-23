@@ -24,6 +24,7 @@ import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
+import { money } from "./ui/format";
 import { ContractOfferModal } from "./components/ContractOfferModal";
 import { ContractsPanel } from "./components/ContractsPanel";
 import { DepthChartPanel } from "./components/DepthChartPanel";
@@ -518,7 +519,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const { ctx, year, perf } = offerContext(realPlayer(player), isRenewal);
     const result = evaluateOffer(realPlayer(player), offer, ctx, year, perf);
     const bonusText = (offer.bonuses || []).length ? `, primes : ${offer.bonuses.map(bonusLabel).join(", ")}` : "";
-    const offerSummary = `Offre : ${offer.salary.toLocaleString("fr-CA")} k$/an sur ${offer.years} an${offer.years > 1 ? "s" : ""}, contrat à ${offer.type === "two" ? `deux volets (LAH ${offer.ahlSalary} k$)` : "un volet"}${offer.signingBonus ? `, prime à la signature de ${offer.signingBonus.toLocaleString("fr-CA")} k$` : ""}${offer.noTrade ? ", clause de non-échange" : ""}${bonusText}.`;
+    const offerSummary = `Offre : ${money(offer.salary)} par saison sur ${offer.years} an${offer.years > 1 ? "s" : ""}, contrat à ${offer.type === "two" ? `deux volets (LAH ${money(offer.ahlSalary)})` : "un volet"}${offer.signingBonus ? `, prime à la signature de ${money(offer.signingBonus)}` : ""}${offer.noTrade ? ", clause de non-échange" : ""}${bonusText}.`;
     if (result.accept) {
       const newContract = { years: offer.years, salary: offer.salary, type: offer.type, ahlSalary: offer.type === "two" ? offer.ahlSalary : undefined, noTrade: offer.noTrade, bonuses: offer.bonuses || [], signingBonus: offer.signingBonus || 0 };
       if (isRenewal) {
@@ -532,7 +533,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       addMessage({ from: "Agent du joueur", subject: `${player.name} a accepté l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\n${player.name} a signé.` });
     } else {
       const why = result.factors.filter((f) => f.value < 0).map((f) => f.label.toLowerCase());
-      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${result.counter.salary.toLocaleString("fr-CA")} k$/an sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${result.parts.twoWay < -0.3 ? " Mon client refuse un contrat à deux volets : il est un joueur de la LNH." : ""}${why.length ? ` Réserves de mon client : ${why.join(", ")}.` : ""}` });
+      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${result.parts.twoWay < -0.3 ? " Mon client refuse un contrat à deux volets : il est un joueur de la LNH." : ""}${why.length ? ` Réserves de mon client : ${why.join(", ")}.` : ""}` });
     }
     setOfferTarget(null);
   }
@@ -955,11 +956,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       if (!all.length) return;
       const sum = won.reduce((a, b) => a + b.amount, 0);
       total += sum;
-      lines.push(`- ${p.name} : ${won.length ? won.map(bonusLabel).join(", ") : "aucune prime atteinte"} (${sum.toLocaleString("fr-CA")} k$ sur ${all.reduce((a, b) => a + b.amount, 0).toLocaleString("fr-CA")} k$ possibles)`);
+      lines.push(`- ${p.name} : ${won.length ? won.map(bonusLabel).join(", ") : "aucune prime atteinte"} (${money(sum)} sur ${money(all.reduce((a, b) => a + b.amount, 0))} possibles)`);
     });
     if (!lines.length) return;
     if (total > 0) setBusiness((prev) => ({ ...prev, cash: prev.cash - total * 1000 }));
-    addMessage({ from: "Directeur général adjoint", subject: `Primes de rendement : ${total.toLocaleString("fr-CA")} k$`, category: "transaction", body: `Primes de fin de saison régulière :\n${lines.join("\n")}` });
+    addMessage({ from: "Directeur général adjoint", subject: `Primes de rendement : ${money(total)}`, category: "transaction", body: `Primes de fin de saison régulière :\n${lines.join("\n")}` });
   }
   // Une journée des séries : chaque série en retard joue son prochain match (un jour sur deux).
   function simPlayoffDay(all = false) {
@@ -1031,7 +1032,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const mine = drafted.filter((x) => x.teamId === myTeamId);
     const elcBonus = mine.reduce((a, x) => a + (x.player.contract?.signingBonus || 0), 0);
     if (elcBonus > 0) setBusiness((prev) => ({ ...prev, cash: prev.cash - elcBonus * 1000 }));
-    if (mine.length) addMessage({ from: "Dépisteur amateur", subject: `Repêchage : ${mine.length} choix de ${teamsById[myTeamId].name}`, category: "scout", playerIds: mine.map((x) => x.player.id), body: mine.map((x) => `#${x.player.draftPick} — ${x.player.name} (${x.player.pos}, ${x.player.age} ans) : contrat d'entrée de ${x.player.contract.years} ans à ${x.player.contract.salary.toLocaleString("fr-CA")} k$ (deux volets)${x.player.contract.signingBonus ? `, prime à la signature ${x.player.contract.signingBonus} k$` : ""}${x.player.contract.bonuses?.length ? `, primes : ${x.player.contract.bonuses.map(bonusLabel).join(", ")}` : ""}`).join("\n") + "\n\nIls rejoignent ton club-école (onglet Profondeur)." });
+    if (mine.length) addMessage({ from: "Dépisteur amateur", subject: `Repêchage : ${mine.length} choix de ${teamsById[myTeamId].name}`, category: "scout", playerIds: mine.map((x) => x.player.id), body: mine.map((x) => `#${x.player.draftPick} — ${x.player.name} (${x.player.pos}, ${x.player.age} ans) : contrat d'entrée de ${x.player.contract.years} ans à ${money(x.player.contract.salary)} (deux volets)${x.player.contract.signingBonus ? `, prime à la signature ${money(x.player.contract.signingBonus)}` : ""}${x.player.contract.bonuses?.length ? `, primes : ${x.player.contract.bonuses.map(bonusLabel).join(", ")}` : ""}`).join("\n") + "\n\nIls rejoignent ton club-école (onglet Profondeur)." });
   }
 
   // ---------- 1er juillet : agents libres ----------

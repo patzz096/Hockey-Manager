@@ -8,6 +8,7 @@ import { teamOvrBenchmark, starsFor, attr20 } from "../engine/attributes";
 import { formatDay } from "../engine/calendar";
 import { h2Style, btnStyle } from "../ui/theme";
 import { StarRating, TeamCrest, ConfirmButton } from "./common";
+import { money as fmtMoney } from "../ui/format";
 
 // ---------------------------------------------------------------------------------------
 // Centre de dépistage, à la FM24 : zones à couvrir (déploiement des dépisteurs et couverture),
@@ -97,7 +98,7 @@ function MissionEditor({ scout, mission, onSetMission, onFire }) {
         <div>
           <div style={{ fontSize: 11, color: "var(--iceMuted)", letterSpacing: 0.4 }}>{(scout.head || "Dépisteur en renfort").toUpperCase()}</div>
           <div style={{ fontSize: 15, fontWeight: 700 }}>{scout.name} <span style={{ color: "var(--gold)" }}>{attr20(scout.rating)}/20</span></div>
-          <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{SPEC[scout.specialty]} · port d'attache : {regionLabel(scout.home)}{scout.salary ? ` · ${scout.salary.toLocaleString("fr-CA")} k$/an` : ""}</div>
+          <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{SPEC[scout.specialty]} · port d'attache : {regionLabel(scout.home)}{scout.salary ? ` · ${fmtMoney(scout.salary)} par saison` : ""}</div>
         </div>
         <div style={{ textAlign: "right", fontSize: 12 }}>
           {active ? <>
@@ -189,7 +190,7 @@ function TeamView({ scouts, missions, onSetMission, market, onHire, onFire, onRe
                   <td style={{ ...td, color: "var(--gold)", fontWeight: 700 }}>{attr20(c.rating)}/20</td>
                   <td style={td}>{SPEC[c.specialty]}</td>
                   <td style={td}>{regionLabel(c.home)}</td>
-                  <td style={td}>{c.salary.toLocaleString("fr-CA")} k$/an</td>
+                  <td style={td}>{fmtMoney(c.salary)} par saison</td>
                   <td style={td}><button onClick={() => onHire(c)} disabled={extra >= maxExtra} style={{ ...btnStyle("var(--win)"), fontSize: 11, padding: "3px 10px", opacity: extra >= maxExtra ? 0.5 : 1 }}>Engager</button></td>
                 </tr>
               ))}</tbody>

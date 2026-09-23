@@ -30,7 +30,11 @@ function validate(db) {
   return db;
 }
 
+// Séparateur détecté sur la ligne d'en-tête : « ; » (Excel en français, décimales à virgule)
+// ou « , ».
 export function parseCsv(text) {
+  const firstLine = text.split(/\r?\n/)[0];
+  const sep = firstLine.includes(";") ? ";" : ",";
   const lines = [];
   let row = [], field = "", quoted = false;
   for (let i = 0; i < text.length; i++) {
@@ -40,7 +44,7 @@ export function parseCsv(text) {
       else if (c === '"') quoted = false;
       else field += c;
     } else if (c === '"') quoted = true;
-    else if (c === "," || c === ";") { row.push(field); field = ""; }
+    else if (c === sep) { row.push(field); field = ""; }
     else if (c === "\n" || c === "\r") {
       if (c === "\r" && text[i + 1] === "\n") i++;
       row.push(field); lines.push(row); row = []; field = "";

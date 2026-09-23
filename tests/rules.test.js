@@ -65,7 +65,9 @@ describe("ballottage", () => {
     const early = resolveWaivers([w], 10, teams, priority, "TOR", new Set(), 2026);
     expect(early.results).toHaveLength(0);
     const res = resolveWaivers([w], 11, teams, priority, "TOR", new Set(), 2026);
-    expect(res.results[0].claimedBy).toBe(priority.find((id) => id !== "MTL" && id !== "TOR"));
+    // La première équipe prioritaire qui a de l'espace sous le plafond réclame le joueur.
+    const byTeam = Object.fromEntries(teams.map((t) => [t.id, t]));
+    expect(res.results[0].claimedBy).toBe(priority.find((id) => id !== "MTL" && id !== "TOR" && fitsUnderCap(byTeam[id].roster, 2026, star.contract.salary)));
     const mine = resolveWaivers([w], 11, teams, ["TOR", ...priority], "TOR", new Set(["W1"]), 2026);
     expect(mine.results[0].claimedBy).toBe("TOR");
   });
