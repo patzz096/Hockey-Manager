@@ -43,6 +43,8 @@ import { BoxscoreView } from "./components/match/BoxscoreView";
 import { LiveMatchViewer } from "./components/match/LiveMatchViewer";
 import { LiveSimPanel, clockDisplay, livePeriod } from "./components/match/LiveSimPanel";
 import { PlayoffsPanel } from "./components/PlayoffsPanel";
+import { RolesPanel } from "./components/RolesPanel";
+import { naturalRoles } from "./engine/roles";
 import { DraftPanel } from "./components/DraftPanel";
 import { CapSummary } from "./components/CapSummary";
 import { WaiversPanel } from "./components/WaiversPanel";
@@ -368,6 +370,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
   function updateStrategy(field, value) {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], strategy: { ...normalizeStrategy(prev[myTeamId].strategy), [field]: value } } }));
+  }
+  // Rôle demandé à un joueur (onglet Rôles).
+  function updateRole(playerId, roleId) {
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], roles: { ...(prev[myTeamId].roles || {}), [playerId]: roleId } } }));
+  }
+  function resetNaturalRoles() {
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], roles: naturalRoles(teamsById[myTeamId].roster) } }));
   }
   function updateMentality(field, value) {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], mentality: { ...prev[myTeamId].mentality, [field]: value } } }));
@@ -900,6 +909,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const navItems = [
     { key: "roster", label: "Alignement", icon: Users },
     { key: "lines", label: "Trios", icon: Layers },
+    { key: "roles", label: "Rôles", icon: UserCog },
     { key: "depth", label: "Profondeur", icon: Network },
     { key: "strategy", label: "Stratégie", icon: Sliders },
     { key: "schedule", label: "Calendrier", icon: CalendarDays },
@@ -981,6 +991,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "lines" && <LinesEditor team={myTeam} lines={myLines} onChange={updateLine} onSwap={swapLineSlots} onChangeUnit={updateUnit} onAutoLines={autoOptimizeLines} onAutoSpecialTeams={autoOptimizeSpecialTeams} onSelectPlayer={selectPlayer} />}
 
         {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} injuries={injuries} day={currentDay} onLtir={placeOnLtir} onSendDown={sendDownPlayer} />}
+
+        {tab === "roles" && <RolesPanel team={myTeam} lines={myLines} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onSelectPlayer={selectPlayer} />}
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
 

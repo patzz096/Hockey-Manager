@@ -4,6 +4,7 @@ import { NATION_FLAG, NATION_NAME } from "../data/names";
 import { SKATER_CATEGORIES, GOALIE_CATEGORIES, ATTR_LABELS, attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { lineLabel } from "../engine/lines";
 import { formatDay } from "../engine/calendar";
+import { ROLES, naturalRole, roleFit, roleOf } from "../engine/roles";
 import { getScoutInfo, perceivedRatings, assignScout, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
 import { contractLabel, draftLabel } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
@@ -166,6 +167,17 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
             </InfoCard>
             <InfoCard label="RÔLE DANS L'ÉQUIPE" accent="var(--steel)">
               <div style={{ fontSize: 13, fontWeight: 600 }}>{role}</div>
+              {known && player.pos !== "G" && (() => {
+                const shownPlayer = { ...player, attrs: shown.attrs };
+                const nat = naturalRole(shownPlayer);
+                const asked = lines ? roleOf(lines, shownPlayer) : nat;
+                return (
+                  <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 4, lineHeight: 1.4 }}>
+                    Archétype : <span style={{ color: "var(--gold)" }}>{ROLES[nat].label}</span>
+                    {isMine && asked !== nat && <><br />Rôle demandé : {ROLES[asked].label} ({roleFit(shownPlayer, asked) >= 0.15 ? "adapté" : roleFit(shownPlayer, asked) > -0.15 ? "passable" : "à contre-emploi"})</>}
+                  </div>
+                );
+              })()}
             </InfoCard>
             <InfoCard label="REPÊCHAGE">
               <div style={{ fontSize: 13, fontWeight: 600 }}>{known ? draftLabel(player) : "?"}</div>

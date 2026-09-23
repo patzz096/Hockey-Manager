@@ -105,6 +105,14 @@ tests/engine.test.js       tests du moteur
   matchs à 5 buts d'écart ou plus, et le gagnant d'un écrasement domine nettement aux tirs
 - Buts, passes, tirs, mises en échec, punitions, avantage/désavantage numérique, mises au jeu,
   tirs bloqués, +/-, temps de glace — tous simulés par joueur selon ses attributs réels
+- Rôles des joueurs (`engine/roles.js`, d'après le guide « Archétypes de joueurs »,
+  `docs/archetypes-joueurs.md`) : attaquants (fabricant de jeu, franc-tireur, attaquant de
+  puissance, deux sens, énergie), défenseurs (offensif, défensif, deux sens), gardien
+  papillon. Onglet Rôles : rôle demandé à chaque joueur, adéquation selon ses attributs clés,
+  archétype naturel, fiche du rôle (attributs, priorité tactique, exemples LNH, effets),
+  avertissements (rôle mal placé dans l'alignement) et conseils de composition des trios et
+  paires. En match, le rôle change qui tire, passe, frappe, bloque et gagne les mises au jeu ;
+  un contre-emploi est joué à moitié et moins bien
 - Systèmes de jeu (`engine/strategy.js`, d'après le guide « Stratégies NHL et profils de
   joueurs ») : 5 phases (zone défensive, sortie de zone, zone offensive, échec avant, repli
   défensif) × 5 systèmes. Chaque système décrit le profil qui lui convient ou non ; l'adéquation

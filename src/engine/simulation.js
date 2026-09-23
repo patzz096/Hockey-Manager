@@ -1,6 +1,7 @@
 import { OFFENSIVE, DEFENSIVE, GOALIE_TECH, avg } from "./attributes";
 import { FORWARD_BONUS, DEFENSE_BONUS, lineInfo } from "./lines";
 import { poisson, weightedPick } from "./random";
+import { roleMods } from "./roles";
 import { DEFAULT_STRATEGY, computeStrategyFits, getStrategyMultipliers, shooterMods } from "./strategy";
 
 // ---------------------------------------------------------------------------------------
@@ -18,7 +19,7 @@ import { DEFAULT_STRATEGY, computeStrategyFits, getStrategyMultipliers, shooterM
 export const SIM = {
   esShots: 24.5,       // tirs à forces égales par équipe et par match, à forces égales
   shotExp: 1.8,        // sensibilité du volume de tirs à l'écart attaque / défense
-  esGoalProb: 0.116,   // probabilité qu'un tir à forces égales soit un but
+  esGoalProb: 0.110,   // probabilité qu'un tir à forces égales soit un but
   finishExp: 1.6,      // sensibilité à l'écart finition / gardien
   ppShotsPerOpp: 1.8,  // tirs par avantage numérique
   ppGoalProb: 0.105,
@@ -59,9 +60,12 @@ export function teamRatings(team, lines, staff) {
   const bonus = (p) => lineInfo(p.id, safeLines).bonus;
   const isD = (p) => p.pos === "LD" || p.pos === "RD";
   const goalie = team.roster.find((p) => p.id === safeLines.goalies.starter) || team.roster.find((p) => p.pos === "G");
-  let attack = weightedAvg(skaters, (p) => avg(p.attrs, OFFENSIVE), bonus);
-  let defense = weightedAvg(skaters, (p) => avg(p.attrs, DEFENSIVE), (p) => bonus(p) * (isD(p) ? 1.6 : 1));
-  let finish = weightedAvg(skaters, offenseSkillScore, bonus);
+  // Rôles demandés : un franc-tireur ou un défenseur offensif pèse plus en attaque, un défenseur
+  // défensif ou un attaquant d'énergie plus en défense ; un joueur mal adapté à son rôle perd en efficacité.
+  const rm = (p) => roleMods(safeLines, p);
+  let attack = weightedAvg(skaters, (p) => avg(p.attrs, OFFENSIVE) * rm(p).attack, bonus);
+  let defense = weightedAvg(skaters, (p) => avg(p.attrs, DEFENSIVE) * rm(p).defense, (p) => bonus(p) * (isD(p) ? 1.6 : 1));
+  let finish = weightedAvg(skaters, (p) => offenseSkillScore(p) * rm(p).finish, bonus);
   const goalieQ = goalie ? avg(goalie.attrs, GOALIE_TECH) : 60;
   if (staff) {
     const coach = 1 + (((staff.headCoach?.rating || 50) - 50) / 50) * 0.03;
@@ -104,7 +108,7 @@ function binomial(n, p, rng) { let k = 0; for (let i = 0; i < n; i++) if (rng() 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // Répartit `shots` tirs et `goals` buts entre les tireurs, puis les passes.
-function distributeAttack(shooters, shots, goals, rng, weightOf, type, bonusOf = () => 1) {
+function distributeAttack(shooters, shots, goals, rng, weightOf, type, bonusOf = () => 1, passOf = () => 1) {
   const shotsBy = {}, goalsBy = {}, assistsBy = {}, events = [];
   if (shooters.length === 0) return { shotsBy, goalsBy, assistsBy, events };
   const weights = shooters.map(weightOf);
@@ -118,7 +122,7 @@ function distributeAttack(shooters, shots, goals, rng, weightOf, type, bonusOf =
     const roll = rng();
     const assistCount = roll < (type === "PP" ? 0.08 : 0.12) ? 0 : roll < 0.55 ? 1 : 2;
     const mates = shooters.filter((p) => p.id !== scorer.id);
-    const passW = mates.map((p) => skillPower(playmakingScore(p), 1.8) * bonusOf(p));
+    const passW = mates.map((p) => skillPower(playmakingScore(p), 1.8) * bonusOf(p) * passOf(p));
     const chosen = new Set();
     for (let a = 0; a < assistCount && chosen.size < mates.length; a++) {
       let pick, tries = 0;
@@ -131,9 +135,10 @@ function distributeAttack(shooters, shots, goals, rng, weightOf, type, bonusOf =
 }
 
 function generateHits(team, lines, rng, scale) {
+  // Le rôle module la fréquence des mises en échec (attaquant d'énergie, de puissance…).
   const hitsBy = {};
   team.roster.filter((p) => p.pos !== "G").forEach((p) => {
-    const lambda = (0.3 + Math.pow(p.attrs.hitting / 99, 1.6) * 3.6) * lineInfo(p.id, lines).bonus * scale;
+    const lambda = (0.3 + Math.pow(p.attrs.hitting / 99, 1.6) * 3.6) * lineInfo(p.id, lines).bonus * roleMods(lines, p).hit * scale;
     const h = poisson(Math.max(0.05, lambda), rng);
     if (h > 0) hitsBy[p.id] = h;
   });
@@ -152,7 +157,7 @@ function simulateAttack(team, lines, rt, oppRt, strat, oppStrat, oppTeam, oppLin
   const esShots = poisson(Math.max(0.05, esLambda), rng);
   const esProb = clamp(SIM.esGoalProb * Math.pow(rt.finish / oppRt.goalieQ, SIM.finishExp) * strat.q * oppStrat.qA, 0.03, 0.2);
   const esGoals = binomial(esShots, esProb, rng);
-  const es = distributeAttack(skaters, esShots, esGoals, rng, (p) => skillPower(offenseSkillScore(p) + p.attrs.hitting * mods.hitting + p.attrs.strength * mods.strength) * bonusOf(p) * (isD(p) ? mods.defenseBoost : 1), "ES", bonusOf);
+  const es = distributeAttack(skaters, esShots, esGoals, rng, (p) => skillPower(offenseSkillScore(p) + p.attrs.hitting * mods.hitting + p.attrs.strength * mods.strength) * bonusOf(p) * (isD(p) ? mods.defenseBoost : 1) * roleMods(lines, p).shoot, "ES", bonusOf, (p) => roleMods(lines, p).pass);
 
   const unit = (lines.pp || []).map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
   const ppOff = unitRating(lines.pp, team.roster, OFFENSIVE);
@@ -161,7 +166,7 @@ function simulateAttack(team, lines, rt, oppRt, strat, oppStrat, oppTeam, oppLin
   const ppFinish = unit.length ? unit.reduce((a, p) => a + offenseSkillScore(p), 0) / unit.length : rt.finish;
   const ppProb = clamp(SIM.ppGoalProb * Math.pow(ppFinish / oppRt.goalieQ, 2) * Math.pow(ppOff / pkDef, 0.8), 0.05, 0.3);
   const ppGoals = binomial(ppShots, ppProb, rng);
-  const pp = distributeAttack(unit.length ? unit : skaters, ppShots, ppGoals, rng, (p) => skillPower(offenseSkillScore(p)), "PP");
+  const pp = distributeAttack(unit.length ? unit : skaters, ppShots, ppGoals, rng, (p) => skillPower(offenseSkillScore(p)) * roleMods(lines, p).shoot, "PP", () => 1, (p) => roleMods(lines, p).pass);
 
   const shotsBy = { ...es.shotsBy }; mergeCount(shotsBy, pp.shotsBy);
   const goalsBy = { ...es.goalsBy }; mergeCount(goalsBy, pp.goalsBy);
@@ -201,8 +206,8 @@ function simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, sca
     ...A.events.map((e) => ({ ...e, side: "away" })),
   ], rng, startMin, 60 * scale);
 
-  const faceoffs = simulateFaceoffs(home, away, rng, scale);
-  const shotMetrics = simulateBlocksAndCorsi(H.shots, A.shots, home, away, rng);
+  const faceoffs = simulateFaceoffs(home, away, rng, scale, linesHome, linesAway);
+  const shotMetrics = simulateBlocksAndCorsi(H.shots, A.shots, home, away, rng, linesHome, linesAway);
   const homePM = {}, awayPM = {};
   applyPlusMinus(H.esEvents, linesHome, linesAway, rng, homePM, awayPM);
   applyPlusMinus(A.esEvents, linesAway, linesHome, rng, awayPM, homePM);
@@ -320,11 +325,13 @@ export function offenseSkillScore(p) { return p.attrs.shotAccuracy * 0.30 + p.at
 
 export function playmakingScore(p) { return p.attrs.passing * 0.6 + p.attrs.offensiveRead * 0.4; }
 
-export function simulateFaceoffs(home, away, rng, scale = 1) {
+export function simulateFaceoffs(home, away, rng, scale = 1, linesHome = null, linesAway = null) {
   const homeC = home.roster.filter((p) => p.pos === "C");
   const awayC = away.roster.filter((p) => p.pos === "C");
-  const homeAvg = homeC.length ? homeC.reduce((a, p) => a + p.attrs.faceoffs, 0) / homeC.length : 50;
-  const awayAvg = awayC.length ? awayC.reduce((a, p) => a + p.attrs.faceoffs, 0) / awayC.length : 50;
+  // Un centre deux sens bien adapté gagne plus de mises au jeu.
+  const fo = (p, lines) => p.attrs.faceoffs + (lines ? roleMods(lines, p).faceoff : 0);
+  const homeAvg = homeC.length ? homeC.reduce((a, p) => a + fo(p, linesHome), 0) / homeC.length : 50;
+  const awayAvg = awayC.length ? awayC.reduce((a, p) => a + fo(p, linesAway), 0) / awayC.length : 50;
   const totalDraws = Math.max(1, Math.round((50 + rng() * 12) * scale));
   const homePct = Math.max(0.28, Math.min(0.72, homeAvg / (homeAvg + awayAvg)));
   let homeWins = 0;
@@ -343,7 +350,7 @@ export function simulateFaceoffs(home, away, rng, scale = 1) {
   };
 }
 
-export function simulateBlocksAndCorsi(homeShots, awayShots, home, away, rng) {
+export function simulateBlocksAndCorsi(homeShots, awayShots, home, away, rng, linesHome = null, linesAway = null) {
   const homeD = home.roster.filter((p) => p.pos === "LD" || p.pos === "RD");
   const awayD = away.roster.filter((p) => p.pos === "LD" || p.pos === "RD");
   const blockSkill = (D) => (D.length ? D.reduce((a, p) => a + p.attrs.shotBlocking, 0) / D.length / 99 : 0.6);
@@ -354,7 +361,8 @@ export function simulateBlocksAndCorsi(homeShots, awayShots, home, away, rng) {
   const distributeBlocks = (D, count) => {
     if (D.length === 0 || count === 0) return {};
     const by = {};
-    const weights = D.map((p) => p.attrs.shotBlocking);
+    const lines = D === homeD ? linesHome : linesAway;
+    const weights = D.map((p) => p.attrs.shotBlocking * (lines ? roleMods(lines, p).block : 1));
     for (let i = 0; i < count; i++) { const d = weightedPick(D, weights, rng); by[d.id] = (by[d.id] || 0) + 1; }
     return by;
   };

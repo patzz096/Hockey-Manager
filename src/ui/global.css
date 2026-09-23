@@ -50,3 +50,6 @@ tbody tr[style*="cursor: pointer"]:active { background-color: rgba(92, 200, 255,
   *, *::before, *::after { transition: none !important; animation: none !important; }
   button:not(:disabled):hover, button:not(:disabled):active { transform: none; }
 }
+
+/* Onglet Rôles : la fiche du rôle passe sous la liste sur écran étroit. */
+@media (max-width: 900px) { .roles-grid { grid-template-columns: 1fr !important; } }

@@ -18,7 +18,8 @@ export function buildLines(roster) {
   const goalies = { starter: G[0]?.id, backup: G[1]?.id };
   const pp = [...skaters].sort((a, b) => avg(b.attrs, OFFENSIVE) - avg(a.attrs, OFFENSIVE)).slice(0, 5).map((p) => p.id);
   const pk = [...skaters].sort((a, b) => avg(b.attrs, DEFENSIVE) - avg(a.attrs, DEFENSIVE)).slice(0, 4).map((p) => p.id);
-  return { forwards, defense, goalies, pp, pk, strategy: { ...DEFAULT_STRATEGY }, mentality: { ...DEFAULT_MENTALITY } };
+  // roles : rôles demandés (id du joueur → rôle) ; vide = rôle naturel de chaque joueur.
+  return { forwards, defense, goalies, pp, pk, roles: {}, strategy: { ...DEFAULT_STRATEGY }, mentality: { ...DEFAULT_MENTALITY } };
 }
 
 export function lineInfo(playerId, lines) {
