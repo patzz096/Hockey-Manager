@@ -1,6 +1,7 @@
 import { expectedSalary, expectedYears } from "./contracts";
 import { computeOvr } from "./attributes";
 import { seededRandom } from "./random";
+import { fitsUnderCap } from "./cap";
 
 export const ROSTER_NEEDS = { C: 4, LW: 4, RW: 4, LD: 3, RD: 3, G: 2 };
 
@@ -29,7 +30,8 @@ export function expireContracts(teams, myTeamId, year) {
 }
 
 // Les équipes de l'ordinateur comblent leurs trous (par position) avec les meilleurs agents libres.
-export function aiFreeAgency(teams, freeAgents, myTeamId) {
+// Respecte le plafond salarial de la saison `year` : un joueur trop cher est ignoré.
+export function aiFreeAgency(teams, freeAgents, myTeamId, year = 2027) {
   let pool = [...freeAgents].sort((a, b) => b.ovr - a.ovr);
   const signings = [];
   const nextTeams = teams.map((t) => {
@@ -38,7 +40,7 @@ export function aiFreeAgency(teams, freeAgents, myTeamId) {
     Object.entries(ROSTER_NEEDS).forEach(([pos, need]) => {
       let have = roster.filter((p) => p.pos === pos).length;
       while (have < need) {
-        const fa = pool.find((p) => p.pos === pos);
+        const fa = pool.find((p) => p.pos === pos && fitsUnderCap(roster, year, expectedSalary(p)));
         if (!fa) break;
         pool = pool.filter((p) => p.id !== fa.id);
         const signed = { ...fa, contract: { years: expectedYears(fa), salary: expectedSalary(fa) } };

@@ -116,7 +116,7 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, careerStats = {}, seasonYear, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, onOfferContract }) {
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, onOfferContract }) {
   const [tab, setTab] = useState("profile");
   const owner = team || (player.draftProspect ? PROSPECT_TEAM : FREE_AGENT_TEAM);
   const isMine = owner.id === myTeamId;
@@ -216,16 +216,17 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
               </table>
             </div>
           )}
-          {known && (careerStats[player.id] || []).length > 0 && (
+          {known && ((careerStats[player.id] || []).length > 0 || playoffStats[player.id]?.gp > 0) && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6 }}>CARRIÈRE (SAISON RÉGULIÈRE)</div>
+              <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6 }}>CARRIÈRE (S = saison régulière, SÉ = séries)</div>
               <table style={{ width: "100%", fontSize: 12, borderCollapse: "collapse" }}>
-                <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}>{["Saison", "Équipe", "PJ", "B", "A", "PTS", "+/-", "PUN"].map((h) => <th key={h} style={{ padding: "3px 6px", textAlign: "left", borderBottom: "1px solid #ffffff1a" }}>{h}</th>)}</tr></thead>
+                <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}>{["Saison", "", "Équipe", "PJ", "B", "A", "PTS", "+/-", "PUN"].map((h) => <th key={h} style={{ padding: "3px 6px", textAlign: "left", borderBottom: "1px solid #ffffff1a" }}>{h}</th>)}</tr></thead>
                 <tbody>
                   {careerStats[player.id].map((c) => (
-                    <tr key={c.season}>{[`${c.season}-${String(c.season + 1).slice(2)}`, c.team, c.gp, c.g, c.a, c.pts, c.plusMinus > 0 ? `+${c.plusMinus}` : c.plusMinus, c.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>
+                    <tr key={`${c.season}-${c.playoffs ? "p" : "r"}`}>{[`${c.season}-${String(c.season + 1).slice(2)}`, c.playoffs ? "SÉ" : "S", c.team, c.gp, c.g, c.a, c.pts, c.plusMinus > 0 ? `+${c.plusMinus}` : c.plusMinus, c.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>
                   ))}
-                  {stat?.gp > 0 && <tr style={{ color: "#D9A404" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, owner.name, stat.gp, stat.g, stat.a, stat.pts, stat.plusMinus > 0 ? `+${stat.plusMinus}` : stat.plusMinus, stat.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>}
+                  {playoffStats[player.id]?.gp > 0 && (() => { const ps = playoffStats[player.id]; return <tr style={{ color: "#D9A404" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, "SÉ", owner.name, ps.gp, ps.g, ps.a, ps.pts, ps.plusMinus > 0 ? `+${ps.plusMinus}` : ps.plusMinus, ps.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>; })()}
+                  {stat?.gp > 0 && <tr style={{ color: "#D9A404" }}>{[`${seasonYear}-${String(seasonYear + 1).slice(2)}`, "S", owner.name, stat.gp, stat.g, stat.a, stat.pts, stat.plusMinus > 0 ? `+${stat.plusMinus}` : stat.plusMinus, stat.pim].map((v, i) => <td key={i} style={{ padding: "3px 6px" }}>{v}</td>)}</tr>}
                 </tbody>
               </table>
             </div>

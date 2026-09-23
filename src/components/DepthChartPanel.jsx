@@ -23,7 +23,7 @@ export function DepthGroup({ title, players, lines, benchmark, showLevel, onSele
                 <span style={{ flex: 1, fontSize: 13 }}>{NATION_FLAG[p.nationality] || ""} {p.name}<span style={{ color: "var(--iceMuted)" }}> ({p.age} ans)</span></span>
                 <StarRating value={starsFor(p.ovr, benchmark)} size={10} />
                 {lines && <span style={{ fontSize: 10, color: "var(--iceMuted)", minWidth: 46, textAlign: "right" }}>{lineLabel(p.id, lines)}</span>}
-                {action && <button onClick={(e) => { e.stopPropagation(); action.onClick(p); }} style={{ ...btnStyle(action.color), fontSize: 10, padding: "3px 6px" }}>{action.label}</button>}
+                {action && <button onClick={(e) => { e.stopPropagation(); action.onClick(p); }} style={{ ...btnStyle(action.color), fontSize: 10, padding: "3px 6px" }}>{typeof action.label === "function" ? action.label(p) : action.label}</button>}
               </div>
             ))}
           </div>
@@ -33,7 +33,7 @@ export function DepthGroup({ title, players, lines, benchmark, showLevel, onSele
   );
 }
 
-export function DepthChartPanel({ team, farm, lines, onSelectPlayer, onCallUp, onSendDown }) {
+export function DepthChartPanel({ team, farm, lines, needsWaivers = () => false, onSelectPlayer, onCallUp, onSendDown }) {
   const benchmark = teamOvrBenchmark(team);
   const prospects = farm.filter((p) => p.age <= 20);
   const ahl = farm.filter((p) => p.age > 20);
@@ -41,7 +41,7 @@ export function DepthChartPanel({ team, farm, lines, onSelectPlayer, onCallUp, o
   return (
     <div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: -8, marginBottom: 16 }}>Vue d'ensemble de l'organisation : ton alignement LNH, ton club-école (LAH) et tes prospects issus du repêchage. Clique un nom pour voir son profil.</p>
-      <DepthGroup title="LNH" players={team.roster} lines={lines} benchmark={benchmark} onSelect={select} action={{ label: "Renvoyer", color: "var(--steel)", onClick: onSendDown }} />
+      <DepthGroup title="LNH" players={team.roster} lines={lines} benchmark={benchmark} onSelect={select} action={{ label: (p) => (needsWaivers(p) ? "Ballottage" : "Renvoyer"), color: "var(--steel)", onClick: onSendDown }} />
       <DepthGroup title="Club-école (LAH)" players={ahl} benchmark={benchmark} onSelect={select} action={{ label: "Rappeler", color: "var(--win)", onClick: onCallUp }} />
       <DepthGroup title="Prospects (repêchage)" players={prospects} benchmark={benchmark} onSelect={select} action={{ label: "Rappeler", color: "var(--win)", onClick: onCallUp }} />
     </div>

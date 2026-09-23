@@ -5,7 +5,7 @@ import { expectedSalary, expectedYears } from "../engine/contracts";
 import { btnStyle } from "../ui/theme";
 import { StarRating } from "./common";
 
-export function ContractOfferModal({ player, isRenewal, team, onClose, onSubmit }) {
+export function ContractOfferModal({ player, isRenewal, team, capSpace = null, onClose, onSubmit }) {
   const expSalary = expectedSalary(player);
   const expYears = expectedYears(player);
   const [salary, setSalary] = useState(expSalary);
@@ -25,7 +25,7 @@ export function ContractOfferModal({ player, isRenewal, team, onClose, onSubmit 
         <p style={{ fontSize: 12, color: "var(--iceMuted)", margin: "10px 0 18px" }}>Attentes estimées de l'agent: ~{expSalary.toLocaleString()}k$/an sur {expYears} an{expYears > 1 ? "s" : ""}. Trop loin de ces attentes, l'offre risque d'être refusée.</p>
 
         <div style={{ marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--iceMuted)", marginBottom: 4 }}><span>Salaire annuel</span><span>{salary.toLocaleString()}k$</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--iceMuted)", marginBottom: 4 }}><span>Salaire annuel</span><span>{salary.toLocaleString()}k${capSpace != null && <span style={{ color: salary > capSpace ? "var(--loss)" : "var(--win)" }}> · espace sous le plafond : {capSpace.toLocaleString()}k$</span>}</span></div>
           <input type="range" min={200} max={12000} step={100} value={salary} onChange={(e) => setSalary(Number(e.target.value))} style={{ width: "100%" }} />
         </div>
         <div style={{ marginBottom: 14 }}>

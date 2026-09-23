@@ -65,6 +65,18 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
           </table>
         </div>
         <div>
+          {draft.lottery && (
+            <div style={{ background: "var(--navy2)", border: "1px solid #D9A40466", borderRadius: 4, padding: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#D9A404", marginBottom: 6 }}>LOTERIE</div>
+              {draft.lottery.draws.map((d) => (
+                <div key={d.pick} style={{ fontSize: 12, padding: "2px 0" }}>
+                  Choix n° {d.pick} : <strong>{teamsById[d.winner].name}</strong> <span style={{ color: "var(--iceMuted)" }}>({d.from}e pire dossier)</span>
+                  {d.movedTo && <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{teamsById[d.drawn].name}, tirée au sort, ne peut monter que de 10 rangs : elle passe au {d.movedTo}e choix.</div>}
+                </div>
+              ))}
+              <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6 }}>16 équipes hors séries, 2 tirages, chances de 18,5 % (pire dossier) à 0,5 %. Montée maximale de 10 rangs.</div>
+            </div>
+          )}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>TES CHOIX</div>
           {myPicks.map((k) => { const p = k.playerId && draft.pool.find((x) => x.id === k.playerId); return (
             <div key={k.overall} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #ffffff11" }}>R{k.round} · #{k.overall} — {p ? `${p.name} (${p.pos})` : <span style={{ color: "var(--iceMuted)" }}>à venir</span>}</div>
@@ -73,7 +85,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
           {recent.map((k) => { const p = draft.pool.find((x) => x.id === k.playerId); return (
             <div key={k.overall} style={{ fontSize: 12, padding: "3px 0" }}>#{k.overall} {teamsById[k.teamId].name} — {p?.name} ({p?.pos})</div>
           ); })}
-          <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 12 }}>Ordre : équipes hors séries (pire dossier d'abord), puis selon la ronde d'élimination ; champion en dernier. Loterie non simulée. Les joueurs repêchés rejoignent le club-école avec un contrat d'entrée (3 ans, 950 k$).</div>
+          <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 12 }}>Ordre : équipes hors séries (pire dossier d'abord, sauf les 2 choix de la loterie), puis selon la ronde d'élimination ; champion en dernier. Les joueurs repêchés rejoignent le club-école avec un contrat d'entrée (3 ans, 950 k$).</div>
         </div>
       </div>
     </div>

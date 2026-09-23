@@ -127,13 +127,28 @@ tests/engine.test.js       tests du moteur
   repêchées par association, tableau fixe de la LNH, séries 4 de 7 (2-2-1-1-1), prolongation
   sans tirs de barrage, jusqu'à la Coupe Stanley. Tes matchs de séries peuvent se jouer en direct
 - Repêchage (`engine/draft.js`) : 7 rondes, ordre selon le classement (hors séries d'abord,
-  puis par ronde d'élimination, champion en dernier ; loterie non simulée). Classement des
+  puis par ronde d'élimination, champion en dernier). Loterie LNH (`runDraftLottery`) :
+  16 équipes, 2 tirages, chances de 18,5 % à 0,5 %, montée maximale de 10 rangs (une équipe
+  tirée trop loin monte de 10 rangs et le choix revient au pire dossier restant). Classement des
   espoirs selon ton dépisteur, rapport de dépistage possible sur chaque espoir, choix
   automatiques des autres équipes. Les repêchés vont au club-école (contrat 3 ans, 950 k$)
 - 1er juillet (`engine/offseason.js`) : contrats avancés d'une saison, contrats échus →
   agents libres (l'ordinateur réengage une partie des siens), les autres équipes comblent
   leurs besoins par position. Nouvelle saison : tout le monde vieillit d'un an (déclin après
   33 ans), nouveau calendrier, statistiques archivées dans la carrière de chaque joueur
+
+- Statistiques des séries cumulées à part (onglet Statistiques : saison régulière / séries,
+  buts gagnants) et archivées dans la carrière (S = saison, SÉ = séries)
+- Plafond salarial (`engine/cap.js`) : 104 M$ en 2026-2027, 113,5 M$ en 2027-2028 (annoncés),
+  puis +5 %/an (hypothèse) ; plancher ≈ 74 % ; seul l'alignement LNH compte. Échanges
+  (des deux côtés), offres, prolongations et rappels refusés s'ils font dépasser le plafond
+  (une équipe au-dessus peut seulement réduire). Maximum 23 joueurs dans l'alignement.
+  L'ordinateur signe ses agents libres sous le plafond
+- Ballottage (`engine/waivers.js`, règles simplifiées) : renvoyer au club-école un joueur de
+  23 ans et plus (ou 160 matchs LNH) le place au ballottage 24 heures ; les équipes peuvent le
+  réclamer avec son contrat, priorité au pire classement. L'ordinateur place ses joueurs en
+  trop (au-delà de 23) et fait des mouvements d'effectif chaque mois ; tu peux les réclamer
+  (onglet Transactions)
 
 **Gestion**
 - Trios/paires/gardiens éditables par glisser-déposer ou clic-clic (échange), sur un schéma
@@ -159,10 +174,10 @@ tests/engine.test.js       tests du moteur
 ## Ce qui reste incomplet ou en cours
 
 1. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
-2. **Statistiques des séries** : les feuilles de match des séries sont consultables, mais les
-   statistiques individuelles des séries ne sont pas encore cumulées ni archivées.
-3. **Loterie du repêchage, plafond salarial, ballottage** : pas encore simulés.
-4. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
+2. **Règles simplifiées** : pas de clause de rachat, de LTIR, de rétention de salaire dans
+   les échanges, ni de limite de 2 loteries gagnées en 5 ans ; l'exemption du ballottage
+   est approximée par l'âge et les matchs joués.
+3. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
    un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
 

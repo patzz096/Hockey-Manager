@@ -6,9 +6,12 @@ import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEF
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
 import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow } from "./engine/calendar";
-import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, ROUND_NAMES } from "./engine/playoffs";
+import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, ROUND_NAMES } from "./engine/playoffs";
 import { createDraft, aiPick, makePick, draftDone } from "./engine/draft";
 import { expireContracts, aiFreeAgency, agePlayers } from "./engine/offseason";
+import { aggregateStats, leadersOf } from "./engine/stats";
+import { capStatus, fitsUnderCap, ROSTER_MAX, formatMoney } from "./engine/cap";
+import { waiverExempt, placeOnWaivers, resolveWaivers, aiWaiverCandidates, aiMonthlyMoves } from "./engine/waivers";
 import { buildLines } from "./engine/lines";
 import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
@@ -40,6 +43,8 @@ import { LiveMatchViewer } from "./components/match/LiveMatchViewer";
 import { LiveSimPanel, clockDisplay, livePeriod } from "./components/match/LiveSimPanel";
 import { PlayoffsPanel } from "./components/PlayoffsPanel";
 import { DraftPanel } from "./components/DraftPanel";
+import { CapSummary } from "./components/CapSummary";
+import { WaiversPanel } from "./components/WaiversPanel";
 
 const PHASE_LABEL = { regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
 const NEXT_STEP = { regular: "", endRegular: "Saison régulière terminée : place aux séries éliminatoires.", playoffs: "Ton équipe est éliminée ou attend son prochain match.", preDraft: "Les séries sont terminées. Prochaine étape : le repêchage.", draft: "Le repêchage est en cours.", preFreeAgency: "Repêchage terminé. Le marché des agents libres ouvre le 1er juillet.", offseason: "Marché des agents libres ouvert. Prépare la prochaine saison." };
@@ -60,6 +65,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [freeAgencyDone, setFreeAgencyDone] = useState(false);
   const [history, setHistory] = useState([]);
   const [careerStats, setCareerStats] = useState({});
+  const [waivers, setWaivers] = useState([]);
+  const [myClaims, setMyClaims] = useState([]);
+  const [notice, setNotice] = useState(null);
   const [pendingScouts, setPendingScouts] = useState([]);
   const [winsThisMonth, setWinsThisMonth] = useState(0);
   const [profitThisMonth, setProfitThisMonth] = useState(0);
@@ -122,32 +130,21 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }, [schedule, myTeamId, phase, mySeries, playoffs]);
   const rounds = useMemo(() => [...new Set(schedule.map((g) => g.round))], [schedule]);
 
-  // Statistiques de saison tirées des feuilles de match. Un joueur échangé ou parti sur le
-  // marché garde ses statistiques (équipe = sa plus récente équipe connue).
-  const seasonStats = useMemo(() => {
-    const everyone = {};
-    teams.forEach((t) => t.roster.forEach((p) => { everyone[p.id] = { player: p, team: t }; }));
-    Object.entries(farmByTeam).forEach(([id, list]) => list.forEach((p) => { if (!everyone[p.id]) everyone[p.id] = { player: p, team: teamsById[id] }; }));
-    freeAgents.forEach((p) => { if (!everyone[p.id]) everyone[p.id] = { player: p, team: null }; });
-    const stats = {};
-    const entry = (id, team) => {
-      if (!stats[id]) stats[id] = { g: 0, a: 0, pts: 0, hits: 0, pim: 0, shots: 0, plusMinus: 0, blocks: 0, faceoffWins: 0, gp: 0, player: everyone[id]?.player || { id, name: "?", pos: "?" }, team: everyone[id]?.team || team };
-      return stats[id];
-    };
-    teams.forEach((t) => t.roster.forEach((p) => entry(p.id, t)));
-    schedule.filter((g) => g.played).forEach((g) => {
-      [[g.box.home, teamsById[g.home]], [g.box.away, teamsById[g.away]]].forEach(([box, team]) => {
-        Object.entries(box.toiBy || {}).forEach(([id, toi]) => { if (toi > 0) entry(id, team).gp++; });
-        const add = (field, key) => Object.entries(box[field] || {}).forEach(([id, c]) => { entry(id, team)[key] += c; });
-        add("goalsBy", "g"); add("assistsBy", "a"); add("hitsBy", "hits"); add("pimBy", "pim"); add("shotsBy", "shots");
-        add("plusMinusBy", "plusMinus"); add("blocksBy", "blocks"); add("faceoffsWonBy", "faceoffWins");
-      });
-    });
-    Object.values(stats).forEach((s) => (s.pts = s.g + s.a));
-    return stats;
-  }, [teams, schedule, teamsById, farmByTeam, freeAgents]);
+  // Statistiques tirées des feuilles de match (saison régulière et séries, séparément).
+  const everyone = useMemo(() => {
+    const out = {};
+    teams.forEach((t) => t.roster.forEach((p) => { out[p.id] = { player: p, team: t }; }));
+    Object.entries(farmByTeam).forEach(([id, list]) => list.forEach((p) => { if (!out[p.id]) out[p.id] = { player: p, team: teamsById[id] }; }));
+    freeAgents.forEach((p) => { if (!out[p.id]) out[p.id] = { player: p, team: null }; });
+    return out;
+  }, [teams, farmByTeam, freeAgents, teamsById]);
+  const seasonStats = useMemo(() => aggregateStats(schedule, teamsById, everyone, teams), [schedule, teamsById, everyone, teams]);
+  const playoffGames = useMemo(() => (playoffs ? playoffs.rounds.flat().flatMap((x) => x.games) : []), [playoffs]);
+  const playoffStats = useMemo(() => aggregateStats(playoffGames, teamsById, everyone), [playoffGames, teamsById, everyone]);
+  const [statsMode, setStatsMode] = useState("regular");
 
-  const leaders = useMemo(() => Object.values(seasonStats).filter((s) => s.player.pos !== "G" && s.gp > 0).sort((a, b) => b.pts - a.pts || b.g - a.g), [seasonStats]);
+  const leaders = useMemo(() => leadersOf(seasonStats), [seasonStats]);
+  const playoffLeaders = useMemo(() => leadersOf(playoffStats), [playoffStats]);
   const teamHitTotals = useMemo(() => {
     const totals = {};
     teams.forEach((t) => (totals[t.id] = 0));
@@ -371,6 +368,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function executeTrade(otherTeamId, myIds, theirIds) {
     if (myIds.length === 0 && theirIds.length === 0) return;
     if (!txWindow.open) return;
+    const myT = teamsById[myTeamId], theirT = teamsById[otherTeamId];
+    const sal = (t, ids) => t.roster.filter((p) => ids.includes(p.id)).reduce((a, p) => a + (p.contract?.salary || 0), 0);
+    const myOut = sal(myT, myIds), myIn = sal(theirT, theirIds);
+    if (!fitsUnderCap(myT.roster, seasonYear, myIn, myOut)) { setNotice(`Échange refusé : ta masse salariale dépasserait le plafond de ${formatMoney(capStatus(myT.roster, seasonYear).cap)}.`); return; }
+    if (!fitsUnderCap(theirT.roster, seasonYear, myOut, myIn)) { setNotice(`Échange refusé : ${theirT.name} dépasserait le plafond salarial.`); return; }
+    if (myT.roster.length - myIds.length + theirIds.length > ROSTER_MAX) { setNotice(`Échange refusé : ton alignement dépasserait ${ROSTER_MAX} joueurs.`); return; }
     const theirTeamName = teamsById[otherTeamId]?.name || "l'autre équipe";
     const myT0 = teamsById[myTeamId], theirT0 = teamsById[otherTeamId];
     const myOutNames = myT0.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
@@ -401,6 +404,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
   function submitOffer(player, offer, isRenewal) {
     if (!isRenewal && !txWindow.open) { setOfferTarget(null); return; }
+    const myRoster = teamsById[myTeamId].roster;
+    const current = isRenewal ? (myRoster.find((p) => p.id === player.id)?.contract?.salary || 0) : 0;
+    if (!fitsUnderCap(myRoster, seasonYear, offer.salary, current)) { setNotice(`Offre impossible : ${formatMoney(offer.salary)} dépasse ton espace sous le plafond (${formatMoney(capStatus(myRoster, seasonYear).space + current)}).`); setOfferTarget(null); return; }
+    if (!isRenewal && myRoster.length >= ROSTER_MAX) { setNotice(`Offre impossible : ton alignement compte déjà ${ROSTER_MAX} joueurs. Renvoie quelqu'un au club-école d'abord.`); setOfferTarget(null); return; }
     const result = evaluateOffer(player, offer);
     const offerSummary = `Offre: ${offer.salary.toLocaleString()}k$/an sur ${offer.years} an${offer.years > 1 ? "s" : ""}${offer.signingBonus ? `, prime de ${offer.signingBonus.toLocaleString()}k$` : ""}${offer.noTrade ? ", clause de non-échange" : ""}.`;
     if (result.accept) {
@@ -447,6 +454,30 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     // Rapport de développement et primes : au début de chaque mois.
     const months = monthIndex(newDay) - monthIndex(currentDay);
     if (months > 0) monthlyTick(months, monthLabel(currentDay));
+    processWaivers(newDay, teams, waivers);
+    // Mouvements d'effectif de l'ordinateur au début de chaque mois de saison régulière.
+    if (months > 0 && phase === "regular") {
+      const moves = aiMonthlyMoves(teams, farmByTeam, myTeamId, newDay, seededRandom(newDay * 17 + 3), 0.2);
+      if (moves.placed.length) {
+        const out = new Map(moves.teams.map((t) => [t.id, t]));
+        const placedIds = new Set(moves.placed.map((w) => w.player.id));
+        // Applique sur l'état le plus récent : retire les joueurs placés, ajoute les rappelés.
+        setTeams((prev) => prev.map((t) => {
+          const m = out.get(t.id);
+          if (!m || t.id === myTeamId) return t;
+          const added = m.roster.filter((p) => !t.roster.some((x) => x.id === p.id));
+          return { ...t, roster: [...t.roster.filter((p) => !placedIds.has(p.id)), ...added].sort((a, b) => b.ovr - a.ovr) };
+        }));
+        setFarmByTeam((prev) => Object.fromEntries(Object.entries(prev).map(([id, list]) => [id, id === myTeamId ? list : list.filter((p) => (moves.farmByTeam[id] || []).some((x) => x.id === p.id))])));
+        setWaivers((prev) => [...prev, ...moves.placed]);
+        setLinesByTeam((prev) => {
+          const next = { ...prev };
+          moves.teams.forEach((t) => { if (t.id !== myTeamId && moves.placed.some((w) => w.fromTeamId === t.id)) next[t.id] = { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality }; });
+          return next;
+        });
+        addMessage({ from: "Ligue", subject: `Ballottage : ${moves.placed.length} joueur${moves.placed.length > 1 ? "s" : ""} disponible${moves.placed.length > 1 ? "s" : ""}`, category: "transaction", playerIds: moves.placed.map((w) => w.player.id), body: moves.placed.map((w) => `- ${w.player.name} (${w.player.pos}, ${w.player.age} ans) — ${teamsById[w.fromTeamId].name}`).join("\n") + "\n\nRéclame-les dans l'onglet Transactions avant l'échéance (24 heures)." });
+      }
+    }
     if (due.length === 0) return;
     setPendingScouts((prev) => prev.filter((m) => m.dueDay > newDay));
     const reports = {};
@@ -495,16 +526,65 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function setDelegation(area, mode) {
     setBusiness((prev) => ({ ...prev, delegation: { ...prev.delegation, [area]: mode } }));
   }
-  function callUpPlayer(player) {
+  // Nombre de matchs LNH en carrière (pour l'exemption du ballottage).
+  function careerGames(playerId) {
+    return (careerStats[playerId] || []).filter((c) => !c.playoffs).reduce((a, c) => a + c.gp, 0) + (seasonStats[playerId]?.gp || 0);
+  }
+  function callUpPlayer(shown) {
+    // L'interface montre les valeurs perçues : on travaille toujours sur le vrai joueur.
+    const player = (farmByTeam[myTeamId] || []).find((p) => p.id === shown.id) || shown;
+    const roster = teamsById[myTeamId].roster;
+    if (roster.length >= ROSTER_MAX) { setNotice(`Rappel impossible : ton alignement compte déjà ${ROSTER_MAX} joueurs (maximum LNH).`); return; }
+    if (!fitsUnderCap(roster, seasonYear, player.contract?.salary || 0)) { setNotice(`Rappel impossible : le salaire de ${player.name} (${formatMoney(player.contract?.salary || 0)}) dépasse ton espace sous le plafond.`); return; }
     setFarmByTeam((prev) => ({ ...prev, [myTeamId]: prev[myTeamId].filter((p) => p.id !== player.id) }));
     setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: [...t.roster, { ...player, level: undefined }].sort((a, b) => b.ovr - a.ovr) })));
-    addMessage({ from: "Directeur du club-école", subject: `Rappel: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.pos}, cote ${player.ovr}) est rappelé du club-école vers l'équipe.` });
+    addMessage({ from: "Directeur du club-école", subject: `Rappel: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.pos}) est rappelé du club-école vers l'équipe.` });
   }
-  function sendDownPlayer(player) {
+  function sendDownPlayer(shown) {
+    const player = teamsById[myTeamId].roster.find((p) => p.id === shown.id) || shown;
     setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: t.roster.filter((p) => p.id !== player.id) })));
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: cleanLinesOfPlayer(prev[myTeamId], player.id) }));
-    setFarmByTeam((prev) => ({ ...prev, [myTeamId]: [...(prev[myTeamId] || []), { ...player, level: "LAH" }] }));
-    addMessage({ from: "Directeur du club-école", subject: `Rétrogradé: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} est renvoyé au club-école.` });
+    if (waiverExempt(player, careerGames(player.id))) {
+      setFarmByTeam((prev) => ({ ...prev, [myTeamId]: [...(prev[myTeamId] || []), { ...player, level: "LAH" }] }));
+      addMessage({ from: "Directeur du club-école", subject: `Rétrogradé: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} est renvoyé au club-école (exempté du ballottage).` });
+    } else {
+      setWaivers((prev) => [...prev, placeOnWaivers(player, myTeamId, currentDay)]);
+      addMessage({ from: "Directeur du club-école", subject: `Ballottage: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.age} ans, ${careerGames(player.id)} matchs LNH) n'est pas exempté : il est placé au ballottage pour 24 heures. Les autres équipes peuvent le réclamer avec son contrat (${formatMoney(player.contract?.salary || 0)}). S'il n'est pas réclamé, il rejoindra ton club-école.` });
+    }
+  }
+  function toggleClaim(playerId) {
+    setMyClaims((prev) => (prev.includes(playerId) ? prev.filter((x) => x !== playerId) : [...prev, playerId]));
+  }
+  // Ballottages échus : attribution par priorité (pire classement d'abord).
+  function processWaivers(newDay, baseTeams, baseWaivers) {
+    if (baseWaivers.length === 0) return;
+    const priority = [...standings].reverse().map((x) => x.id);
+    const { remaining, results } = resolveWaivers(baseWaivers, newDay, baseTeams, priority, myTeamId, new Set(myClaims), seasonYear);
+    if (results.length === 0) return;
+    setWaivers(remaining);
+    setMyClaims((prev) => prev.filter((id) => !results.some((r) => r.player.id === id)));
+    setTeams((prev) => prev.map((t) => {
+      const won = results.filter((r) => r.claimedBy === t.id).map((r) => ({ ...r.player, level: undefined }));
+      return won.length ? { ...t, roster: [...t.roster, ...won].sort((a, b) => b.ovr - a.ovr) } : t;
+    }));
+    setFarmByTeam((prev) => {
+      const next = { ...prev };
+      results.filter((r) => !r.claimedBy).forEach((r) => { next[r.fromTeamId] = [...(next[r.fromTeamId] || []), { ...r.player, level: "LAH" }]; });
+      return next;
+    });
+    results.forEach((r) => {
+      if (r.fromTeamId !== myTeamId && r.claimedBy !== myTeamId && !myClaims.includes(r.player.id)) return;
+      const who = r.claimedBy ? teamsById[r.claimedBy].name : null;
+      addMessage({ from: "Ligue", subject: `Ballottage : ${r.player.name} ${who ? `réclamé par ${who}` : "non réclamé"}`, category: "transaction", playerIds: [r.player.id], body: who ? `${r.player.name} passe chez ${who} avec son contrat.` : `${r.player.name} rejoint le club-école de ${teamsById[r.fromTeamId].name}.` });
+    });
+  }
+  // Les équipes de l'ordinateur au-delà de 23 joueurs placent leurs joueurs en trop au ballottage.
+  function aiPlaceWaivers(baseTeams, day) {
+    const placed = baseTeams.filter((t) => t.id !== myTeamId).flatMap((t) => aiWaiverCandidates(t, day));
+    if (placed.length === 0) return baseTeams;
+    const ids = new Set(placed.map((w) => w.player.id));
+    setWaivers((prev) => [...prev, ...placed]);
+    return baseTeams.map((t) => ({ ...t, roster: t.roster.filter((p) => !ids.has(p.id)) }));
   }
   // Progression des joueurs (répétée `months` fois si plusieurs mois passent d'un coup).
   function monthlyTick(months, label) {
@@ -621,7 +701,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // ---------- Repêchage ----------
   function goToDraft() {
     advanceTo(dates.draft);
-    setDraft(createDraft(seasonYear, draftOrder(standings, playoffs)));
+    const baseOrder = draftOrder(standings, playoffs);
+    const lottery = runDraftLottery(baseOrder, 16, seededRandom(seasonYear * 101 + 7));
+    setDraft({ ...createDraft(seasonYear, lottery.order), lottery: { draws: lottery.draws, baseOrder } });
+    addMessage({ from: "Ligue", subject: `Loterie du repêchage ${seasonYear + 1}`, category: "general", body: lottery.draws.map((d) => `Choix n° ${d.pick} : ${teamsById[d.winner].name} (${d.from}e pire dossier)${d.movedTo ? ` — ${teamsById[d.drawn].name}, tirée, ne peut monter que de 10 rangs et passe au ${d.movedTo}e rang` : ""}`).join("\n") });
     const expiring = (teamsById[myTeamId]?.roster || []).filter((p) => (p.contract?.years ?? 1) <= 1);
     if (expiring.length) addMessage({ from: "Directeur général adjoint", subject: `Contrats échus le ${formatDay(dates.freeAgency)}`, category: "transaction", playerIds: expiring.map((p) => p.id), body: `Ces joueurs deviendront agents libres le 1er juillet si tu ne les prolonges pas (onglet Contrats) :\n${expiring.map((p) => `- ${p.name} (${p.pos})`).join("\n")}` });
     setTab("draft");
@@ -657,7 +740,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function goToFreeAgency() {
     advanceTo(dates.freeAgency);
     const exp = expireContracts(teams, myTeamId, seasonYear);
-    const fa = aiFreeAgency(exp.teams, [...freeAgents, ...exp.released], myTeamId);
+    const fa = aiFreeAgency(exp.teams, [...freeAgents, ...exp.released], myTeamId, seasonYear + 1);
+    fa.teams = aiPlaceWaivers(fa.teams, currentDay + (dates.freeAgency - currentDay));
     setTeams(fa.teams);
     setFreeAgents(fa.freeAgents);
     setLinesByTeam((prev) => {
@@ -682,9 +766,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setCareerStats((prev) => {
       const next = { ...prev };
       Object.values(seasonStats).filter((st) => st.gp > 0).forEach((st) => { next[st.player.id] = [...(next[st.player.id] || []), { season: seasonYear, team: st.team.name, gp: st.gp, g: st.g, a: st.a, pts: st.pts, plusMinus: st.plusMinus, pim: st.pim }]; });
+      Object.values(playoffStats).filter((st) => st.gp > 0).forEach((st) => { next[st.player.id] = [...(next[st.player.id] || []), { season: seasonYear, team: st.team.name, playoffs: true, gp: st.gp, g: st.g, a: st.a, pts: st.pts, plusMinus: st.plusMinus, pim: st.pim }]; });
       return next;
     });
-    const aged = teams.map((t) => ({ ...t, roster: agePlayers(t.roster).sort((a, b) => b.ovr - a.ovr) }));
+    const aged = aiPlaceWaivers(teams.map((t) => ({ ...t, roster: agePlayers(t.roster).sort((a, b) => b.ovr - a.ovr) })), seasonDates(seasonYear + 1).start - 1);
     setTeams(aged);
     setFarmByTeam((prev) => Object.fromEntries(Object.entries(prev).map(([id, list]) => [id, agePlayers(list)])));
     setFreeAgents((prev) => agePlayers(prev));
@@ -757,8 +842,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   return (
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Inter, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} careerStats={careerStats} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
-      {offerTarget && <ContractOfferModal player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} onOfferContract={(p) => openOffer(p, true)} />}
+      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear).space + (offerTarget.isRenewal ? offerTarget.player.contract?.salary || 0 : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} isRenewal={offerTarget.isRenewal} team={myTeam} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 190, background: "var(--navy2)", padding: "20px 12px", display: "flex", flexDirection: "column", gap: 4, borderRight: `1px solid ${myTeam.color}33` }}>
@@ -774,9 +859,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             )}
           </button>
         ))}
-        <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}><span style={{ color: "var(--ice)" }}>{formatDay(currentDay)}</span><br />Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
+        <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}><span style={{ color: "var(--ice)" }}>{formatDay(currentDay)}</span><br />Plafond : <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} compact /><br />Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
       </div>
       <div style={{ flex: 1, padding: "24px 32px", overflow: "auto" }}>
+        {notice && <div onClick={() => setNotice(null)} style={{ background: "#B84A4A33", border: "1px solid var(--loss)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 13, cursor: "pointer" }}>{notice} <span style={{ color: "var(--iceMuted)", fontSize: 11 }}>(clique pour fermer)</span></div>}
         {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={() => playLive(false)} onEndOfPeriod={() => playLive(true)} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <div>
@@ -817,14 +903,17 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "lines" && <LinesEditor team={myTeam} lines={myLines} onChange={updateLine} onSwap={swapLineSlots} onChangeUnit={updateUnit} onAutoLines={autoOptimizeLines} onAutoSpecialTeams={autoOptimizeSpecialTeams} onSelectPlayer={selectPlayer} />}
 
-        {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} onSendDown={sendDownPlayer} />}
+        {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id))} onSelectPlayer={selectPlayer} onCallUp={callUpPlayer} onSendDown={sendDownPlayer} />}
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} />}
 
         {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} />}
+        {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} />}
+        {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} onToggleClaim={toggleClaim} onSelectPlayer={selectPlayer} />}
 
         {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onSign={(p) => openOffer(p, false)} onRefreshFreeAgents={refreshFreeAgents} txWindow={txWindow} />}
 
+        {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} />}
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onOfferContract={(p) => openOffer(p, true)} onSelectPlayer={selectPlayer} />}
 
         {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
@@ -875,7 +964,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           </div>
         )}
 
-        {tab === "stats" && <StatsTables leaders={leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} />}
+        {tab === "stats" && <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+          {[["regular", "Saison régulière"], ["playoffs", "Séries éliminatoires"]].map(([k, l]) => <button key={k} onClick={() => setStatsMode(k)} style={{ ...btnStyle(statsMode === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>)}
+        </div>}
+        {tab === "stats" && statsMode === "playoffs" && playoffLeaders.length === 0 && <p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Aucun match de séries joué pour l'instant.</p>}
+        {tab === "stats" && <StatsTables leaders={statsMode === "playoffs" ? playoffLeaders : leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} />}
 
         {tab === "standings" && <StandingsTable standings={standings} teamsById={teamsById} myTeamId={myTeamId} history={history} />}
 
@@ -883,7 +976,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "draft" && (draft
           ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onPick={(id) => runDraft({ myPlayerId: id, untilMine: true })} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} />
-          : <div><h2 style={h2Style}>Repêchage</h2><p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Le repêchage a lieu le {formatDay(dates.draft)}, une semaine avant l'ouverture du marché des agents libres (1er juillet), après les séries. Ordre : équipes hors séries (pire dossier d'abord), puis selon la ronde d'élimination.</p></div>)}
+          : <div><h2 style={h2Style}>Repêchage</h2><p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Le repêchage a lieu le {formatDay(dates.draft)}, une semaine avant l'ouverture du marché des agents libres (1er juillet), après les séries. Ordre : équipes hors séries (pire dossier d'abord ; loterie pour les 2 premiers choix), puis selon la ronde d'élimination.</p></div>)}
       </div>
     </div>
   );

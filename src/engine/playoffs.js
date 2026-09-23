@@ -81,7 +81,7 @@ export function seriesOfTeam(playoffs, teamId) {
 
 // Ordre du repêchage : équipes hors séries (pire dossier d'abord), puis équipes éliminées par
 // ronde (pire dossier d'abord dans chaque ronde), finaliste avant-dernier, champion dernier.
-// (La loterie de la LNH n'est pas simulée.)
+// Les deux premiers choix sont ensuite fixés par la loterie (voir runDraftLottery).
 export function draftOrder(standings, playoffs) {
   const worstFirst = (ids) => [...ids].sort((a, b) => playoffs.rankOf[b] - playoffs.rankOf[a]);
   const inPlayoffs = new Set(playoffs.rounds[0].flatMap((s) => [s.high, s.low]));
@@ -91,6 +91,41 @@ export function draftOrder(standings, playoffs) {
   });
   if (playoffs.champion) order.push(playoffs.champion);
   return order;
+}
+
+// Loterie de la LNH (format en vigueur depuis 2022) : les 16 équipes hors séries participent,
+// deux tirages (1er et 2e choix), chances de 18,5 % à 0,5 %. Une équipe ne peut monter de plus
+// de 10 rangs : si une équipe trop loin est tirée, elle monte de 10 rangs et le choix revient à
+// l'équipe restante qui a les meilleures chances (le pire dossier). Une équipe ne gagne qu'une fois.
+export const LOTTERY_ODDS = [18.5, 13.5, 11.5, 9.5, 8.5, 7.5, 6.5, 6.0, 5.0, 3.5, 3.0, 2.5, 2.0, 1.5, 0.5, 0.5];
+
+export function runDraftLottery(order, nonPlayoffCount, rng) {
+  const pool = order.slice(0, nonPlayoffCount);
+  const fixed = {}; // position (1 = premier choix) -> équipe
+  const placed = new Set();
+  const draws = [];
+  for (let pick = 1; pick <= 2; pick++) {
+    if (fixed[pick]) continue; // déjà attribué par la montée de 10 rangs du tirage précédent
+    const candidates = pool.map((id, i) => ({ id, rank: i + 1, odds: LOTTERY_ODDS[i] ?? 0 })).filter((c) => !placed.has(c.id));
+    const total = candidates.reduce((a, c) => a + c.odds, 0);
+    let r = rng() * total, drawn = candidates[candidates.length - 1];
+    for (const c of candidates) { r -= c.odds; if (r <= 0) { drawn = c; break; } }
+    if (drawn.rank - pick <= 10) {
+      fixed[pick] = drawn.id; placed.add(drawn.id);
+      draws.push({ pick, drawn: drawn.id, winner: drawn.id, from: drawn.rank });
+    } else {
+      let target = drawn.rank - 10;
+      while (fixed[target]) target++;
+      fixed[target] = drawn.id; placed.add(drawn.id);
+      const best = candidates.find((c) => !placed.has(c.id));
+      fixed[pick] = best.id; placed.add(best.id);
+      draws.push({ pick, drawn: drawn.id, winner: best.id, from: best.rank, movedTo: target });
+    }
+  }
+  const rest = order.filter((id) => !placed.has(id));
+  const result = [];
+  for (let pos = 1; pos <= order.length; pos++) result.push(fixed[pos] || rest.shift());
+  return { order: result, draws };
 }
 
 export { CONFERENCES };
