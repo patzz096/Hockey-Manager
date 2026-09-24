@@ -418,17 +418,32 @@ export const DEFENSE_TOI_BASE = [22, 18, 14];
 
 export function computeTOI(lines, rng, scale = 1) {
   const toiBy = {};
+  const shift = lines.shift;
   lines.forwards.forEach((l, i) => {
-    const base = FORWARD_TOI_BASE[i] * scale;
-    [l.LW, l.C, l.RW].filter(Boolean).forEach((id) => { toiBy[id] = Math.max(1, base + (rng() * 4 - 2) * scale); });
+    // Mise en direct avec trio choisi : ce trio joue (presque) toute la mise au jeu, les autres restent au banc.
+    const base = (shift ? (i === shift.forwardIdx ? scale * 60 * 0.85 : scale * 60 * 0.02) : FORWARD_TOI_BASE[i] * scale);
+    [l.LW, l.C, l.RW].filter(Boolean).forEach((id) => { toiBy[id] = Math.max(shift ? 0 : 1, base + (rng() * 4 - 2) * scale); });
   });
   lines.defense.forEach((l, i) => {
-    const base = DEFENSE_TOI_BASE[i] * scale;
-    [l.LD, l.RD].filter(Boolean).forEach((id) => { toiBy[id] = Math.max(1, base + (rng() * 4 - 2) * scale); });
+    const base = (shift ? (i === shift.defenseIdx ? scale * 60 * 0.85 : scale * 60 * 0.02) : DEFENSE_TOI_BASE[i] * scale);
+    [l.LD, l.RD].filter(Boolean).forEach((id) => { toiBy[id] = Math.max(shift ? 0 : 1, base + (rng() * 4 - 2) * scale); });
   });
   if (lines.goalies.starter) toiBy[lines.goalies.starter] = 60 * scale;
   if (lines.goalies.backup) toiBy[lines.goalies.backup] = 0;
   return toiBy;
+}
+
+// Choix de trio et de paire de l'ordinateur pour une mise au jeu, selon l'écart au score
+// (positif = l'équipe mène) et le moment du match : protège une avance en fin de match avec
+// une paire défensive, pousse en attaque quand elle tire de l'arrière.
+export function aiPickShift(scoreDiff, minute, rng) {
+  const late = minute >= 44;
+  const fWeights = [0.34, 0.28, 0.22, 0.16];
+  if (late && scoreDiff <= -1) { fWeights[0] += 0.22; fWeights[3] = Math.max(0.05, fWeights[3] - 0.12); }
+  if (late && scoreDiff >= 1) { fWeights[3] += 0.12; fWeights[0] = Math.max(0.05, fWeights[0] - 0.1); }
+  const dWeights = [0.44, 0.34, 0.22];
+  if (late && scoreDiff >= 1) dWeights[0] += 0.15;
+  return { forwardIdx: weightedPick([0, 1, 2, 3], fWeights, rng), defenseIdx: weightedPick([0, 1, 2], dWeights, rng) };
 }
 
 export function pickOnIcePair(lines, rng) {

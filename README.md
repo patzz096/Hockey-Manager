@@ -233,6 +233,14 @@ tests/engine.test.js       tests du moteur
   « Profils » dans les messages qui citent des joueurs
 - Visionneur de match animé 2D (rejeu du résultat déjà simulé, pas une physique en direct)
 - Mode "Sim en direct" avec horloge de période, sommaire de buts et stats en temps réel
+- Choix du trio et de la paire de défense pour chaque mise au jeu, en sim en direct (bouton
+  « Choisir le trio et la paire ») : avantage du dernier changement comme dans la vraie LNH — les
+  visiteurs envoient toujours leur ligne en premier (visible), l'équipe locale réplique en
+  dernier ; à l'étranger, la réplique des locaux reste cachée jusqu'au prochain arrêt.
+  L'ordinateur adapte son choix à l'écart au score et au moment du match (trio offensif en
+  retard, paire défensive en avance en fin de match). Le trio et la paire envoyés concentrent
+  presque tout le temps de glace et les tirs de la mise au jeu (`engine/lines.js`, `lines.shift`,
+  `engine/simulation.js` `aiPickShift`) ; le déploiement "auto" habituel reste disponible en un clic
 - Filtres et tri sur presque tous les tableaux (division, équipe, colonnes)
 
 ## Ce qui reste incomplet ou en cours

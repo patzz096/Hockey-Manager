@@ -19,7 +19,7 @@ import { waiverExempt, placeOnWaivers, resolveWaivers, aiWaiverCandidates, aiMon
 import { buildLines } from "./engine/lines";
 import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
-import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime } from "./engine/simulation";
+import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
@@ -117,6 +117,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [expandedGameId, setExpandedGameId] = useState(null);
   const [watchingGame, setWatchingGame] = useState(null);
   const [liveMatch, setLiveMatch] = useState(null);
+  // Choix du trio / de la paire à envoyer sur la glace pour la prochaine mise au jeu (sim en
+  // direct). { myIsHome, oppShift: {forwardIdx, defenseIdx}, forwardIdx, defenseIdx }.
+  const [shiftPicker, setShiftPicker] = useState(null);
   const [scheduleFilter, setScheduleFilter] = useState("all");
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [editingPlayer, setEditingPlayer] = useState(null);
@@ -232,19 +235,53 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function startLiveMatch(game) {
     setWatchingGame(null);
     setExpandedGameId(null);
-    setLiveMatch({ game, home: dressTeam(teamsById[game.home], linesByTeam[game.home], injuries, currentDay).team, away: dressTeam(teamsById[game.away], linesByTeam[game.away], injuries, currentDay).team, minute: 0, homeScore: 0, awayScore: 0, accum: emptyLiveAccum(), lastStop: null });
+    setShiftPicker(null);
+    const dressedHome = dressTeam(teamsById[game.home], linesByTeam[game.home], injuries, currentDay);
+    const dressedAway = dressTeam(teamsById[game.away], linesByTeam[game.away], injuries, currentDay);
+    setLiveMatch({ game, home: dressedHome.team, away: dressedAway.team, linesHome: dressedHome.lines, linesAway: dressedAway.lines, minute: 0, homeScore: 0, awayScore: 0, accum: emptyLiveAccum(), lastStop: null, lastShift: null });
   }
-  // Joue jusqu'au prochain coup de sifflet (moment variable) ou jusqu'à la fin de la période.
+  // Simule un segment jusqu'à `stop`. shiftHome/shiftAway (optionnels) : { forwardIdx, defenseIdx }
+  // du trio et de la paire envoyés sur la glace pour cette mise au jeu (voir engine/lines.js).
+  function runLiveSegment(stop, shiftHome = null, shiftAway = null) {
+    const prev = liveMatch;
+    if (!prev) return;
+    const staffByTeam = { [myTeamId]: business.staff };
+    const linesHome = shiftHome ? { ...prev.linesHome, shift: shiftHome } : prev.linesHome;
+    const linesAway = shiftAway ? { ...prev.linesAway, shift: shiftAway } : prev.linesAway;
+    const result = simulateStretch(prev.home, prev.away, linesHome, linesAway, staffByTeam, prev.minute, stop.minute - prev.minute, Math.random, { home: prev.homeScore, away: prev.awayScore });
+    const at = stop.minute >= 60 ? "fin du match" : `${clockDisplay(stop.minute)} en ${livePeriod(stop.minute)}${livePeriod(stop.minute) === 1 ? "re" : "e"}`;
+    setLiveMatch({ ...prev, accum: mergeLivePeriod(prev.accum, result), homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, minute: stop.minute, lastStop: `${at} : ${result.home.penalties + result.away.penalties > 0 && stop.reason !== "Fin de la période" ? "Punition" : stop.reason}`, lastShift: shiftHome || shiftAway ? { home: shiftHome, away: shiftAway } : null });
+    setShiftPicker(null);
+  }
+  // Joue jusqu'au prochain coup de sifflet (moment variable) ou jusqu'à la fin de la période,
+  // avec le déploiement habituel (pas de trio précis choisi pour cette mise au jeu).
   function playLive(toPeriodEnd = false) {
     const prev = liveMatch;
     if (!prev || prev.minute >= 60) return;
     const periodEnd = (Math.floor(prev.minute / 20) + 1) * 20;
     const stop = toPeriodEnd ? { minute: periodEnd, reason: "Fin de la période" } : nextStoppage(prev.minute, Math.random);
-    const staffByTeam = { [myTeamId]: business.staff };
-    const dressedLines = (id) => dressTeam(teamsById[id], linesByTeam[id], injuries, currentDay).lines;
-    const result = simulateStretch(prev.home, prev.away, dressedLines(prev.home.id), dressedLines(prev.away.id), staffByTeam, prev.minute, stop.minute - prev.minute, Math.random, { home: prev.homeScore, away: prev.awayScore });
-    const at = stop.minute >= 60 ? "fin du match" : `${clockDisplay(stop.minute)} en ${livePeriod(stop.minute)}${livePeriod(stop.minute) === 1 ? "re" : "e"}`;
-    setLiveMatch({ ...prev, accum: mergeLivePeriod(prev.accum, result), homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, minute: stop.minute, lastStop: `${at} : ${result.home.penalties + result.away.penalties > 0 && stop.reason !== "Fin de la période" ? "Punition" : stop.reason}` });
+    runLiveSegment(stop);
+  }
+  // Ouvre le sélecteur de trio/paire pour la prochaine mise au jeu. L'adversaire choisit
+  // d'abord (l'ordinateur, selon l'écart au score) ; à domicile, tu vois son choix avant de
+  // répliquer (dernier changement, comme dans la vraie LNH) ; à l'étranger, tu choisis à l'aveugle.
+  function openShiftPicker() {
+    const prev = liveMatch;
+    if (!prev || prev.minute >= 60) return;
+    const myIsHome = prev.game.home === myTeamId;
+    const oppDiff = myIsHome ? prev.awayScore - prev.homeScore : prev.homeScore - prev.awayScore;
+    const oppShift = aiPickShift(oppDiff, prev.minute, Math.random);
+    setShiftPicker({ myIsHome, oppShift, forwardIdx: 0, defenseIdx: 0 });
+  }
+  function updateShiftPicker(patch) { setShiftPicker((prev) => (prev ? { ...prev, ...patch } : prev)); }
+  function cancelShiftPicker() { setShiftPicker(null); }
+  // Envoie le trio/la paire choisis : joue jusqu'au prochain arrêt avec ce déploiement des deux côtés.
+  function sendShift() {
+    const prev = liveMatch;
+    if (!prev || !shiftPicker) return;
+    const stop = nextStoppage(prev.minute, Math.random);
+    const mine = { forwardIdx: shiftPicker.forwardIdx, defenseIdx: shiftPicker.defenseIdx };
+    runLiveSegment(stop, shiftPicker.myIsHome ? mine : shiftPicker.oppShift, shiftPicker.myIsHome ? shiftPicker.oppShift : mine);
   }
   function finishLiveMatch() {
     if (!liveMatch) return;
@@ -267,6 +304,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     else setSchedule((prev) => prev.map((g) => (g.id === finalGame.id ? finalGame : g)));
     processFinance([finalGame]);
     setLiveMatch(null);
+    setShiftPicker(null);
     setWatchingGame(null);
   }
   // Joue des matchs le jour `day` : les blessés sont retirés des alignements (remplacés par les
@@ -1171,7 +1209,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       </div>
       <div key={tab} className="tab-view" style={{ flex: 1, padding: "24px 32px", overflow: "auto", background: "radial-gradient(1100px 480px at 75% -12%, rgba(92,200,255,0.08), transparent 60%)" }}>
         {notice && <div onClick={() => setNotice(null)} style={{ background: "#B84A4A33", border: "1px solid var(--loss)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 13, cursor: "pointer" }}>{notice} <span style={{ color: "var(--iceMuted)", fontSize: 11 }}>(clique pour fermer)</span></div>}
-        {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={() => playLive(false)} onEndOfPeriod={() => playLive(true)} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")} />}
+        {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={() => playLive(false)} onEndOfPeriod={() => playLive(true)} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")}
+          shiftPicker={shiftPicker} onOpenShiftPicker={openShiftPicker} onPickForward={(i) => updateShiftPicker({ forwardIdx: i })} onPickDefense={(i) => updateShiftPicker({ defenseIdx: i })} onSendShift={sendShift} onCancelShift={cancelShiftPicker} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 3 }}>{formatDay(currentDay)} · Saison {seasonYear}-{seasonYear + 1} · {PHASE_LABEL[phase]}</div>
