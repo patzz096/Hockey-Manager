@@ -19,9 +19,10 @@ import { waiverExempt, placeOnWaivers, resolveWaivers, aiWaiverCandidates, aiMon
 import { buildLines } from "./engine/lines";
 import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
-import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift } from "./engine/simulation";
+import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
+import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
 import { money } from "./ui/format";
@@ -124,7 +125,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [offerTarget, setOfferTarget] = useState(null);
-  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), staff: { hockeyOpsDirector: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, scoutAmateur: null, scoutPro: null }, delegation: { finance: "manual", hockeyOps: "manual" }, log: [] });
+  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), staff: { hockeyOpsDirector: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
   // Ton équipe telle que ton personnel la perçoit (valeurs estimées) : c'est ce qu'affiche l'interface.
@@ -238,7 +239,14 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setShiftPicker(null);
     const dressedHome = dressTeam(teamsById[game.home], linesByTeam[game.home], injuries, currentDay);
     const dressedAway = dressTeam(teamsById[game.away], linesByTeam[game.away], injuries, currentDay);
-    setLiveMatch({ game, home: dressedHome.team, away: dressedAway.team, linesHome: dressedHome.lines, linesAway: dressedAway.lines, minute: 0, homeScore: 0, awayScore: 0, accum: emptyLiveAccum(), lastStop: null, lastShift: null });
+    // Énergie de match (engine/training.js) : part de la condition de saison de chacun.
+    const energy = Object.fromEntries([...dressedHome.team.roster, ...dressedAway.team.roster].map((p) => [p.id, p.condition ?? BASE_CONDITION]));
+    setLiveMatch({ game, home: dressedHome.team, away: dressedAway.team, linesHome: dressedHome.lines, linesAway: dressedAway.lines, minute: 0, homeScore: 0, awayScore: 0, accum: emptyLiveAccum(), lastStop: null, lastShift: null, energy });
+  }
+  // Équipe telle que simulée pour ce segment : la condition de chacun est remplacée par son
+  // énergie du match en cours (engine/training.js), qui baisse avec le temps de glace accumulé.
+  function withEnergy(team, energy) {
+    return { ...team, roster: team.roster.map((p) => (energy[p.id] != null ? { ...p, condition: energy[p.id] } : p)) };
   }
   // Simule un segment jusqu'à `stop`. shiftHome/shiftAway (optionnels) : { forwardIdx, defenseIdx }
   // du trio et de la paire envoyés sur la glace pour cette mise au jeu (voir engine/lines.js).
@@ -248,9 +256,17 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const staffByTeam = { [myTeamId]: business.staff };
     const linesHome = shiftHome ? { ...prev.linesHome, shift: shiftHome } : prev.linesHome;
     const linesAway = shiftAway ? { ...prev.linesAway, shift: shiftAway } : prev.linesAway;
-    const result = simulateStretch(prev.home, prev.away, linesHome, linesAway, staffByTeam, prev.minute, stop.minute - prev.minute, Math.random, { home: prev.homeScore, away: prev.awayScore });
+    const minutes = stop.minute - prev.minute;
+    const homeForSim = withEnergy(prev.home, prev.energy);
+    const awayForSim = withEnergy(prev.away, prev.energy);
+    const result = simulateStretch(homeForSim, awayForSim, linesHome, linesAway, staffByTeam, prev.minute, minutes, Math.random, { home: prev.homeScore, away: prev.awayScore });
+    // Fatigue : le temps de glace de ce segment (même calcul que la feuille de match) baisse
+    // l'énergie de ceux qui ont joué, la remonte un peu pour ceux restés au banc.
+    const toiHome = computeTOI(linesHome, Math.random, minutes / 60);
+    const toiAway = computeTOI(linesAway, Math.random, minutes / 60);
+    const energy = applyGameFatigue(applyGameFatigue(prev.energy, prev.home.roster, toiHome, minutes), prev.away.roster, toiAway, minutes);
     const at = stop.minute >= 60 ? "fin du match" : `${clockDisplay(stop.minute)} en ${livePeriod(stop.minute)}${livePeriod(stop.minute) === 1 ? "re" : "e"}`;
-    setLiveMatch({ ...prev, accum: mergeLivePeriod(prev.accum, result), homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, minute: stop.minute, lastStop: `${at} : ${result.home.penalties + result.away.penalties > 0 && stop.reason !== "Fin de la période" ? "Punition" : stop.reason}`, lastShift: shiftHome || shiftAway ? { home: shiftHome, away: shiftAway } : null });
+    setLiveMatch({ ...prev, accum: mergeLivePeriod(prev.accum, result), homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, minute: stop.minute, lastStop: `${at} : ${result.home.penalties + result.away.penalties > 0 && stop.reason !== "Fin de la période" ? "Punition" : stop.reason}`, lastShift: shiftHome || shiftAway ? { home: shiftHome, away: shiftAway } : null, energy });
     setShiftPicker(null);
   }
   // Joue jusqu'au prochain coup de sifflet (moment variable) ou jusqu'à la fin de la période,
@@ -448,8 +464,14 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       return { ...prev, [myTeamId]: teamLines };
     });
   }
+  // Change une phase du système de jeu. Un changement de système coûte de la cohésion (temps
+  // d'adaptation, engine/training.js) : elle se reconstruit ensuite avec l'entraînement.
+  function applyStrategy(teamLines, newStrategy) {
+    const changed = strategySignature(teamLines.strategy) !== strategySignature(newStrategy);
+    return { ...teamLines, strategy: newStrategy, cohesion: changed ? resetCohesion(teamLines.cohesion ?? 100) : teamLines.cohesion };
+  }
   function updateStrategy(field, value) {
-    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], strategy: { ...normalizeStrategy(prev[myTeamId].strategy), [field]: value } } }));
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: applyStrategy(prev[myTeamId], { ...normalizeStrategy(prev[myTeamId].strategy), [field]: value }) }));
   }
   // Rôle demandé à un joueur (onglet Rôles).
   function updateRole(playerId, roleId) {
@@ -478,8 +500,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
   // Meilleur système pour chaque phase, selon l'effectif tel que ton personnel le perçoit.
   function autoOptimizeStrategy() {
-    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], strategy: bestStrategy(myTeamView, prev[myTeamId]) } }));
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: applyStrategy(prev[myTeamId], bestStrategy(myTeamView, prev[myTeamId])) }));
   }
+  function setTrainingFocus(focus) { setBusiness((prev) => ({ ...prev, trainingFocus: focus })); }
 
   function cleanLinesOfPlayer(l, playerId) {
     return {
@@ -614,6 +637,35 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setScoutMissions((prev) => ({ ...prev, [scoutId]: mission ? { ...mission, weeksDone: 0, startDay: currentDay } : null }));
   }
   function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 6)); }
+  // Semaines d'entraînement (voir engine/training.js) : condition physique pour toutes les
+  // équipes (selon les matchs joués et l'endurance de chacun) ; cohésion tactique seulement pour
+  // la tienne (les 31 autres restent pleinement rodées, voir buildLines). `schedule` peut avoir un
+  // tour de retard sur l'appelant (mise à jour React groupée) : sans conséquence, la fatigue et la
+  // cohésion évoluent doucement d'une semaine à l'autre.
+  function runTrainingWeeks(fromDay, weeks) {
+    const toDay = fromDay + weeks * 7;
+    const gamesOf = (teamId) => schedule.filter((g) => g.played && (g.home === teamId || g.away === teamId) && roundDay(seasonYear, g.round) > fromDay && roundDay(seasonYear, g.round) <= toDay).length;
+    const myRoster = teamsById[myTeamId]?.roster || [];
+    const avgCondition = myRoster.length ? myRoster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myRoster.length : BASE_CONDITION;
+    const curCohesion = linesByTeam[myTeamId]?.cohesion ?? 100;
+    const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) <= toDay + 7).length;
+    const focus = business.delegation.training === "delegated" ? autoTrainingFocus(avgCondition, curCohesion, upcoming) : business.trainingFocus;
+    const coachRatings = [business.staff.headCoach?.rating, business.staff.fitnessCoach?.rating].filter((r) => r != null);
+    const coachRating = coachRatings.length ? coachRatings.reduce((a, r) => a + r, 0) / coachRatings.length : 50;
+    const fitnessSkill = business.staff.fitnessCoach?.devSkill;
+    setTeams((prev) => prev.map((t) => {
+      const gpw = gamesOf(t.id) / weeks;
+      const f = t.id === myTeamId ? focus : DEFAULT_FOCUS;
+      let roster = t.roster;
+      for (let w = 0; w < weeks; w++) roster = applyWeeklyCondition(roster, gpw, f, t.id === myTeamId ? fitnessSkill : undefined);
+      return roster === t.roster ? t : { ...t, roster };
+    }));
+    setLinesByTeam((prev) => {
+      let cohesion = prev[myTeamId]?.cohesion ?? 100;
+      for (let w = 0; w < weeks; w++) cohesion = applyWeeklyCohesion(cohesion, focus, coachRating);
+      return cohesion === prev[myTeamId]?.cohesion ? prev : { ...prev, [myTeamId]: { ...prev[myTeamId], cohesion } };
+    });
+  }
   // Semaines de dépistage (voir engine/scoutingZones.js).
   function runScoutingWeeks(fromDay, weeks) {
     let coverage = scoutCoverage;
@@ -682,6 +734,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     processWaivers(newDay, teams, waivers);
     const weeks = Math.min(40, Math.floor(newDay / 7) - Math.floor(currentDay / 7));
     if (weeks > 0) runScoutingWeeks(currentDay, weeks);
+    if (weeks > 0) runTrainingWeeks(currentDay, weeks);
     const healed = Object.values(injuries).filter((i) => i.until <= newDay);
     if (healed.length) {
       setInjuries((prev) => Object.fromEntries(Object.entries(prev).filter(([, i]) => i.until > newDay)));
@@ -899,7 +952,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // Progression des joueurs (répétée `months` fois si plusieurs mois passent d'un coup).
   function monthlyTick(months, label) {
     if (business.delegation.hockeyOps === "delegated") autoManageHockeyOps();
-    const coachDev = (business.staff.headCoach?.devSkill + business.staff.assistantOff?.devSkill + business.staff.assistantDef?.devSkill) / [business.staff.headCoach, business.staff.assistantOff, business.staff.assistantDef].filter(Boolean).length || 50;
+    // L'entraîneur physique contribue aussi au développement des joueurs (engine/training.js).
+    const devCoaches = [business.staff.headCoach, business.staff.assistantOff, business.staff.assistantDef, business.staff.fitnessCoach].filter(Boolean);
+    const coachDev = devCoaches.reduce((a, c) => a + (c.devSkill || 50), 0) / devCoaches.length || 50;
     const scoutProRating = business.staff.scoutPro?.rating || 50;
     const devBonus = ((coachDev - 50) / 50) * 0.5;
     const scoutBonus = ((scoutProRating - 50) / 50) * 0.2;
@@ -1265,7 +1320,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
-        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
+        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} cohesion={linesByTeam[myTeamId]?.cohesion ?? 100} onSetTrainingFocus={setTrainingFocus} />}
 
         {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
 

@@ -225,11 +225,20 @@ export function optionEffects(phaseKey, id, fit) {
 
 // Multiplicateurs combinés des 5 phases et de la mentalité. own/opp (effet global offensif /
 // défensif) servent au choix automatique ; la simulation utilise vol/volA/q/qA/pen.
-export function getStrategyMultipliers(strategy, fits, mentality) {
+// Part de l'adéquation à la stratégie qui se réalise vraiment en match, selon la cohésion
+// (engine/training.js) : une tactique à peine installée (cohésion basse) exécute son système
+// comme s'il était moins adapté (ou moins inadapté) à l'effectif que ce qu'il est réellement ;
+// pleinement rodée (cohésion 100, le cas par défaut de toutes les équipes non suivies), l'effet
+// se réalise en entier. Définie ici (pas dans training.js) pour éviter un cycle d'imports.
+export function cohesionRealization(cohesion = 100) { return clamp(0.45 + (cohesion / 100) * 0.55, 0.45, 1); }
+
+export function getStrategyMultipliers(strategy, fits, mentality, cohesion) {
   const s = normalizeStrategy(strategy);
+  const realized = cohesion == null ? 1 : cohesionRealization(cohesion);
   const m = { ...N };
   STRATEGY_PHASES.forEach((ph) => {
-    const e = optionEffects(ph.key, s[ph.key], fits?.[ph.key]?.[s[ph.key]] ?? 0);
+    const fit = (fits?.[ph.key]?.[s[ph.key]] ?? 0) * realized;
+    const e = optionEffects(ph.key, s[ph.key], fit);
     Object.keys(m).forEach((k) => { m[k] *= e[k]; });
   });
   if (mentality) {

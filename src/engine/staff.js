@@ -1,12 +1,12 @@
 import { FIRST_NAMES, LAST_NAMES } from "../data/names";
 
-export const STAFF_ROLES = { hockeyOpsDirector: "Directeur des opérations hockey", financeDirector: "Directeur des finances", headCoach: "Entraîneur-chef", assistantOff: "Adjoint offensif", assistantDef: "Adjoint défensif", scoutAmateur: "Dépisteur amateur", scoutPro: "Dépisteur professionnel" };
+export const STAFF_ROLES = { hockeyOpsDirector: "Directeur des opérations hockey", financeDirector: "Directeur des finances", headCoach: "Entraîneur-chef", assistantOff: "Adjoint offensif", assistantDef: "Adjoint défensif", fitnessCoach: "Entraîneur physique", scoutAmateur: "Dépisteur amateur", scoutPro: "Dépisteur professionnel" };
 
-export const STAFF_BASE_SALARY = { hockeyOpsDirector: 2200, financeDirector: 1800, headCoach: 1800, assistantOff: 900, assistantDef: 900, scoutAmateur: 700, scoutPro: 900 };
+export const STAFF_BASE_SALARY = { hockeyOpsDirector: 2200, financeDirector: 1800, headCoach: 1800, assistantOff: 900, assistantDef: 900, fitnessCoach: 950, scoutAmateur: 700, scoutPro: 900 };
 
 export function buildStaffMarket(rng, count = 12) {
   const roles = Object.keys(STAFF_ROLES);
-  const coachRoles = ["headCoach", "assistantOff", "assistantDef"];
+  const coachRoles = ["headCoach", "assistantOff", "assistantDef", "fitnessCoach"];
   const list = [];
   for (let i = 0; i < count; i++) {
     const role = roles[i % roles.length];
@@ -23,7 +23,7 @@ export function buildStaffMarket(rng, count = 12) {
 export function buildStaffMarketRT(count = 6) {
   const rng = Math.random;
   const roles = Object.keys(STAFF_ROLES);
-  const coachRoles = ["headCoach", "assistantOff", "assistantDef"];
+  const coachRoles = ["headCoach", "assistantOff", "assistantDef", "fitnessCoach"];
   const list = [];
   for (let i = 0; i < count; i++) {
     const role = roles[i % roles.length];

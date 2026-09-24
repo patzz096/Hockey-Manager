@@ -2,6 +2,11 @@ import { FIRST_NAMES, LAST_NAMES, NATIONALITY_POOL } from "../data/names";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, potentialCeiling } from "./attributes";
 import { CURRENT_YEAR, randomContract } from "./contracts";
 import { randAttr } from "./random";
+import { BASE_CONDITION } from "./training";
+
+// Condition physique de départ (engine/training.js) : centrée sur BASE_CONDITION pour ne pas
+// biaiser le calibrage moyen de la ligue (voir tests/simulation-calibration.test.js).
+const randomCondition = (rng) => Math.round(BASE_CONDITION - 10 + rng() * 20);
 
 // 4C + 8W (4 slots for LW, 4 for RW) + 6D (3 pairs) + 2G (starter/backup)
 export const ROSTER_POSITIONS = ["C","C","C","C","LW","LW","LW","LW","RW","RW","RW","RW","LD","LD","LD","RD","RD","RD","G","G"];
@@ -14,7 +19,7 @@ export function buildRealRoster(data, teamIndex, rng) {
     const ovr = computeOvr(d.pos, attrs);
     const potential = d.potential != null ? Math.max(ovr, Math.min(99, d.potential)) : Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
     const contract = d.contract ? { type: "one", ...d.contract } : { ...randomContract(rng, { age: d.age, ovr, potential, pos: d.pos }), generated: true };
-    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, shoots: d.shoots, heightCm: d.heightCm, weightKg: d.weightKg, nhlId: d.nhlId, attrs, ovr, potential, contract };
+    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, shoots: d.shoots, heightCm: d.heightCm, weightKg: d.weightKg, nhlId: d.nhlId, attrs, ovr, potential, contract, condition: d.condition ?? randomCondition(rng) };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
@@ -27,7 +32,7 @@ export function buildNamedRoster(data, teamIndex, rng) {
     const age = Math.round(16 + rng() * 2);
     const ovr = computeOvr(d.pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng));
-    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age, attrs, ovr, potential, contract: { ...randomContract(rng, { age, ovr, potential, pos: d.pos }), generated: true } };
+    return { id: `${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age, attrs, ovr, potential, contract: { ...randomContract(rng, { age, ovr, potential, pos: d.pos }), generated: true }, condition: randomCondition(rng) };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
@@ -51,7 +56,7 @@ export function buildRoster(teamIndex, rng) {
     const age = Math.round(17 + rng() * 20);
     const ovr = computeOvr(pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng));
-    return { id: `${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: { ...randomContract(rng, { age, ovr, potential, pos }), generated: true }, nationality: pickNationality(rng) };
+    return { id: `${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: { ...randomContract(rng, { age, ovr, potential, pos }), generated: true }, nationality: pickNationality(rng), condition: randomCondition(rng) };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
@@ -69,7 +74,7 @@ export function buildFreeAgentPool(rng, count = 16) {
     const age = Math.round(19 + rng() * 14);
     const ovr = computeOvr(pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng));
-    list.push({ id: `FA-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: null, nationality: pickNationality(rng) });
+    list.push({ id: `FA-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: null, nationality: pickNationality(rng), condition: randomCondition(rng) });
   }
   return list;
 }
@@ -88,7 +93,7 @@ export function buildFarmRoster(teamIndex, rng, count = 10) {
     const age = Math.round(18 + rng() * 3);
     const ovr = computeOvr(pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng) + Math.round(rng() * 6));
-    list.push({ id: `FARM-${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: randomContract(rng, { age, ovr, potential, pos, level: "LAH" }), nationality: pickNationality(rng), level: "LAH" });
+    list.push({ id: `FARM-${teamIndex}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: randomContract(rng, { age, ovr, potential, pos, level: "LAH" }), nationality: pickNationality(rng), level: "LAH", condition: randomCondition(rng) });
   }
   return list;
 }
@@ -118,7 +123,7 @@ export function buildFreeAgentPoolRT(count = 16, scoutRating = 50) {
     const age = Math.round(19 + rng() * 14);
     const ovr = computeOvr(pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng));
-    list.push({ id: `FA-${Date.now()}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: null, draftPick: null, draftYear: null, nationality: pickNationality(rng) });
+    list.push({ id: `FA-${Date.now()}-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: null, draftPick: null, draftYear: null, nationality: pickNationality(rng), condition: randomCondition(rng) });
   }
   return list;
 }

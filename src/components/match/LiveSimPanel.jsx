@@ -2,6 +2,7 @@ import { btnStyle } from "../../ui/theme";
 import { TeamCrest } from "../common";
 import { StatLines } from "./BoxscoreView";
 import { GoalSummary } from "./GoalSummary";
+import { BASE_CONDITION, conditionColor, conditionLabel } from "../../engine/training";
 
 export const LIVE_PERIOD_MS = 9000;
 
@@ -39,6 +40,21 @@ export function livePeriod(minute) {
 }
 
 const lastName = (team, id) => { const p = team.roster.find((x) => x.id === id); return p ? p.name.split(" ").slice(-1)[0] : "—"; };
+
+// État de forme moyen d'un trio/paire (engine/training.js) : sert à voir en un coup d'œil
+// qu'une ligne fatiguée n'est plus le meilleur choix, même si c'est le trio n°1 sur papier.
+function lineEnergy(team, energy, ids) {
+  const vals = ids.filter(Boolean).map((id) => energy?.[id] ?? team.roster.find((p) => p.id === id)?.condition ?? BASE_CONDITION);
+  return vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : BASE_CONDITION;
+}
+function EnergyBadge({ value }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 8, color: conditionColor(value), marginLeft: 4 }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: conditionColor(value), display: "inline-block" }} />
+      {Math.round(value)} · {conditionLabel(value)}
+    </span>
+  );
+}
 function shiftLabel(team, lines, idx) {
   if (!idx) return "—";
   const fl = lines.forwards[idx.forwardIdx], dl = lines.defense[idx.defenseIdx];
@@ -47,7 +63,7 @@ function shiftLabel(team, lines, idx) {
 
 // Trios et paires cliquables : sert à choisir sa propre ligne (interactive) ou à afficher
 // celle déjà envoyée par l'adversaire (lecture seule).
-function LineChoice({ team, lines, forwardIdx, defenseIdx, onPickForward, onPickDefense, interactive }) {
+function LineChoice({ team, lines, forwardIdx, defenseIdx, onPickForward, onPickDefense, interactive, energy }) {
   const chip = (active) => ({
     textAlign: "left", fontSize: 11, padding: "5px 8px", borderRadius: 6, cursor: interactive ? "pointer" : "default", fontFamily: "inherit", color: "var(--ice)",
     background: active ? "rgba(92,200,255,0.22)" : "var(--navy)", border: `1px solid ${active ? "var(--accent)" : "var(--line)"}`, opacity: interactive || active ? 1 : 0.6,
@@ -57,7 +73,7 @@ function LineChoice({ team, lines, forwardIdx, defenseIdx, onPickForward, onPick
       <div role={interactive ? "radiogroup" : undefined} aria-label="Trios" style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
         {lines.forwards.map((l, i) => (
           <button key={i} type="button" role={interactive ? "radio" : undefined} aria-checked={interactive ? i === forwardIdx : undefined} disabled={!interactive} onClick={() => onPickForward(i)} style={chip(i === forwardIdx)}>
-            <div style={{ fontSize: 9, color: "var(--iceMuted)" }}>TRIO {i + 1}</div>
+            <div style={{ fontSize: 9, color: "var(--iceMuted)", display: "flex", alignItems: "center" }}>TRIO {i + 1}<EnergyBadge value={lineEnergy(team, energy, [l.LW, l.C, l.RW])} /></div>
             {[l.LW, l.C, l.RW].map((id) => lastName(team, id)).join(" · ")}
           </button>
         ))}
@@ -65,7 +81,7 @@ function LineChoice({ team, lines, forwardIdx, defenseIdx, onPickForward, onPick
       <div role={interactive ? "radiogroup" : undefined} aria-label="Paires" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         {lines.defense.map((l, i) => (
           <button key={i} type="button" role={interactive ? "radio" : undefined} aria-checked={interactive ? i === defenseIdx : undefined} disabled={!interactive} onClick={() => onPickDefense(i)} style={chip(i === defenseIdx)}>
-            <div style={{ fontSize: 9, color: "var(--iceMuted)" }}>PAIRE {i + 1}</div>
+            <div style={{ fontSize: 9, color: "var(--iceMuted)", display: "flex", alignItems: "center" }}>PAIRE {i + 1}<EnergyBadge value={lineEnergy(team, energy, [l.LD, l.RD])} /></div>
             {[l.LD, l.RD].map((id) => lastName(team, id)).join(" · ")}
           </button>
         ))}
@@ -79,7 +95,7 @@ function LineChoice({ team, lines, forwardIdx, defenseIdx, onPickForward, onPick
 // dernier. Si tu es à domicile, tu vois la ligne adverse avant de choisir la tienne ; à
 // l'étranger, la réplique des locaux reste cachée jusqu'au prochain arrêt.
 function ShiftPicker({ liveMatch, shiftPicker, onPickForward, onPickDefense, onSend, onCancel }) {
-  const { home, away, linesHome, linesAway } = liveMatch;
+  const { home, away, linesHome, linesAway, energy } = liveMatch;
   const { myIsHome, oppShift, forwardIdx, defenseIdx } = shiftPicker;
   const mine = { forwardIdx, defenseIdx };
   const awayInteractive = !myIsHome;
@@ -92,7 +108,7 @@ function ShiftPicker({ liveMatch, shiftPicker, onPickForward, onPickDefense, onS
         {badge && <span style={{ fontSize: 10, color: interactive ? "var(--accent)" : "var(--gold)" }}>{badge}</span>}
       </div>
       {interactive || idx
-        ? <LineChoice team={team} lines={lines} forwardIdx={idx.forwardIdx} defenseIdx={idx.defenseIdx} onPickForward={onPickForward} onPickDefense={onPickDefense} interactive={interactive} />
+        ? <LineChoice team={team} lines={lines} forwardIdx={idx.forwardIdx} defenseIdx={idx.defenseIdx} onPickForward={onPickForward} onPickDefense={onPickDefense} interactive={interactive} energy={energy} />
         : <div style={{ fontSize: 12, color: "var(--iceMuted)", padding: "10px 0" }}>Réplique des locaux — connue après l'envoi de ta ligne.</div>}
     </div>
   );

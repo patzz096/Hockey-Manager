@@ -218,8 +218,19 @@ tests/engine.test.js       tests du moteur
 - Trios/paires/gardiens éditables par glisser-déposer ou clic-clic (échange), sur un schéma
   de patinoire façon FM24, avec liste de joueurs par position à droite
 - Personnel : entraîneur-chef, adjoints (avec compétence de développement séparée),
-  dépisteurs amateur/pro, directeur des finances, directeur des opérations hockey — avec
-  primes de performance et option délégation (contrôle manuel ou IA)
+  entraîneur physique, dépisteurs amateur/pro, directeur des finances, directeur des
+  opérations hockey — avec primes de performance et option délégation (contrôle manuel ou IA)
+- Entraînement façon FM24 (`engine/training.js`, onglet Personnel) : condition physique par
+  joueur (récupère avec le repos, chute avec les matchs joués, atténuée par l'endurance —
+  module les cotes d'équipe via `conditionFactor`) et cohésion tactique de ton équipe (chute
+  quand tu changes de système, remonte à l'entraînement, détermine la part de l'adéquation à
+  ta stratégie réellement réalisée en match). Quatre programmes hebdomadaires (équilibré,
+  préparation physique, travail tactique, semaine de repos), délégable comme les finances et
+  les opérations hockey. L'entraîneur physique accélère la récupération de la condition,
+  contribue au développement des joueurs et à la progression de la cohésion. En sim en
+  direct, l'énergie de chaque joueur (initialisée à sa condition) baisse avec son temps de
+  glace et se voit sur les trios/paires du sélecteur de mise en jeu (« état de forme ») —
+  de quoi rendre coûteux d'envoyer toujours le trio no 1
 - Finances : billetterie à 3 paliers, stationnement, 10 items de concession, installations
   améliorables, bilan détaillé par match local
 - Transactions : échanges, agents libres (négociation d'offre avec moteur de décision du

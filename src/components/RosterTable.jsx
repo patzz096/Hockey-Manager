@@ -1,6 +1,7 @@
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { lineLabel } from "../engine/lines";
 import { getScoutInfo } from "../engine/scouting";
+import { BASE_CONDITION, conditionColor, conditionLabel } from "../engine/training";
 import { contractLabel } from "../ui/format";
 import { scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
@@ -17,6 +18,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowl
     if (key === "line") return lineLabel(p.id, lines);
     if (key === "ovr") return p.ovr;
     if (key === "potential") return p.potential;
+    if (key === "condition") return p.condition ?? BASE_CONDITION;
     if (key === "salary") return p.contract?.salary || 0;
     return 0;
   };
@@ -31,6 +33,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowl
         <SortTh label="Trio/Paire" sortKey="line" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort} />
         <SortTh label="Cote actuelle" sortKey="ovr" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort} />
         <SortTh label="Potentiel" sortKey="potential" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort} />
+        <SortTh label="Forme" sortKey="condition" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort} />
         <SortTh label="Contrat" sortKey="salary" activeKey={sortKey} activeDir={sortDir} onSort={toggleSort} />
         <th></th>
       </tr></thead>
@@ -38,6 +41,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowl
         {sorted.map((p) => {
           const scoutInfo = getScoutInfo(p, teamId, myTeamId, staff, scoutKnowledge);
           const qColor = scoutQualityColor(scoutInfo.quality);
+          const cond = p.condition ?? BASE_CONDITION;
           return (
           <tr key={p.id} onClick={() => onSelect(p)} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
@@ -48,6 +52,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowl
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{lineLabel(p.id, lines)}</td>
             <td style={{ padding: "7px 10px" }}><StarRating value={starsFor(p.ovr, benchmark)} size={12} color={qColor} /></td>
             <td style={{ padding: "7px 10px" }}><StarRating value={starsFor(p.potential, benchmark)} size={12} color={qColor === "var(--gold)" ? "#7A9EDB" : "var(--iceMuted)"} /></td>
+            <td style={{ padding: "7px 10px" }}><span title={conditionLabel(cond)} style={{ fontSize: 12, fontWeight: 600, color: conditionColor(cond) }}>{cond}</span></td>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)", fontSize: 12 }}>{contractLabel(p.contract)}</td>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)", fontSize: 12 }}>Profil ›</td>
           </tr>

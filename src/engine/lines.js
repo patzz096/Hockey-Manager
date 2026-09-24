@@ -25,7 +25,9 @@ export function buildLines(roster) {
   // Unités spéciales : le système le plus rentable pour l'effectif, deux unités chacune.
   const pp = bestSpecial(roster, "pp"), pk = bestSpecial(roster, "pk");
   // roles : rôles demandés (id du joueur → rôle) ; vide = rôle naturel de chaque joueur.
-  return { forwards, defense, goalies, pp: pp.units, pk: pk.units, special: { pp: pp.id, pk: pk.id }, roles: {}, strategy: { ...DEFAULT_STRATEGY }, mentality: { ...DEFAULT_MENTALITY } };
+  // cohesion : rodage du système de jeu (engine/training.js) ; 100 = pleinement rodé (la
+  // valeur par défaut pour les 31 autres équipes, jamais suivie que pour la tienne).
+  return { forwards, defense, goalies, pp: pp.units, pk: pk.units, special: { pp: pp.id, pk: pk.id }, roles: {}, strategy: { ...DEFAULT_STRATEGY }, mentality: { ...DEFAULT_MENTALITY }, cohesion: 100 };
 }
 
 export function lineInfo(playerId, lines) {

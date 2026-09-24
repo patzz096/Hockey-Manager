@@ -4,6 +4,7 @@ import { poisson, weightedPick } from "./random";
 import { roleMods } from "./roles";
 import { unitsForSim } from "./specialTeams";
 import { DEFAULT_STRATEGY, computeStrategyFits, getStrategyMultipliers, shooterMods } from "./strategy";
+import { conditionFactor } from "./training";
 
 // ---------------------------------------------------------------------------------------
 // Modèle de match : tout découle des tirs, pour que la feuille de match soit cohérente.
@@ -66,10 +67,14 @@ export function teamRatings(team, lines, staff) {
   // Rôles demandés : un franc-tireur ou un défenseur offensif pèse plus en attaque, un défenseur
   // défensif ou un attaquant d'énergie plus en défense ; un joueur mal adapté à son rôle perd en efficacité.
   const rm = (p) => roleMods(safeLines, p);
-  let attack = weightedAvg(skaters, (p) => avg(p.attrs, OFFENSIVE) * rm(p).attack, bonus);
-  let defense = weightedAvg(skaters, (p) => avg(p.attrs, DEFENSIVE) * rm(p).defense, (p) => bonus(p) * (isD(p) ? 1.6 : 1));
-  let finish = weightedAvg(skaters, (p) => offenseSkillScore(p) * rm(p).finish, bonus);
-  const goalieQ = goalie ? avg(goalie.attrs, GOALIE_TECH) : 60;
+  // Condition physique (engine/training.js) : neutre par défaut, légèrement en dessous/au-dessus
+  // pour un joueur fatigué ou en pleine forme. En sim en direct, `team.roster` porte une
+  // condition temporaire (l'énergie du match) au lieu de la condition de saison — voir App.jsx.
+  const cf = (p) => conditionFactor(p.condition);
+  let attack = weightedAvg(skaters, (p) => avg(p.attrs, OFFENSIVE) * rm(p).attack * cf(p), bonus);
+  let defense = weightedAvg(skaters, (p) => avg(p.attrs, DEFENSIVE) * rm(p).defense * cf(p), (p) => bonus(p) * (isD(p) ? 1.6 : 1));
+  let finish = weightedAvg(skaters, (p) => offenseSkillScore(p) * rm(p).finish * cf(p), bonus);
+  const goalieQ = goalie ? avg(goalie.attrs, GOALIE_TECH) * cf(goalie) : 60;
   if (staff) {
     const coach = 1 + (((staff.headCoach?.rating || 50) - 50) / 50) * 0.03;
     attack *= coach * (1 + (((staff.assistantOff?.rating || 50) - 50) / 50) * 0.025);
@@ -220,8 +225,11 @@ function timeline(events, rng, startMin, lengthMin) {
 
 // Simule un segment (match complet : scale 1 ; tranche du direct : 5/60).
 function simulateSegment(home, away, linesHome, linesAway, staffByTeam, rng, scale, startMin, lead = 0) {
-  const stratHome = scoreEffect(getStrategyMultipliers(linesHome.strategy || DEFAULT_STRATEGY, computeStrategyFits(home, linesHome), linesHome.mentality), lead, startMin);
-  const stratAway = scoreEffect(getStrategyMultipliers(linesAway.strategy || DEFAULT_STRATEGY, computeStrategyFits(away, linesAway), linesAway.mentality), -lead, startMin);
+  // Cohésion tactique (engine/training.js) : seule ton équipe en a une qui bouge (linesHome/
+  // linesAway.cohesion, absente = 100, pleinement rodée) ; elle détermine la part de
+  // l'adéquation à la stratégie qui se réalise vraiment ce segment.
+  const stratHome = scoreEffect(getStrategyMultipliers(linesHome.strategy || DEFAULT_STRATEGY, computeStrategyFits(home, linesHome), linesHome.mentality, linesHome.cohesion), lead, startMin);
+  const stratAway = scoreEffect(getStrategyMultipliers(linesAway.strategy || DEFAULT_STRATEGY, computeStrategyFits(away, linesAway), linesAway.mentality, linesAway.cohesion), -lead, startMin);
   const rtH = teamRatings(home, linesHome, staffByTeam[home.id]);
   const rtA = teamRatings(away, linesAway, staffByTeam[away.id]);
 

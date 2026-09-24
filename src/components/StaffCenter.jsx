@@ -1,5 +1,6 @@
 import { attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STAFF_ROLES } from "../engine/staff";
+import { BASE_CONDITION, TRAINING_FOCUSES, conditionColor, conditionLabel, cohesionColor, cohesionLabel } from "../engine/training";
 import { h2Style, btnStyle, attr20Color } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
@@ -29,11 +30,12 @@ export function StaffCard({ role, hired, benchmark, onFire }) {
   );
 }
 
-export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onHire, onFire, onRefresh, onSetDelegation, onSelectPlayer }) {
+export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onHire, onFire, onRefresh, onSetDelegation, onSelectPlayer, cohesion, onSetTrainingFocus }) {
   const [smk, smd, smToggle] = useSort("rating");
   const smAcc = (c, key) => (key === "role" ? STAFF_ROLES[c.role] : c[key]);
   const sortedStaffMarket = sortRows(staffMarket, smk, smd, smAcc);
   const benchmark = teamOvrBenchmark(myTeam);
+  const avgCondition = myTeam.roster.length ? myTeam.roster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myTeam.roster.length : BASE_CONDITION;
   return (
     <div>
       <h2 style={h2Style}>Délégation</h2>
@@ -53,8 +55,44 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
             <button onClick={() => onSetDelegation("hockeyOps", "delegated")} style={{ ...btnStyle(business.delegation.hockeyOps === "delegated" ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
           </div>
         </div>
+        <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, flex: 1, minWidth: 220 }}>
+          <div style={{ fontSize: 12, marginBottom: 8 }}>Entraînement {business.staff.fitnessCoach ? `(${business.staff.fitnessCoach.name})` : "(poste vacant)"}</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => onSetDelegation("training", "manual")} style={{ ...btnStyle(business.delegation.training === "manual" ? "var(--red)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
+            <button onClick={() => onSetDelegation("training", "delegated")} style={{ ...btnStyle(business.delegation.training === "delegated" ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
+          </div>
+        </div>
       </div>
-      <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -18, marginBottom: 26 }}>Finances déléguées: le directeur ajuste les prix des billets et investit dans les installations après chaque match local. Opérations hockey déléguées: le directeur comble automatiquement les postes vacants (entraîneurs, adjoints, dépisteurs) à chaque avancement de mois.</p>
+      <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -18, marginBottom: 26 }}>Finances déléguées: le directeur ajuste les prix des billets et investit dans les installations après chaque match local. Opérations hockey déléguées: le directeur comble automatiquement les postes vacants (entraîneurs, adjoints, dépisteurs) à chaque avancement de mois. Entraînement délégué: l'accent hebdomadaire (physique, tactique, repos) est choisi automatiquement selon la forme de l'effectif, la cohésion et le calendrier à venir.</p>
+
+      <h2 style={h2Style}>Entraînement</h2>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+        <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, flex: 1, minWidth: 200 }}>
+          <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 4 }}>FORME PHYSIQUE MOYENNE</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 22, color: conditionColor(avgCondition) }}>{Math.round(avgCondition)}</span>
+            <span style={{ fontSize: 12, color: conditionColor(avgCondition) }}>{conditionLabel(avgCondition)}</span>
+          </div>
+        </div>
+        <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, flex: 1, minWidth: 200 }}>
+          <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 4 }}>COHÉSION TACTIQUE</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 22, color: cohesionColor(cohesion) }}>{Math.round(cohesion)}</span>
+            <span style={{ fontSize: 12, color: cohesionColor(cohesion) }}>{cohesionLabel(cohesion)}</span>
+          </div>
+        </div>
+      </div>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>La cohésion baisse quand tu changes ta stratégie et remonte à l'entraînement — un système bien rodé rend pleinement les bonus/malus de ta stratégie. Un entraîneur physique en poste accélère la récupération de la forme et contribue au développement des joueurs.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 10, marginBottom: 26 }}>
+        {Object.entries(TRAINING_FOCUSES).map(([key, f]) => (
+          <button key={key} disabled={business.delegation.training === "delegated"} onClick={() => onSetTrainingFocus(key)} style={{ ...btnStyle(business.trainingFocus === key ? "var(--accent)" : "var(--steel)"), flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, opacity: business.delegation.training === "delegated" ? 0.55 : 1, cursor: business.delegation.training === "delegated" ? "default" : "pointer" }}>
+            <span style={{ fontSize: 12, fontWeight: 600 }}>{f.label}</span>
+            <span style={{ fontSize: 10, color: business.trainingFocus === key ? "#0A1627" : "var(--iceMuted)" }}>{f.desc}</span>
+          </button>
+        ))}
+      </div>
+      {business.delegation.training === "delegated" && <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -18, marginBottom: 26 }}>Entraînement délégué — l'accent est choisi automatiquement chaque semaine.</p>}
+
       <h2 style={h2Style}>Personnel en poste</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 12, marginBottom: 28 }}>
         {Object.keys(STAFF_ROLES).map((role) => (<StaffCard key={role} role={role} hired={business.staff[role]} benchmark={benchmark} onFire={onFire} />))}
