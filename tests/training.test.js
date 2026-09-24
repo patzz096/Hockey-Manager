@@ -5,7 +5,7 @@ import {
   BASE_CONDITION, conditionFactor, weeklyConditionDelta, applyWeeklyCondition,
   strategySignature, resetCohesion, weeklyCohesionDelta, applyWeeklyCohesion,
   cohesionRealization, autoTrainingFocus, autoTrainingSessions, resolveFocus,
-  applyGameFatigue, MIN_CONDITION, MIN_COHESION, MAX_SESSIONS_PER_WEEK,
+  applyGameFatigue, MIN_CONDITION, MIN_COHESION, SLOTS_PER_DAY,
 } from "../src/engine/training";
 import { DEFAULT_STRATEGY } from "../src/engine/strategy";
 
@@ -99,9 +99,9 @@ describe("resolveFocus (séances multiples au calendrier)", () => {
 });
 
 describe("autoTrainingSessions", () => {
-  it("planifie au maximum MAX_SESSIONS_PER_WEEK séances", () => {
-    expect(autoTrainingSessions(85, 95, 3).length).toBe(MAX_SESSIONS_PER_WEEK);
-    expect(autoTrainingSessions(60, 40, 3).length).toBe(MAX_SESSIONS_PER_WEEK);
+  it("planifie au maximum SLOTS_PER_DAY séances (matin/après-midi)", () => {
+    expect(autoTrainingSessions(85, 95, 3).length).toBe(SLOTS_PER_DAY);
+    expect(autoTrainingSessions(60, 40, 3).length).toBe(SLOTS_PER_DAY);
   });
   it("repos si aucun match à venir", () => { expect(autoTrainingSessions(85, 100, 0)).toEqual(["rest", "rest"]); });
   it("inclut une séance physique si l'effectif est fatigué", () => { expect(autoTrainingSessions(60, 100, 3)).toContain("fitness"); });

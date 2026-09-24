@@ -5,7 +5,7 @@ import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBon
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
-import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths, weekBucket } from "./engine/calendar";
+import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths } from "./engine/calendar";
 import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, lotteryIneligible, ROUND_NAMES } from "./engine/playoffs";
 import { createDraft, aiPick, makePick, draftDone, upcomingDraftClass } from "./engine/draft";
 import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promoteFromJunior } from "./engine/minorLeagues";
@@ -22,7 +22,7 @@ import { seededRandom } from "./engine/random";
 import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
-import { BASE_CONDITION, DEFAULT_FOCUS, MAX_SESSIONS_PER_WEEK, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
+import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
 import { money } from "./ui/format";
@@ -641,12 +641,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 6)); }
   // Semaines d'entraînement (voir engine/training.js) : condition physique pour toutes les
   // équipes (selon les matchs joués et l'endurance de chacun) ; cohésion tactique seulement pour
-  // la tienne (les 31 autres restent pleinement rodées, voir buildLines). Jusqu'à 2 séances par
-  // semaine, planifiées dans l'onglet Calendrier (`business.trainingSchedule`, jour → focus) ; si
-  // aucune n'est planifiée une semaine donnée, le programme par défaut (Personnel) s'applique. En
-  // délégué, `autoTrainingSessions` choisit à ta place, semaine par semaine. `schedule` peut avoir
-  // un tour de retard sur l'appelant (mise à jour React groupée) : sans conséquence, la fatigue et
-  // la cohésion évoluent doucement d'une semaine à l'autre.
+  // la tienne (les 31 autres restent pleinement rodées, voir buildLines). Jusqu'à SLOTS_PER_DAY
+  // séances par jour (matin/après-midi, un match occupant une case), planifiées dans l'onglet
+  // Calendrier (`business.trainingSchedule`, jour → [matin, après-midi]) ; les jours sans séance
+  // planifiée utilisent le programme par défaut (Personnel). En délégué, `autoTrainingSessions`/
+  // `autoTrainingFocus` choisissent à ta place, jour par jour. `schedule` peut avoir un tour de
+  // retard sur l'appelant (mise à jour React groupée) : sans conséquence, la fatigue et la
+  // cohésion évoluent doucement d'une semaine à l'autre.
   function runTrainingWeeks(fromDay, weeks) {
     const gamesOf = (teamId, from, to) => schedule.filter((g) => g.played && (g.home === teamId || g.away === teamId) && roundDay(seasonYear, g.round) > from && roundDay(seasonYear, g.round) <= to).length;
     const myRoster = teamsById[myTeamId]?.roster || [];
@@ -665,13 +666,21 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       const weekStart = fromDay + w * 7, weekEnd = weekStart + 7;
       if (delegated) {
         const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) <= weekEnd + 7).length;
-        const sessions = autoTrainingSessions(avgCondition, curCohesion, upcoming);
-        const freeDays = [];
-        for (let d = weekStart + 1; d <= weekEnd && freeDays.length < sessions.length; d++) if (!myGameDays.has(d)) freeDays.push(d);
-        sessions.forEach((focus, i) => { if (freeDays[i] != null) autoPlacements[freeDays[i]] = focus; });
+        const pair = autoTrainingSessions(avgCondition, curCohesion, upcoming);
+        const single = autoTrainingFocus(avgCondition, curCohesion, upcoming);
+        const sessions = [];
+        for (let d = weekStart + 1; d <= weekEnd; d++) {
+          const dayFocuses = myGameDays.has(d) ? [single] : pair;
+          autoPlacements[d] = dayFocuses;
+          sessions.push(...dayFocuses);
+        }
         weeklySessions.push(sessions);
       } else {
-        const sessions = Object.entries(scheduled).filter(([day]) => Number(day) > weekStart && Number(day) <= weekEnd).map(([, focus]) => focus);
+        const sessions = [];
+        Object.entries(scheduled).forEach(([day, slots]) => {
+          const d = Number(day);
+          if (d > weekStart && d <= weekEnd) (slots || []).forEach((f) => { if (f) sessions.push(f); });
+        });
         weeklySessions.push(sessions.length ? sessions : [business.trainingFocus]);
       }
     }
@@ -695,18 +704,27 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       setBusiness((prev) => ({ ...prev, trainingSchedule: { ...prev.trainingSchedule, ...autoPlacements } }));
     }
   }
-  // Planification manuelle d'une séance au calendrier (max MAX_SESSIONS_PER_WEEK par semaine,
-  // jamais un jour de match). `day` : jour absolu (voir engine/calendar.js).
-  function scheduleTraining(day, focusKey) {
+  // Planification manuelle d'une séance au calendrier : `slot` 0 = matin, 1 = après-midi.
+  // Un jour de match occupe la case de l'après-midi (un match compte pour une séance) : seule
+  // celle du matin reste disponible ce jour-là. `day` : jour absolu (voir engine/calendar.js).
+  function scheduleTraining(day, slot, focusKey) {
     const isGameDay = schedule.some((g) => (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) === day);
-    if (isGameDay) { setNotice("Impossible de planifier une séance d'entraînement un jour de match."); return; }
-    const bucket = weekBucket(day);
-    const already = Object.keys(business.trainingSchedule || {}).filter((d) => Number(d) !== day && weekBucket(Number(d)) === bucket);
-    if (already.length >= MAX_SESSIONS_PER_WEEK) { setNotice(`Maximum ${MAX_SESSIONS_PER_WEEK} séances d'entraînement par semaine.`); return; }
-    setBusiness((prev) => ({ ...prev, trainingSchedule: { ...prev.trainingSchedule, [day]: focusKey } }));
+    if (isGameDay && slot === 1) { setNotice("L'après-midi est déjà occupé par le match ce jour-là — une seule séance possible, le matin."); return; }
+    setBusiness((prev) => {
+      const daySlots = prev.trainingSchedule[day] || [null, null];
+      const next = [...daySlots]; next[slot] = focusKey;
+      return { ...prev, trainingSchedule: { ...prev.trainingSchedule, [day]: next } };
+    });
   }
-  function cancelTraining(day) {
-    setBusiness((prev) => { const next = { ...prev.trainingSchedule }; delete next[day]; return { ...prev, trainingSchedule: next }; });
+  function cancelTraining(day, slot) {
+    setBusiness((prev) => {
+      const daySlots = prev.trainingSchedule[day];
+      if (!daySlots) return prev;
+      const next = [...daySlots]; next[slot] = null;
+      const trainingSchedule = { ...prev.trainingSchedule };
+      if (next.every((s) => s == null)) delete trainingSchedule[day]; else trainingSchedule[day] = next;
+      return { ...prev, trainingSchedule };
+    });
   }
   // Semaines de dépistage (voir engine/scoutingZones.js).
   function runScoutingWeeks(fromDay, weeks) {

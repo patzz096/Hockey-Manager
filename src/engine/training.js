@@ -19,6 +19,10 @@ import { normalizeStrategy, STRATEGY_PHASES } from "./strategy";
 //    système de jeu (les 5 phases) reste le même, chute quand tu le changes (temps d'adaptation,
 //    comme une nouvelle tactique en FM). Elle détermine la part de l'adéquation de ton effectif
 //    qui se réalise vraiment en match (`engine/strategy.js` getStrategyMultipliers).
+//  - Calendrier (App.jsx `business.trainingSchedule`, jour → [séance du matin, séance de
+//    l'après-midi]) : jusqu'à SLOTS_PER_DAY séances par jour, un match occupant une des deux
+//    cases. Toutes les séances de la semaine sont moyennées (`resolveFocus`) pour obtenir l'effet
+//    hebdomadaire réel sur la condition et la cohésion.
 // ---------------------------------------------------------------------------------------
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -46,11 +50,15 @@ export const TRAINING_FOCUSES = {
   rest: { label: "Semaine de repos", desc: "Charge allégée : la meilleure récupération physique, mais aucun travail tactique cette semaine-là.", conditionBoost: 4.6, cohesionBoost: -2.8 },
 };
 export const DEFAULT_FOCUS = "balanced";
-export const MAX_SESSIONS_PER_WEEK = 2;
+// Calendrier (onglet Calendrier, vue "mon équipe") : 2 cases par jour (matin/après-midi). Un
+// match occupe une case (celle de l'après-midi, par convention) : un jour de match ne peut donc
+// recevoir qu'une seule séance (le matin), un jour libre jusqu'à 2 (matin ET après-midi).
+export const SLOTS_PER_DAY = 2;
 
 // Choix automatique quand l'entraînement est délégué (onglet Personnel) : repos si personne ne
 // joue bientôt, physique si l'effectif est fatigué, tactique si la cohésion a pris un coup
-// (changement de système récent), sinon équilibré.
+// (changement de système récent), sinon équilibré. Utilisé pour la case du matin d'un jour de
+// match (une seule séance possible ce jour-là).
 export function autoTrainingFocus(avgCondition, cohesion, upcomingGames) {
   if (upcomingGames === 0) return "rest";
   if (avgCondition < 68) return "fitness";
@@ -58,20 +66,19 @@ export function autoTrainingFocus(avgCondition, cohesion, upcomingGames) {
   return "balanced";
 }
 
-// Version "calendrier" du choix automatique : jusqu'à MAX_SESSIONS_PER_WEEK séances par semaine
-// (comme un utilisateur qui planifierait lui-même), pour rester cohérent avec le calendrier
-// mensuel où les séances manuelles sont aussi limitées à 2 par semaine.
+// Version à 2 séances (matin + après-midi) du choix automatique, pour un jour sans match.
 export function autoTrainingSessions(avgCondition, cohesion, upcomingGames) {
   if (upcomingGames === 0) return ["rest", "rest"];
   const sessions = [];
   if (avgCondition < 68) sessions.push("fitness");
   if (cohesion < 60) sessions.push("tactical");
-  while (sessions.length < MAX_SESSIONS_PER_WEEK) sessions.push("balanced");
+  while (sessions.length < SLOTS_PER_DAY) sessions.push("balanced");
   return sessions;
 }
 
-// Un ou plusieurs programmes (jusqu'à 2 séances/semaine planifiées au calendrier) réduits à un
-// seul effet moyen. Accepte une seule clé (rétrocompatible) ou un tableau de clés.
+// Un ou plusieurs programmes (toutes les séances de la semaine, matin et après-midi confondus,
+// planifiées au calendrier) réduits à un seul effet moyen. Accepte une seule clé (rétrocompatible)
+// ou un tableau de clés.
 export function resolveFocus(focusKeys = DEFAULT_FOCUS) {
   const arr = Array.isArray(focusKeys) ? focusKeys : [focusKeys];
   const list = arr.length ? arr : [DEFAULT_FOCUS];

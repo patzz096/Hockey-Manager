@@ -83,7 +83,7 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
         </div>
       </div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>La cohésion baisse quand tu changes ta stratégie et remonte à l'entraînement — un système bien rodé rend pleinement les bonus/malus de ta stratégie. Un entraîneur physique en poste accélère la récupération de la forme et contribue au développement des joueurs.</p>
-      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>Planifie jusqu'à 2 séances précises par semaine dans l'onglet <strong>Calendrier</strong> (vue « Mon équipe »). Le programme par défaut ci-dessous ne s'applique que les semaines où tu n'as rien planifié.</p>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>Planifie jusqu'à 2 séances précises par jour (matin et après-midi) dans l'onglet <strong>Calendrier</strong> (vue « Mon équipe ») — un jour de match n'en permet qu'une, le matin. Le programme par défaut ci-dessous ne s'applique que les semaines où tu n'as rien planifié.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 10, marginBottom: 26 }}>
         {Object.entries(TRAINING_FOCUSES).map(([key, f]) => (
           <button key={key} disabled={business.delegation.training === "delegated"} onClick={() => onSetTrainingFocus(key)} style={{ ...btnStyle(business.trainingFocus === key ? "var(--accent)" : "var(--steel)"), flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, opacity: business.delegation.training === "delegated" ? 0.55 : 1, cursor: business.delegation.training === "delegated" ? "default" : "pointer" }}>
