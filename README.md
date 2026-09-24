@@ -230,7 +230,13 @@ tests/engine.test.js       tests du moteur
   contribue au développement des joueurs et à la progression de la cohésion. En sim en
   direct, l'énergie de chaque joueur (initialisée à sa condition) baisse avec son temps de
   glace et se voit sur les trios/paires du sélecteur de mise en jeu (« état de forme ») —
-  de quoi rendre coûteux d'envoyer toujours le trio no 1
+  de quoi rendre coûteux d'envoyer toujours le trio no 1. Séances planifiables directement
+  au calendrier (onglet Calendrier, vue « Mon équipe », jusqu'à 2 par semaine, jamais un
+  jour de match) : le programme par défaut de Personnel ne s'applique que les semaines sans
+  séance planifiée ; en délégué, l'IA choisit et affiche ses propres séances chaque semaine
+- Calendrier mensuel pour ton équipe (`MonthlyCalendar`) : matchs et séances d'entraînement
+  du mois sur une grille classique, navigation mois par mois, séance planifiée ou annulée
+  d'un clic ; le calendrier complet (toutes les équipes, par ronde) reste disponible à côté
 - Finances : billetterie à 3 paliers, stationnement, 10 items de concession, installations
   améliorables, bilan détaillé par match local
 - Transactions : échanges, agents libres (négociation d'offre avec moteur de décision du

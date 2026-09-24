@@ -4,7 +4,8 @@ import { describe, it, expect } from "vitest";
 import {
   BASE_CONDITION, conditionFactor, weeklyConditionDelta, applyWeeklyCondition,
   strategySignature, resetCohesion, weeklyCohesionDelta, applyWeeklyCohesion,
-  cohesionRealization, autoTrainingFocus, applyGameFatigue, MIN_CONDITION, MIN_COHESION,
+  cohesionRealization, autoTrainingFocus, autoTrainingSessions, resolveFocus,
+  applyGameFatigue, MIN_CONDITION, MIN_COHESION, MAX_SESSIONS_PER_WEEK,
 } from "../src/engine/training";
 import { DEFAULT_STRATEGY } from "../src/engine/strategy";
 
@@ -81,6 +82,30 @@ describe("cohésion tactique", () => {
     expect(cohesionRealization(30)).toBeLessThan(cohesionRealization(100));
     expect(cohesionRealization(0)).toBeGreaterThanOrEqual(0.45);
   });
+});
+
+describe("resolveFocus (séances multiples au calendrier)", () => {
+  it("une seule clé se comporte comme avant (rétrocompatible)", () => {
+    expect(resolveFocus("fitness")).toEqual({ conditionBoost: 2.8, cohesionBoost: -1.6 });
+  });
+  it("moyenne l'effet de deux séances de la même semaine", () => {
+    const blended = resolveFocus(["fitness", "tactical"]);
+    expect(blended.conditionBoost).toBeCloseTo((2.8 + -1.2) / 2);
+    expect(blended.cohesionBoost).toBeCloseTo((-1.6 + 3.0) / 2);
+  });
+  it("un tableau vide retombe sur le programme équilibré", () => {
+    expect(resolveFocus([])).toEqual({ conditionBoost: 0, cohesionBoost: 0 });
+  });
+});
+
+describe("autoTrainingSessions", () => {
+  it("planifie au maximum MAX_SESSIONS_PER_WEEK séances", () => {
+    expect(autoTrainingSessions(85, 95, 3).length).toBe(MAX_SESSIONS_PER_WEEK);
+    expect(autoTrainingSessions(60, 40, 3).length).toBe(MAX_SESSIONS_PER_WEEK);
+  });
+  it("repos si aucun match à venir", () => { expect(autoTrainingSessions(85, 100, 0)).toEqual(["rest", "rest"]); });
+  it("inclut une séance physique si l'effectif est fatigué", () => { expect(autoTrainingSessions(60, 100, 3)).toContain("fitness"); });
+  it("inclut une séance tactique si la cohésion a chuté", () => { expect(autoTrainingSessions(85, 40, 3)).toContain("tactical"); });
 });
 
 describe("autoTrainingFocus", () => {

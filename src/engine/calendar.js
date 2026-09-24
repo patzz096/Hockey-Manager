@@ -29,6 +29,16 @@ export function seasonDates(year) {
 }
 export function roundDay(year, round) { return seasonDates(year).start + (round - 1) * ROUND_SPACING; }
 
+// Calendrier mensuel (onglet Calendrier, vue "mon équipe") : premier jour du mois contenant
+// `day`, et premier jour du mois `n` mois plus loin (n négatif = mois précédents).
+export function monthStartDay(day) { const d = dayToDate(day); return dateToDay(d.getUTCFullYear(), d.getUTCMonth(), 1); }
+export function addMonths(day, n) { const d = dayToDate(day); return dateToDay(d.getUTCFullYear(), d.getUTCMonth() + n, 1); }
+
+// Semaine d'entraînement (engine/training.js) : max 2 séances par semaine. Simple découpage en
+// blocs de 7 jours depuis l'epoch (pas aligné sur un jour précis, mais constant et suffisant
+// pour limiter la fréquence des séances).
+export function weekBucket(day) { return Math.floor(day / 7); }
+
 // Échanges et signatures d'agents libres : fermés de la date limite jusqu'au 1er juillet.
 export function transactionWindow(year, day) {
   const d = seasonDates(year);

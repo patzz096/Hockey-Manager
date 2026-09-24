@@ -5,7 +5,7 @@ import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBon
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
-import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow } from "./engine/calendar";
+import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths, weekBucket } from "./engine/calendar";
 import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, lotteryIneligible, ROUND_NAMES } from "./engine/playoffs";
 import { createDraft, aiPick, makePick, draftDone, upcomingDraftClass } from "./engine/draft";
 import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promoteFromJunior } from "./engine/minorLeagues";
@@ -22,7 +22,7 @@ import { seededRandom } from "./engine/random";
 import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
-import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
+import { BASE_CONDITION, DEFAULT_FOCUS, MAX_SESSIONS_PER_WEEK, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
 import { money } from "./ui/format";
@@ -38,6 +38,7 @@ import { PlayerEditorModal } from "./components/PlayerEditorModal";
 import { PlayerModal } from "./components/PlayerModal";
 import { RosterTable } from "./components/RosterTable";
 import { StaffCenter } from "./components/StaffCenter";
+import { MonthlyCalendar } from "./components/MonthlyCalendar";
 import { StandingsTable } from "./components/StandingsTable";
 import { StatsTables } from "./components/StatsTables";
 import { StrategyEditor } from "./components/StrategyEditor";
@@ -122,10 +123,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // direct). { myIsHome, oppShift: {forwardIdx, defenseIdx}, forwardIdx, defenseIdx }.
   const [shiftPicker, setShiftPicker] = useState(null);
   const [scheduleFilter, setScheduleFilter] = useState("all");
+  const [calendarMonth, setCalendarMonth] = useState(() => monthStartDay(seasonDates(FIRST_SEASON).start - 1));
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [offerTarget, setOfferTarget] = useState(null);
-  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), staff: { hockeyOpsDirector: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, log: [] });
+  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), staff: { hockeyOpsDirector: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
   // Ton équipe telle que ton personnel la perçoit (valeurs estimées) : c'est ce qu'affiche l'interface.
@@ -639,32 +641,72 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 6)); }
   // Semaines d'entraînement (voir engine/training.js) : condition physique pour toutes les
   // équipes (selon les matchs joués et l'endurance de chacun) ; cohésion tactique seulement pour
-  // la tienne (les 31 autres restent pleinement rodées, voir buildLines). `schedule` peut avoir un
-  // tour de retard sur l'appelant (mise à jour React groupée) : sans conséquence, la fatigue et la
-  // cohésion évoluent doucement d'une semaine à l'autre.
+  // la tienne (les 31 autres restent pleinement rodées, voir buildLines). Jusqu'à 2 séances par
+  // semaine, planifiées dans l'onglet Calendrier (`business.trainingSchedule`, jour → focus) ; si
+  // aucune n'est planifiée une semaine donnée, le programme par défaut (Personnel) s'applique. En
+  // délégué, `autoTrainingSessions` choisit à ta place, semaine par semaine. `schedule` peut avoir
+  // un tour de retard sur l'appelant (mise à jour React groupée) : sans conséquence, la fatigue et
+  // la cohésion évoluent doucement d'une semaine à l'autre.
   function runTrainingWeeks(fromDay, weeks) {
-    const toDay = fromDay + weeks * 7;
-    const gamesOf = (teamId) => schedule.filter((g) => g.played && (g.home === teamId || g.away === teamId) && roundDay(seasonYear, g.round) > fromDay && roundDay(seasonYear, g.round) <= toDay).length;
+    const gamesOf = (teamId, from, to) => schedule.filter((g) => g.played && (g.home === teamId || g.away === teamId) && roundDay(seasonYear, g.round) > from && roundDay(seasonYear, g.round) <= to).length;
     const myRoster = teamsById[myTeamId]?.roster || [];
     const avgCondition = myRoster.length ? myRoster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myRoster.length : BASE_CONDITION;
     const curCohesion = linesByTeam[myTeamId]?.cohesion ?? 100;
-    const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) <= toDay + 7).length;
-    const focus = business.delegation.training === "delegated" ? autoTrainingFocus(avgCondition, curCohesion, upcoming) : business.trainingFocus;
     const coachRatings = [business.staff.headCoach?.rating, business.staff.fitnessCoach?.rating].filter((r) => r != null);
     const coachRating = coachRatings.length ? coachRatings.reduce((a, r) => a + r, 0) / coachRatings.length : 50;
     const fitnessSkill = business.staff.fitnessCoach?.devSkill;
+    const scheduled = business.trainingSchedule || {};
+    const delegated = business.delegation.training === "delegated";
+    const myGameDays = new Set(schedule.filter((g) => g.home === myTeamId || g.away === myTeamId).map((g) => roundDay(seasonYear, g.round)));
+
+    const weeklySessions = [];
+    const autoPlacements = {};
+    for (let w = 0; w < weeks; w++) {
+      const weekStart = fromDay + w * 7, weekEnd = weekStart + 7;
+      if (delegated) {
+        const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) <= weekEnd + 7).length;
+        const sessions = autoTrainingSessions(avgCondition, curCohesion, upcoming);
+        const freeDays = [];
+        for (let d = weekStart + 1; d <= weekEnd && freeDays.length < sessions.length; d++) if (!myGameDays.has(d)) freeDays.push(d);
+        sessions.forEach((focus, i) => { if (freeDays[i] != null) autoPlacements[freeDays[i]] = focus; });
+        weeklySessions.push(sessions);
+      } else {
+        const sessions = Object.entries(scheduled).filter(([day]) => Number(day) > weekStart && Number(day) <= weekEnd).map(([, focus]) => focus);
+        weeklySessions.push(sessions.length ? sessions : [business.trainingFocus]);
+      }
+    }
+
     setTeams((prev) => prev.map((t) => {
-      const gpw = gamesOf(t.id) / weeks;
-      const f = t.id === myTeamId ? focus : DEFAULT_FOCUS;
       let roster = t.roster;
-      for (let w = 0; w < weeks; w++) roster = applyWeeklyCondition(roster, gpw, f, t.id === myTeamId ? fitnessSkill : undefined);
+      for (let w = 0; w < weeks; w++) {
+        const weekStart = fromDay + w * 7, weekEnd = weekStart + 7;
+        const gpw = gamesOf(t.id, weekStart, weekEnd);
+        const sessions = t.id === myTeamId ? weeklySessions[w] : DEFAULT_FOCUS;
+        roster = applyWeeklyCondition(roster, gpw, sessions, t.id === myTeamId ? fitnessSkill : undefined);
+      }
       return roster === t.roster ? t : { ...t, roster };
     }));
     setLinesByTeam((prev) => {
       let cohesion = prev[myTeamId]?.cohesion ?? 100;
-      for (let w = 0; w < weeks; w++) cohesion = applyWeeklyCohesion(cohesion, focus, coachRating);
+      weeklySessions.forEach((sessions) => { cohesion = applyWeeklyCohesion(cohesion, sessions, coachRating); });
       return cohesion === prev[myTeamId]?.cohesion ? prev : { ...prev, [myTeamId]: { ...prev[myTeamId], cohesion } };
     });
+    if (delegated && Object.keys(autoPlacements).length) {
+      setBusiness((prev) => ({ ...prev, trainingSchedule: { ...prev.trainingSchedule, ...autoPlacements } }));
+    }
+  }
+  // Planification manuelle d'une séance au calendrier (max MAX_SESSIONS_PER_WEEK par semaine,
+  // jamais un jour de match). `day` : jour absolu (voir engine/calendar.js).
+  function scheduleTraining(day, focusKey) {
+    const isGameDay = schedule.some((g) => (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) === day);
+    if (isGameDay) { setNotice("Impossible de planifier une séance d'entraînement un jour de match."); return; }
+    const bucket = weekBucket(day);
+    const already = Object.keys(business.trainingSchedule || {}).filter((d) => Number(d) !== day && weekBucket(Number(d)) === bucket);
+    if (already.length >= MAX_SESSIONS_PER_WEEK) { setNotice(`Maximum ${MAX_SESSIONS_PER_WEEK} séances d'entraînement par semaine.`); return; }
+    setBusiness((prev) => ({ ...prev, trainingSchedule: { ...prev.trainingSchedule, [day]: focusKey } }));
+  }
+  function cancelTraining(day) {
+    setBusiness((prev) => { const next = { ...prev.trainingSchedule }; delete next[day]; return { ...prev, trainingSchedule: next }; });
   }
   // Semaines de dépistage (voir engine/scoutingZones.js).
   function runScoutingWeeks(fromDay, weeks) {
@@ -1333,11 +1375,19 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <h2 style={{ ...h2Style, marginBottom: 0 }}>Calendrier</h2>
               <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => setScheduleFilter("mine")} style={{ ...btnStyle(scheduleFilter === "mine" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Mon équipe (vue mensuelle)</button>
                 <button onClick={() => setScheduleFilter("all")} style={{ ...btnStyle(scheduleFilter === "all" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Calendrier complet</button>
-                <button onClick={() => setScheduleFilter("mine")} style={{ ...btnStyle(scheduleFilter === "mine" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Mon équipe seulement</button>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: 520, overflow: "auto", paddingRight: 6, marginTop: 12 }}>
+            {scheduleFilter === "mine" && (
+              <MonthlyCalendar
+                monthDay={calendarMonth} currentDay={currentDay} myTeam={myTeam} teamsById={teamsById} schedule={schedule} seasonYear={seasonYear}
+                trainingSchedule={business.trainingSchedule} delegation={business.delegation.training}
+                onPrevMonth={() => setCalendarMonth((d) => addMonths(d, -1))} onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
+                onSchedule={scheduleTraining} onCancelTraining={cancelTraining} onWatchGame={setWatchingGame}
+              />
+            )}
+            {scheduleFilter === "all" && <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: 520, overflow: "auto", paddingRight: 6, marginTop: 12 }}>
               {rounds.map((r) => {
                 const roundGames = schedule.filter((g) => g.round === r && (scheduleFilter === "all" || g.home === myTeamId || g.away === myTeamId));
                 if (roundGames.length === 0) return null;
@@ -1364,7 +1414,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
                 </div>
                 );
               })}
-            </div>
+            </div>}
           </div>
         )}
 

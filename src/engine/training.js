@@ -46,6 +46,7 @@ export const TRAINING_FOCUSES = {
   rest: { label: "Semaine de repos", desc: "Charge allégée : la meilleure récupération physique, mais aucun travail tactique cette semaine-là.", conditionBoost: 4.6, cohesionBoost: -2.8 },
 };
 export const DEFAULT_FOCUS = "balanced";
+export const MAX_SESSIONS_PER_WEEK = 2;
 
 // Choix automatique quand l'entraînement est délégué (onglet Personnel) : repos si personne ne
 // joue bientôt, physique si l'effectif est fatigué, tactique si la cohésion a pris un coup
@@ -57,11 +58,35 @@ export function autoTrainingFocus(avgCondition, cohesion, upcomingGames) {
   return "balanced";
 }
 
+// Version "calendrier" du choix automatique : jusqu'à MAX_SESSIONS_PER_WEEK séances par semaine
+// (comme un utilisateur qui planifierait lui-même), pour rester cohérent avec le calendrier
+// mensuel où les séances manuelles sont aussi limitées à 2 par semaine.
+export function autoTrainingSessions(avgCondition, cohesion, upcomingGames) {
+  if (upcomingGames === 0) return ["rest", "rest"];
+  const sessions = [];
+  if (avgCondition < 68) sessions.push("fitness");
+  if (cohesion < 60) sessions.push("tactical");
+  while (sessions.length < MAX_SESSIONS_PER_WEEK) sessions.push("balanced");
+  return sessions;
+}
+
+// Un ou plusieurs programmes (jusqu'à 2 séances/semaine planifiées au calendrier) réduits à un
+// seul effet moyen. Accepte une seule clé (rétrocompatible) ou un tableau de clés.
+export function resolveFocus(focusKeys = DEFAULT_FOCUS) {
+  const arr = Array.isArray(focusKeys) ? focusKeys : [focusKeys];
+  const list = arr.length ? arr : [DEFAULT_FOCUS];
+  const items = list.map((k) => TRAINING_FOCUSES[k] || TRAINING_FOCUSES.balanced);
+  return {
+    conditionBoost: items.reduce((a, f) => a + f.conditionBoost, 0) / items.length,
+    cohesionBoost: items.reduce((a, f) => a + f.cohesionBoost, 0) / items.length,
+  };
+}
+
 // Delta de condition d'un joueur pour une semaine : récupération de base (meilleure avec
 // l'endurance et un programme physique) moins la fatigue des matchs joués, plus une légère
 // dérive vers BASE_CONDITION pour éviter qu'un effectif dérive indéfiniment vers 0 ou 100.
-export function weeklyConditionDelta(condition, stamina = 60, gamesThisWeek = 0, focusKey = DEFAULT_FOCUS, fitnessSkill = null) {
-  const focus = TRAINING_FOCUSES[focusKey] || TRAINING_FOCUSES.balanced;
+export function weeklyConditionDelta(condition, stamina = 60, gamesThisWeek = 0, focusKeys = DEFAULT_FOCUS, fitnessSkill = null) {
+  const focus = resolveFocus(focusKeys);
   const staminaFactor = 0.6 + (clamp(stamina, 1, 99) / 99) * 0.8; // 0.6..1.4
   // Entraîneur physique (engine/staff.js `fitnessCoach`) : accélère la récupération hebdomadaire.
   const coachBoost = fitnessSkill == null ? 0 : ((clamp(fitnessSkill, 20, 99) - 50) / 50) * 0.9;
@@ -70,10 +95,10 @@ export function weeklyConditionDelta(condition, stamina = 60, gamesThisWeek = 0,
   const pullToBase = (BASE_CONDITION - condition) * 0.04;
   return recovery - fatigue + pullToBase;
 }
-export function applyWeeklyCondition(roster, gamesThisWeek, focusKey = DEFAULT_FOCUS, fitnessSkill = null) {
+export function applyWeeklyCondition(roster, gamesThisWeek, focusKeys = DEFAULT_FOCUS, fitnessSkill = null) {
   return roster.map((p) => {
     const cur = p.condition ?? BASE_CONDITION;
-    const next = clamp(cur + weeklyConditionDelta(cur, p.attrs?.stamina, gamesThisWeek, focusKey, fitnessSkill), MIN_CONDITION, 100);
+    const next = clamp(cur + weeklyConditionDelta(cur, p.attrs?.stamina, gamesThisWeek, focusKeys, fitnessSkill), MIN_CONDITION, 100);
     return next === cur ? p : { ...p, condition: Math.round(next) };
   });
 }
@@ -91,12 +116,12 @@ export function strategySignature(strategy) {
 // Cohésion après un changement de système : chute (temps d'adaptation), jamais sous MIN_COHESION.
 export function resetCohesion(cohesion = 100) { return Math.max(MIN_COHESION, cohesion - COHESION_RESET_DROP); }
 
-export function weeklyCohesionDelta(focusKey = DEFAULT_FOCUS, coachRating = 50) {
-  const focus = TRAINING_FOCUSES[focusKey] || TRAINING_FOCUSES.balanced;
+export function weeklyCohesionDelta(focusKeys = DEFAULT_FOCUS, coachRating = 50) {
+  const focus = resolveFocus(focusKeys);
   return (2.3 + focus.cohesionBoost) * (0.7 + clamp(coachRating, 20, 99) / 200);
 }
-export function applyWeeklyCohesion(cohesion = 100, focusKey = DEFAULT_FOCUS, coachRating = 50) {
-  return Math.round(clamp(cohesion + weeklyCohesionDelta(focusKey, coachRating), MIN_COHESION, 100));
+export function applyWeeklyCohesion(cohesion = 100, focusKeys = DEFAULT_FOCUS, coachRating = 50) {
+  return Math.round(clamp(cohesion + weeklyCohesionDelta(focusKeys, coachRating), MIN_COHESION, 100));
 }
 export function cohesionLabel(cohesion = 100) {
   return cohesion >= 90 ? "Rodée" : cohesion >= 70 ? "Bien assimilée" : cohesion >= 50 ? "En apprentissage" : "Nouveau système";
