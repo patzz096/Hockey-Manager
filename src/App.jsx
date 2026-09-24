@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
-import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
+import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
 import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths } from "./engine/calendar";
@@ -134,7 +134,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // la saison (façon FM24) ; remis à zéro à la signature ou au début d'une nouvelle saison.
   const [pendingOffers, setPendingOffers] = useState([]);
   const [negotiations, setNegotiations] = useState({});
-  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), staff: { hockeyOpsDirector: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
+  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), merchItems: DEFAULT_MERCH_ITEMS.map((i) => ({ ...i })), fanEngagement: DEFAULT_ENGAGEMENT, tvDeal: negotiateTvDeal(DEFAULT_ENGAGEMENT, 0.5, FIRST_SEASON), staff: { hockeyOpsDirector: null, gm: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null, broadcastDirector: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
   // Ton équipe telle que ton personnel la perçoit (valeurs estimées) : c'est ce qu'affiche l'interface.
@@ -438,6 +438,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function setTierPrice(key, price) { setBusiness((prev) => ({ ...prev, ticketTiers: prev.ticketTiers.map((t) => (t.key === key ? { ...t, price } : t)) })); }
   function setParkingPrice(price) { setBusiness((prev) => ({ ...prev, parking: { ...prev.parking, price } })); }
   function setItemPrice(key, price) { setBusiness((prev) => ({ ...prev, concessionItems: prev.concessionItems.map((i) => (i.key === key ? { ...i, price } : i)) })); }
+  function setMerchPrice(key, price) { setBusiness((prev) => ({ ...prev, merchItems: prev.merchItems.map((i) => (i.key === key ? { ...i, price } : i)) })); }
   function upgradeFacility(key) {
     setBusiness((prev) => {
       const level = prev.facilities[key];
@@ -1160,6 +1161,15 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       setBusiness((prev) => ({ ...prev, cash: prev.cash - totalBonus }));
       addMessage({ from: "Ressources humaines", subject: `Primes de performance — ${label}`, category: "finance", body: bonuses.map((b) => `${b.role} (${b.name}): +${b.amt.toLocaleString()} $ — ${b.reason}`).join("\n") });
     }
+    // Engagement des partisans (engine/finance.js) : évolue lentement selon l'affluence récente,
+    // les victoires et l'investissement marketing (installations + directeur des communications).
+    const myStand = standings.find((x) => x.id === myTeamId);
+    const monthWinPct = myStand && myStand.gp > 0 ? myStand.w / myStand.gp : 0.5;
+    const recentGames = business.log.slice(0, 8);
+    const utilization = recentGames.length
+      ? recentGames.reduce((a, g) => a + g.attendance / (g.tiers.reduce((s, t) => s + t.capacity, 0) || 1), 0) / recentGames.length
+      : 0.6;
+    setBusiness((prev) => ({ ...prev, fanEngagement: applyEngagementDelta(prev.fanEngagement, utilization, monthWinPct, prev.facilities.marketing, prev.staff.broadcastDirector?.rating) }));
     setProfitThisMonth(0);
     setWinsThisMonth(0);
   }
@@ -1327,6 +1337,16 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setScoutingSpend(0);
     setFreeAgencyDone(false);
     setNegotiations({});
+    // Contrat de diffusion : arrive à échéance après TV_DEAL_TERM ans, renégocié selon
+    // l'engagement des partisans et le dossier de la saison qui vient de se terminer.
+    const myWinPct = my && my.gp > 0 ? my.w / my.gp : 0.5;
+    setBusiness((prev) => {
+      const yearsLeft = (prev.tvDeal?.years ?? 1) - 1;
+      if (yearsLeft > 0) return { ...prev, tvDeal: { ...prev.tvDeal, years: yearsLeft } };
+      const deal = negotiateTvDeal(prev.fanEngagement, myWinPct, seasonYear + 1, prev.staff.broadcastDirector?.rating);
+      addMessage({ from: "Directeur des communications", subject: "Nouveau contrat de diffusion", category: "finance", body: `${deal.value.toLocaleString()} $ par saison sur ${deal.years} ans, selon l'engagement des partisans (${prev.fanEngagement}/100) et le dossier de l'équipe (${my ? `${my.w}-${my.l}-${my.otl}` : "—"}).` });
+      return { ...prev, tvDeal: deal };
+    });
     setSeasonYear(seasonYear + 1);
     advanceTo(seasonDates(seasonYear + 1).start - 1);
     addMessage({ from: "Ligue", subject: `Saison ${seasonYear + 1}-${seasonYear + 2}`, category: "general", body: `Premier match le ${formatDay(seasonDates(seasonYear + 1).start)}. Date limite des échanges : ${formatDay(seasonDates(seasonYear + 1).tradeDeadline)}.` });
@@ -1492,7 +1512,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "inbox" && <InboxPanel messages={messages} onMarkRead={markRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 
-        {tab === "finances" && <FinancesPanel business={business} teamCapacity={myTeam.capacity} onSetTierPrice={setTierPrice} onSetParkingPrice={setParkingPrice} onSetItemPrice={setItemPrice} onUpgrade={upgradeFacility} />}
+        {tab === "finances" && <FinancesPanel business={business} teamCapacity={myTeam.capacity} winPct={myStanding && myStanding.gp > 0 ? myStanding.w / myStanding.gp : 0.5} onSetTierPrice={setTierPrice} onSetParkingPrice={setParkingPrice} onSetItemPrice={setItemPrice} onSetMerchPrice={setMerchPrice} onUpgrade={upgradeFacility} />}
 
         {tab === "schedule" && (
           <div>

@@ -243,8 +243,22 @@ tests/engine.test.js       tests du moteur
   du mois sur une grille classique (case matin/après-midi par jour), navigation mois par
   mois, séance planifiée ou annulée d'un clic ; le calendrier complet (toutes les équipes,
   par ronde) reste disponible à côté
-- Finances : billetterie à 3 paliers, stationnement, 10 items de concession, installations
-  améliorables, bilan détaillé par match local
+- Finances : billetterie à 3 paliers, stationnement, 10 items de concession, marchandise
+  itemisée (chandail, casquette, t-shirt, souvenir — `engine/finance.js`), installations
+  améliorables, bilan détaillé par match local (billetterie, concessions, marchandise,
+  stationnement, contrat de diffusion, dépenses)
+- Contrat de diffusion télé (`engine/finance.js` `negotiateTvDeal`) : revenu fixe par saison
+  (versé au prorata de chaque match local), renégocié tous les 4 ans en saison morte selon
+  l'engagement des partisans et le dossier de l'équipe — une équipe populaire et gagnante
+  décroche un bien meilleur contrat. Directeur des communications (nouveau rôle de personnel,
+  auto-embauché par le directeur des opérations hockey délégué) : améliore la négociation du
+  contrat de diffusion, l'affluence et la progression de l'engagement des partisans
+- Note d'expérience client (0-100) : reflète tes prix (billets, concessions, marchandise) par
+  rapport à leur prix de base et le niveau de tes installations — instantanée, se dégrade vite
+  si tu gonfles les prix
+- Note d'engagement des partisans (0-100, évolue lentement d'un mois à l'autre selon
+  l'affluence récente, les victoires et l'investissement marketing) : détermine les ventes de
+  marchandise et la valeur du prochain contrat de diffusion
 - Transactions : échanges, agents libres, contrats, page de profondeur (LNH/LAH/prospects)
   avec rappels/renvois. Négociation de contrat façon FM24 (`engine/contracts.js`) :
   - Offre envoyée à l'agent, réponse après un délai de 1 à 3 jours (`business` pending
