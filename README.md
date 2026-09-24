@@ -259,7 +259,10 @@ tests/engine.test.js       tests du moteur
   L'ordinateur adapte son choix à l'écart au score et au moment du match (trio offensif en
   retard, paire défensive en avance en fin de match). Le trio et la paire envoyés concentrent
   presque tout le temps de glace et les tirs de la mise au jeu (`engine/lines.js`, `lines.shift`,
-  `engine/simulation.js` `aiPickShift`) ; le déploiement "auto" habituel reste disponible en un clic
+  `engine/simulation.js` `aiPickShift`) — mais seulement pour une durée réaliste (1 minute) :
+  si le prochain arrêt de jeu tarde, l'adjoint reprend un déploiement normal pour le reste du
+  segment plutôt que de laisser ce trio seul sur la glace plusieurs minutes d'affilée
+  (`App.jsx` `runLiveSegment`) ; le déploiement "auto" habituel reste disponible en un clic
 - Filtres et tri sur presque tous les tableaux (division, équipe, colonnes)
 
 ## Ce qui reste incomplet ou en cours

@@ -250,25 +250,49 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function withEnergy(team, energy) {
     return { ...team, roster: team.roster.map((p) => (energy[p.id] != null ? { ...p, condition: energy[p.id] } : p)) };
   }
+  // Durée réaliste maximale d'une mise au jeu avec le trio/la paire choisis manuellement. Au-delà,
+  // s'il n'y a pas d'arrêt de jeu, l'adjoint reprend un déploiement normal (comme en mode auto)
+  // jusqu'au prochain arrêt réel, pour éviter qu'un trio reste sur la glace 4 minutes d'affilée.
+  const MAX_MANUAL_SHIFT_MIN = 1;
   // Simule un segment jusqu'à `stop`. shiftHome/shiftAway (optionnels) : { forwardIdx, defenseIdx }
   // du trio et de la paire envoyés sur la glace pour cette mise au jeu (voir engine/lines.js).
   function runLiveSegment(stop, shiftHome = null, shiftAway = null) {
     const prev = liveMatch;
     if (!prev) return;
     const staffByTeam = { [myTeamId]: business.staff };
-    const linesHome = shiftHome ? { ...prev.linesHome, shift: shiftHome } : prev.linesHome;
-    const linesAway = shiftAway ? { ...prev.linesAway, shift: shiftAway } : prev.linesAway;
-    const minutes = stop.minute - prev.minute;
-    const homeForSim = withEnergy(prev.home, prev.energy);
-    const awayForSim = withEnergy(prev.away, prev.energy);
-    const result = simulateStretch(homeForSim, awayForSim, linesHome, linesAway, staffByTeam, prev.minute, minutes, Math.random, { home: prev.homeScore, away: prev.awayScore });
-    // Fatigue : le temps de glace de ce segment (même calcul que la feuille de match) baisse
-    // l'énergie de ceux qui ont joué, la remonte un peu pour ceux restés au banc.
-    const toiHome = computeTOI(linesHome, Math.random, minutes / 60);
-    const toiAway = computeTOI(linesAway, Math.random, minutes / 60);
-    const energy = applyGameFatigue(applyGameFatigue(prev.energy, prev.home.roster, toiHome, minutes), prev.away.roster, toiAway, minutes);
+    const totalMinutes = stop.minute - prev.minute;
+    const shiftMinutes = (shiftHome || shiftAway) ? Math.min(totalMinutes, MAX_MANUAL_SHIFT_MIN) : totalMinutes;
+
+    // Segment 1 : le trio/la paire choisis (ou le déploiement habituel si aucun n'a été envoyé).
+    const linesHome1 = shiftHome ? { ...prev.linesHome, shift: shiftHome } : prev.linesHome;
+    const linesAway1 = shiftAway ? { ...prev.linesAway, shift: shiftAway } : prev.linesAway;
+    const homeForSim1 = withEnergy(prev.home, prev.energy);
+    const awayForSim1 = withEnergy(prev.away, prev.energy);
+    const seg1 = simulateStretch(homeForSim1, awayForSim1, linesHome1, linesAway1, staffByTeam, prev.minute, shiftMinutes, Math.random, { home: prev.homeScore, away: prev.awayScore });
+    const toiHome1 = computeTOI(linesHome1, Math.random, shiftMinutes / 60);
+    const toiAway1 = computeTOI(linesAway1, Math.random, shiftMinutes / 60);
+    let energy = applyGameFatigue(applyGameFatigue(prev.energy, prev.home.roster, toiHome1, shiftMinutes), prev.away.roster, toiAway1, shiftMinutes);
+    let accum = mergeLivePeriod(prev.accum, seg1);
+    let homeScore = prev.homeScore + seg1.periodHomeScore, awayScore = prev.awayScore + seg1.periodAwayScore;
+    let penalties = seg1.home.penalties + seg1.away.penalties;
+
+    // Segment 2 (si l'arrêt de jeu tarde) : déploiement normal jusqu'au véritable arrêt — l'adjoint
+    // fait tourner les trios, personne ne reste figé sur la glace au-delà d'une mise au jeu.
+    const remaining = totalMinutes - shiftMinutes;
+    if (remaining > 0.01) {
+      const homeForSim2 = withEnergy(prev.home, energy);
+      const awayForSim2 = withEnergy(prev.away, energy);
+      const seg2 = simulateStretch(homeForSim2, awayForSim2, prev.linesHome, prev.linesAway, staffByTeam, prev.minute + shiftMinutes, remaining, Math.random, { home: homeScore, away: awayScore });
+      const toiHome2 = computeTOI(prev.linesHome, Math.random, remaining / 60);
+      const toiAway2 = computeTOI(prev.linesAway, Math.random, remaining / 60);
+      energy = applyGameFatigue(applyGameFatigue(energy, prev.home.roster, toiHome2, remaining), prev.away.roster, toiAway2, remaining);
+      accum = mergeLivePeriod(accum, seg2);
+      homeScore += seg2.periodHomeScore; awayScore += seg2.periodAwayScore;
+      penalties += seg2.home.penalties + seg2.away.penalties;
+    }
+
     const at = stop.minute >= 60 ? "fin du match" : `${clockDisplay(stop.minute)} en ${livePeriod(stop.minute)}${livePeriod(stop.minute) === 1 ? "re" : "e"}`;
-    setLiveMatch({ ...prev, accum: mergeLivePeriod(prev.accum, result), homeScore: prev.homeScore + result.periodHomeScore, awayScore: prev.awayScore + result.periodAwayScore, minute: stop.minute, lastStop: `${at} : ${result.home.penalties + result.away.penalties > 0 && stop.reason !== "Fin de la période" ? "Punition" : stop.reason}`, lastShift: shiftHome || shiftAway ? { home: shiftHome, away: shiftAway } : null, energy });
+    setLiveMatch({ ...prev, accum, homeScore, awayScore, minute: stop.minute, lastStop: `${at} : ${penalties > 0 && stop.reason !== "Fin de la période" ? "Punition" : stop.reason}`, lastShift: shiftHome || shiftAway ? { home: shiftHome, away: shiftAway } : null, energy });
     setShiftPicker(null);
   }
   // Joue jusqu'au prochain coup de sifflet (moment variable) ou jusqu'à la fin de la période,
