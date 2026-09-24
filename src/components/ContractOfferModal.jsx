@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
-import { agentAsk, evaluateOffer, interestFactors, interestLabel, bonusRules, BONUS_KINDS, minSalaryFor, maxSalaryFor, MAX_TERM, homeRegionLabel, marketValue } from "../engine/contracts";
+import { agentAsk, evaluateOffer, interestFactors, interestLabel, bonusRules, BONUS_KINDS, minSalaryFor, maxSalaryFor, MAX_TERM, homeRegionLabel, gmEstimate, MAX_OFFER_ATTEMPTS } from "../engine/contracts";
 import { formatMoney } from "../engine/cap";
 import { btnStyle } from "../ui/theme";
 import { StarRating } from "./common";
@@ -16,6 +16,7 @@ import { money as k$ } from "../ui/format";
 const factorColor = (v) => (v >= 0.4 ? "var(--win)" : v >= 0.1 ? "#7FD6A0" : v > -0.1 ? "var(--gold)" : v > -0.4 ? "#F59A4A" : "var(--loss)");
 const label = { display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--iceMuted)", marginBottom: 4 };
 const input = { background: "var(--navy)", color: "var(--ice)", border: "1px solid var(--line)", borderRadius: 5, padding: "4px 6px", fontSize: 12, fontFamily: "inherit" };
+const clampNum = (v, lo, hi) => (Number.isNaN(v) ? lo : Math.max(lo, Math.min(hi, v)));
 
 function FactorBar({ f }) {
   const pct = (f.value + 1) * 50;
@@ -33,15 +34,16 @@ function FactorBar({ f }) {
   );
 }
 
-export function ContractOfferModal({ player, realPlayer, isRenewal, team, context, stats, capSpace = null, onClose, onSubmit }) {
+export function ContractOfferModal({ player, realPlayer, isRenewal, team, context, stats, capSpace = null, gmRating = null, rejections = 0, onClose, onSubmit }) {
   const real = realPlayer || player;
   const { ctx, year, perf } = context;
-  const ask = agentAsk(real, ctx, year, perf);
+  const ask = agentAsk(real, ctx, year, perf, rejections);
+  const estimate = gmEstimate(real, ask, gmRating);
   const { factors, interest } = interestFactors(real, ctx);
   const min = minSalaryFor(year), max = maxSalaryFor(year);
   const maxTerm = isRenewal ? MAX_TERM.renewal : MAX_TERM.freeAgent;
-  const [salary, setSalary] = useState(ask.salary);
-  const [years, setYears] = useState(Math.min(ask.years, maxTerm));
+  const [salary, setSalary] = useState(estimate.salary);
+  const [years, setYears] = useState(Math.min(estimate.years, maxTerm));
   const [type, setType] = useState("one");
   const [ahlSalary, setAhlSalary] = useState(150);
   const [signingBonus, setSigningBonus] = useState(0);
@@ -59,9 +61,9 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
   const ntcAllowed = real.age >= 27;
   const offer = { salary, years, type, ahlSalary, signingBonus, noTrade: ntcAllowed && noTrade, bonuses: activeBonuses };
   // Chance d'acceptation : même calcul que l'envoi, sans tirage.
-  const ev = evaluateOffer(real, offer, ctx, year, perf, () => 1);
+  const ev = evaluateOffer(real, offer, ctx, year, perf, () => 1, rejections);
   const pct = Math.round(ev.probability * 100);
-  const hit = salary + bonusSum;
+  const hit = salary + bonusSum + Math.round((signingBonus || 0) / Math.max(1, years));
   const isGoalie = real.pos === "G";
   const bench = teamOvrBenchmark(team);
 
@@ -84,19 +86,30 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
           </div>
           {factors.map((f) => <FactorBar key={f.key} f={f} />)}
           <div style={{ fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
-            Demande de l'agent : <strong style={{ color: "var(--gold)" }}>{k$(ask.salary)}/an sur {ask.years} an{ask.years > 1 ? "s" : ""}</strong>
-            <span style={{ color: "var(--iceMuted)" }}> · valeur marchande {k$(marketValue(real, year, perf))}{interest >= 0.15 ? " (rabais : il aime ton équipe)" : interest <= -0.15 ? " (prime : il hésite à venir)" : ""}{!isRenewal && real.ovr >= 62 ? " · d'autres équipes s'intéressent à lui" : ""}</span>
+            Estimation du DG : <strong style={{ color: "var(--gold)" }}>{k$(Math.round(estimate.salary * (1 - estimate.spread) / 25) * 25)} – {k$(Math.round(estimate.salary * (1 + estimate.spread) / 25) * 25)}/an</strong>, autour de {estimate.years} an{estimate.years > 1 ? "s" : ""}
+            <span style={{ color: "var(--iceMuted)" }}> · {gmRating == null ? "aucun DG en poste : estimation à l'aveugle" : estimate.spread <= 0.12 ? "DG expérimenté : estimation fiable" : estimate.spread <= 0.25 ? "estimation approximative" : "DG peu expérimenté : estimation très large"}{!isRenewal && real.ovr >= 62 ? " · d'autres équipes s'intéressent probablement à lui" : ""}</span>
           </div>
+          {rejections > 0 && (
+            <div style={{ fontSize: 12, marginTop: 6, color: "#F59A4A" }}>
+              {rejections} offre{rejections > 1 ? "s" : ""} refusée{rejections > 1 ? "s" : ""} d'affilée — ses attentes ont grimpé.{rejections >= MAX_OFFER_ATTEMPTS - 1 ? ` Dernière chance avant qu'il ne refuse toute négociation (max ${MAX_OFFER_ATTEMPTS}).` : ""}
+            </div>
+          )}
         </section>
 
         <div style={{ marginBottom: 12 }}>
           <div style={label}><span>Salaire annuel (impact sur le plafond)</span><span style={{ color: "var(--ice)", fontWeight: 700 }}>{k$(salary)}</span></div>
-          <input aria-label="Salaire" type="range" min={min} max={max} step={25} value={salary} onChange={(e) => setSalary(Number(e.target.value))} style={{ width: "100%" }} />
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input aria-label="Salaire" type="range" min={min} max={max} step={25} value={salary} onChange={(e) => setSalary(Number(e.target.value))} style={{ flex: 1 }} />
+            <input aria-label="Salaire (milliers de $, exact)" type="number" min={min} max={max} step={25} value={salary} onChange={(e) => setSalary(clampNum(Number(e.target.value), min, max))} style={{ ...input, width: 84 }} />
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--iceMuted)" }}><span>Minimum LNH {k$(min)}</span><span>Maximum (20 % du plafond) {k$(max)}</span></div>
         </div>
         <div style={{ marginBottom: 12 }}>
           <div style={label}><span>Durée</span><span style={{ color: "var(--ice)", fontWeight: 700 }}>{years} an{years > 1 ? "s" : ""}</span></div>
-          <input aria-label="Durée" type="range" min={1} max={maxTerm} step={1} value={years} onChange={(e) => setYears(Number(e.target.value))} style={{ width: "100%" }} />
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input aria-label="Durée" type="range" min={1} max={maxTerm} step={1} value={years} onChange={(e) => setYears(Number(e.target.value))} style={{ flex: 1 }} />
+            <input aria-label="Durée (années, exacte)" type="number" min={1} max={maxTerm} step={1} value={years} onChange={(e) => setYears(clampNum(Number(e.target.value), 1, maxTerm))} style={{ ...input, width: 56 }} />
+          </div>
           <div style={{ fontSize: 10, color: "var(--iceMuted)" }}>Maximum {maxTerm} ans ({isRenewal ? "prolongation avec ton équipe" : "agent libre"}).</div>
         </div>
 

@@ -29,9 +29,11 @@ export const BURIAL_ALLOWANCE = 375; // un volet dans la LAH : seul le salaire a
 const round25 = (v) => Math.round(v / 25) * 25;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-// Coût d'un contrat pour le plafond : salaire + primes de rendement maximales.
+// Coût d'un contrat pour le plafond : salaire + primes de rendement maximales + prime à la
+// signature étalée sur la durée d'origine du contrat (voir engine/cap.js `hitOf`, même formule).
 export function bonusTotal(contract) { return (contract?.bonuses || []).reduce((a, b) => a + (b.amount || 0), 0); }
-export function capHit(contract) { return (contract?.salary || 0) + bonusTotal(contract); }
+export function signingBonusHit(contract) { return (contract?.signingBonus || 0) / (contract?.originalYears || contract?.years || 1); }
+export function capHit(contract) { return (contract?.salary || 0) + bonusTotal(contract) + signingBonusHit(contract); }
 export const isTwoWay = (contract) => contract?.type === "two";
 
 // Valeur marchande (k$/an) d'un joueur, selon sa cote, son âge et son potentiel. `perf` :
@@ -89,7 +91,7 @@ export function entryLevelContract(pickOverall, age, year) {
   const bonuses = pickOverall <= 10
     ? [{ kind: "g", target: 20, amount: 250 }, { kind: "pts", target: 60, amount: 350 }, { kind: "gp", target: 60, amount: 200 }]
     : pickOverall <= 32 ? [{ kind: "pts", target: 50, amount: 250 }, { kind: "gp", target: 50, amount: 150 }] : [];
-  return { years, salary, type: "two", ahlSalary: 80, elc: true, signingBonus: pickOverall <= 32 ? round25(salary * 0.1) : 0, bonuses };
+  return { years, originalYears: years, salary, type: "two", ahlSalary: 80, elc: true, signingBonus: pickOverall <= 32 ? round25(salary * 0.1) : 0, bonuses };
 }
 
 // ------------------------------- Primes de rendement -------------------------------
@@ -99,6 +101,7 @@ export const BONUS_KINDS = {
   a: { label: "Passes", short: "A", skater: true },
   pts: { label: "Points", short: "PTS", skater: true },
   plusMinus: { label: "Différentiel (+/-)", short: "+/-", skater: true },
+  w: { label: "Victoires", short: "V", goalie: true },
 };
 export function bonusRules(player, offer, year) {
   const veteran = player.age >= 35 && offer.years === 1;
@@ -171,10 +174,18 @@ export function lineupContext(player, roster) {
   return { lineupRank: better, slots };
 }
 
+// --------------------------- Négociation : lassitude du joueur ---------------------------
+// Trop d'offres refusées d'affilée pour le même joueur : son agent en demande plus (il se sent
+// méprisé) et, au-delà de MAX_OFFER_ATTEMPTS, il refuse carrément de négocier davantage pour
+// le reste de la saison (façon FM24 : un joueur qu'on relance trop se braque).
+export const MAX_OFFER_ATTEMPTS = 3;
+export function frustrationMultiplier(rejections = 0) { return 1 + Math.min(rejections, MAX_OFFER_ATTEMPTS) * 0.08; }
+
 // Demande de l'agent : valeur marchande, rabais si le joueur aime ton équipe (ou prime s'il
-// ne l'aime pas), prime de concurrence pour un agent libre recherché.
-export function agentAsk(player, ctx, year, perf = null) {
-  const market = marketValue(player, year, perf);
+// ne l'aime pas), prime de concurrence pour un agent libre recherché, majorée si tu l'as déjà
+// relancé sans succès (`rejections` : offres refusées d'affilée pour ce joueur).
+export function agentAsk(player, ctx, year, perf = null, rejections = 0) {
+  const market = marketValue(player, year, perf) * frustrationMultiplier(rejections);
   const { interest } = interestFactors(player, ctx);
   const competition = ctx.isRenewal ? 0 : clamp((player.ovr - 60) / 10, 0, 1) * 0.12;
   return { salary: round25(clamp(market * (1 - 0.15 * interest) * (1 + competition), minSalaryFor(year), maxSalaryFor(year))), years: expectedYears(player), market, interest };
@@ -182,8 +193,8 @@ export function agentAsk(player, ctx, year, perf = null) {
 
 // Évaluation d'une offre. offer : { salary, years, type, ahlSalary, signingBonus, noTrade,
 // bonuses }. Renvoie la probabilité d'acceptation, le détail et une contre-offre.
-export function evaluateOffer(player, offer, ctx, year = CURRENT_YEAR, perf = null, rng = Math.random) {
-  const ask = agentAsk(player, ctx, year, perf);
+export function evaluateOffer(player, offer, ctx, year = CURRENT_YEAR, perf = null, rng = Math.random, rejections = 0) {
+  const ask = agentAsk(player, ctx, year, perf, rejections);
   const { factors, interest } = interestFactors(player, ctx);
   const perYear = offer.salary + (offer.signingBonus || 0) / Math.max(1, offer.years) + bonusTotal(offer) * 0.4;
   const money = (perYear / ask.salary - 1) * 2.5;
@@ -198,4 +209,19 @@ export function evaluateOffer(player, offer, ctx, year = CURRENT_YEAR, perf = nu
     parts: { money, term, twoWay, ntc },
     counter: { salary: ask.salary, years: ask.years, type: "one" },
   };
+}
+
+// --------------------------- Estimation du directeur général ---------------------------
+// Le DG estime les attentes du joueur (montant, durée) à la place de l'agent : sans DG en poste,
+// ou avec un DG peu compétent, l'estimation est large et peu fiable ; un excellent DG cerne
+// presque exactement la vraie demande. `gmRating` : cote du DG (20-99), ou null si le poste est
+// vacant (estimation la plus large possible). Le bruit est stable pour un joueur/DG donnés
+// (basé sur son id), pour ne pas changer à chaque rendu.
+export function gmEstimate(player, ask, gmRating = null) {
+  const spread = gmRating == null ? 0.4 : clamp(0.42 - (clamp(gmRating, 20, 99) - 20) / 79 * 0.37, 0.05, 0.4);
+  const n = (hash(player.id + "gm") % 1000) / 1000 - 0.5; // -0.5..0.5, stable par joueur
+  const salary = round25(ask.salary * (1 + n * 2 * spread));
+  const yearsNoise = spread > 0.2 ? (n >= 0 ? 1 : -1) : 0;
+  const years = clamp(ask.years + yearsNoise, 1, MAX_TERM.freeAgent);
+  return { salary, years, spread };
 }

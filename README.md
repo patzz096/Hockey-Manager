@@ -220,7 +220,8 @@ tests/engine.test.js       tests du moteur
 - Personnel : entraîneur-chef, adjoints (avec compétence de développement séparée),
   entraîneur physique, dépisteurs amateur/pro, directeur des finances, directeur des
   opérations hockey — avec primes de performance et option délégation (contrôle manuel ou IA)
-- Entraînement façon FM24 (`engine/training.js`, onglet Personnel) : condition physique par
+- Entraînement façon FM24 (`engine/training.js`, onglet dédié « Entraînement », séparé de
+  Personnel) : condition physique par
   joueur (récupère avec le repos, chute avec les matchs joués, atténuée par l'endurance —
   module les cotes d'équipe via `conditionFactor`) et cohésion tactique de ton équipe (chute
   quand tu changes de système, remonte à l'entraînement, détermine la part de l'adéquation à
@@ -233,16 +234,31 @@ tests/engine.test.js       tests du moteur
   de quoi rendre coûteux d'envoyer toujours le trio no 1. Séances planifiables directement
   au calendrier (onglet Calendrier, vue « Mon équipe »), jusqu'à 2 par jour (matin et
   après-midi) — un jour de match n'en permet qu'une, le matin, puisque le match compte pour
-  l'autre case : le programme par défaut de Personnel ne s'applique que les semaines sans
-  séance planifiée ; en délégué, l'IA choisit et affiche ses propres séances chaque jour
+  l'autre case : le programme par défaut (onglet Entraînement) ne s'applique que les semaines
+  sans séance planifiée ; en délégué, l'IA choisit et affiche ses propres séances chaque jour
 - Calendrier mensuel pour ton équipe (`MonthlyCalendar`) : matchs et séances d'entraînement
   du mois sur une grille classique (case matin/après-midi par jour), navigation mois par
   mois, séance planifiée ou annulée d'un clic ; le calendrier complet (toutes les équipes,
   par ronde) reste disponible à côté
 - Finances : billetterie à 3 paliers, stationnement, 10 items de concession, installations
   améliorables, bilan détaillé par match local
-- Transactions : échanges, agents libres (négociation d'offre avec moteur de décision du
-  joueur), contrats, page de profondeur (LNH/LAH/prospects) avec rappels/renvois
+- Transactions : échanges, agents libres, contrats, page de profondeur (LNH/LAH/prospects)
+  avec rappels/renvois. Négociation de contrat façon FM24 (`engine/contracts.js`) :
+  - Offre envoyée à l'agent, réponse après un délai de 1 à 3 jours (`business` pending
+    offers, résolue dans `advanceDays`) plutôt qu'instantanée — un message confirme l'envoi,
+    un second la décision une fois le délai écoulé.
+  - Montant et durée ajustables au curseur ou saisis directement au clavier (`ContractOfferModal`).
+  - Attentes du joueur estimées par ton directeur général plutôt que révélées telles quelles :
+    plage floue autour de la vraie demande, resserrée selon la cote du DG (`gmEstimate`) —
+    sans DG en poste, estimation à l'aveugle (plage maximale).
+  - Trop d'offres refusées d'affilée pour un même joueur font monter ses attentes
+    (`frustrationMultiplier`) puis, au-delà de 3 refus, il refuse toute négociation pour le
+    reste de la saison (`MAX_OFFER_ATTEMPTS`, remis à zéro en début de saison).
+  - Prime à la signature désormais comptée sur le plafond salarial, étalée sur la durée
+    d'origine du contrat (`capHit`/`payroll`, `contract.originalYears`).
+  - Primes de rendement (contrats d'entrée, 35 ans et plus sur un an) : buts, passes, points,
+    +/-, matchs joués, et victoires pour les gardiens (`BONUS_KINDS`), payées en fin de
+    saison régulière selon les statistiques réellement atteintes
 - Messagerie interne recevant tous les rapports (progression, finances, transactions, dépistage)
 
 **Interface**

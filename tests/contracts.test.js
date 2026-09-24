@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { initLeague } from "../src/engine/league";
-import { marketValue, entryLevelContract, bonusRules, earnedBonuses, interestFactors, evaluateOffer, agentAsk, minSalaryFor, maxSalaryFor, homeRegionOf, lineupContext, capHit } from "../src/engine/contracts";
+import { marketValue, entryLevelContract, bonusRules, earnedBonuses, interestFactors, evaluateOffer, agentAsk, minSalaryFor, maxSalaryFor, homeRegionOf, lineupContext, capHit, frustrationMultiplier, gmEstimate, MAX_OFFER_ATTEMPTS } from "../src/engine/contracts";
 import { capStatus, payroll } from "../src/engine/cap";
 
 const lg = initLeague();
@@ -62,5 +62,32 @@ describe("contrats LNH", () => {
     expect(p({ salary: ask * 1.2 })).toBeGreaterThan(p({ salary: ask }));
     expect(p({ salary: ask })).toBeGreaterThan(p({ salary: ask * 0.8 }));
     expect(p({ salary: ask, type: "two", ahlSalary: 200 })).toBeLessThan(p({ salary: ask }) - 0.2);
+  });
+
+  it("la prime à la signature compte sur le plafond, étalée sur la durée d'origine du contrat", () => {
+    const c = { salary: 1000, years: 2, originalYears: 4, signingBonus: 800 };
+    expect(capHit(c)).toBe(1000 + 800 / 4);
+    expect(payroll([{ contract: c }])).toBe(capHit(c));
+    // Sans originalYears (contrat fraîchement signé), on retombe sur years.
+    expect(capHit({ salary: 1000, years: 4, signingBonus: 800 })).toBe(1000 + 200);
+  });
+
+  it("un joueur relancé sans succès demande de plus en plus, jusqu'au maximum permis", () => {
+    expect(frustrationMultiplier(0)).toBe(1);
+    expect(frustrationMultiplier(1)).toBeGreaterThan(frustrationMultiplier(0));
+    expect(frustrationMultiplier(MAX_OFFER_ATTEMPTS)).toBeGreaterThan(frustrationMultiplier(MAX_OFFER_ATTEMPTS - 1));
+    expect(frustrationMultiplier(MAX_OFFER_ATTEMPTS + 5)).toBe(frustrationMultiplier(MAX_OFFER_ATTEMPTS));
+    const ctx = ctxFor(mtl, base);
+    expect(agentAsk(base, ctx, 2026, null, 2).salary).toBeGreaterThan(agentAsk(base, ctx, 2026, null, 0).salary);
+  });
+
+  it("l'estimation du DG est plus précise avec une meilleure cote, absente de DG = large", () => {
+    const ask = agentAsk(base, ctxFor(mtl, base), 2026);
+    const noGm = gmEstimate(base, ask, null);
+    const badGm = gmEstimate(base, ask, 25);
+    const goodGm = gmEstimate(base, ask, 95);
+    expect(goodGm.spread).toBeLessThan(badGm.spread);
+    expect(badGm.spread).toBeLessThanOrEqual(noGm.spread);
+    expect(Math.abs(goodGm.salary - ask.salary)).toBeLessThan(Math.abs(badGm.salary - ask.salary) + 1);
   });
 });

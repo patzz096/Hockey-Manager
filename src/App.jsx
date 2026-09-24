@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars } from "lucide-react";
+import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
-import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit } from "./engine/contracts";
+import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
@@ -38,6 +38,7 @@ import { PlayerEditorModal } from "./components/PlayerEditorModal";
 import { PlayerModal } from "./components/PlayerModal";
 import { RosterTable } from "./components/RosterTable";
 import { StaffCenter } from "./components/StaffCenter";
+import { TrainingCenter } from "./components/TrainingCenter";
 import { MonthlyCalendar } from "./components/MonthlyCalendar";
 import { StandingsTable } from "./components/StandingsTable";
 import { StatsTables } from "./components/StatsTables";
@@ -127,6 +128,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [offerTarget, setOfferTarget] = useState(null);
+  // Offres de contrat en attente de réponse (délai de l'agent, voir queueOffer/advanceDays) et
+  // lassitude de négociation par joueur : { [playerId]: { rejections, stonewalled } }. Un joueur
+  // trop relancé (MAX_OFFER_ATTEMPTS refus d'affilée) refuse toute négociation pour le reste de
+  // la saison (façon FM24) ; remis à zéro à la signature ou au début d'une nouvelle saison.
+  const [pendingOffers, setPendingOffers] = useState([]);
+  const [negotiations, setNegotiations] = useState({});
   const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), staff: { hockeyOpsDirector: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
@@ -581,6 +588,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     addMessage({ from: "Directeur général adjoint", subject: `Échange conclu avec ${theirTeamName}`, category: "transaction", playerIds: [...myIds, ...theirIds], body });
   }
   function openOffer(player, isRenewal = false) {
+    const neg = negotiations[player.id];
+    if (neg?.stonewalled) { setNotice(`${player.name} refuse toute négociation pour le reste de la saison — trop d'offres refusées.`); return; }
+    if (pendingOffers.some((o) => o.playerId === player.id)) { setNotice(`Une offre est déjà en attente de réponse pour ${player.name}.`); return; }
     setSelectedPlayer(null);
     setOfferTarget({ player: isRenewal ? realPlayer(player) : player, isRenewal });
   }
@@ -596,19 +606,40 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       perf: st && st.gp >= 10 ? st.pts / st.gp : null,
     };
   }
-  function submitOffer(player, offer, isRenewal) {
+  function offerSummaryText(offer) {
+    const bonusText = (offer.bonuses || []).length ? `, primes : ${offer.bonuses.map(bonusLabel).join(", ")}` : "";
+    return `Offre : ${money(offer.salary)} par saison sur ${offer.years} an${offer.years > 1 ? "s" : ""}, contrat à ${offer.type === "two" ? `deux volets (LAH ${money(offer.ahlSalary)})` : "un volet"}${offer.signingBonus ? `, prime à la signature de ${money(offer.signingBonus)}` : ""}${offer.noTrade ? ", clause de non-échange" : ""}${bonusText}.`;
+  }
+  // Envoie l'offre : l'agent met quelques jours à consulter son client (voir resolveOffer,
+  // advanceDays) plutôt que de répondre instantanément.
+  function queueOffer(player, offer, isRenewal) {
     if (!isRenewal && !txWindow.open) { setOfferTarget(null); return; }
     const myRoster = teamsById[myTeamId].roster;
     const current = isRenewal ? capHit(myRoster.find((p) => p.id === player.id)?.contract) : 0;
-    const hit = offer.salary + (offer.bonuses || []).reduce((a, b) => a + b.amount, 0);
+    const hit = capHit(offer);
     if (!fitsUnderCap(myRoster, seasonYear, hit, current, myCapOpts)) { setNotice(`Offre impossible : ${formatMoney(hit)} dépasse ton espace sous le plafond (${formatMoney(capStatus(myRoster, seasonYear, myCapOpts).space + current)}).`); setOfferTarget(null); return; }
     if (!isRenewal && rosterCount(myRoster) >= ROSTER_MAX) { setNotice(`Offre impossible : ton alignement compte déjà ${ROSTER_MAX} joueurs. Renvoie quelqu'un au club-école d'abord.`); setOfferTarget(null); return; }
+    const delay = 1 + Math.floor(Math.random() * 3); // 1-3 jours : le temps que l'agent consulte son client
+    const dueDay = currentDay + delay;
+    setPendingOffers((prev) => [...prev, { id: `OFFER-${Date.now()}-${player.id}`, playerId: player.id, playerName: player.name, offer, isRenewal, dueDay }]);
+    addMessage({ from: "Agent du joueur", subject: `Offre envoyée : ${player.name}`, category: "transaction", playerIds: [player.id], body: `${offerSummaryText(offer)}\n\nL'agent doit consulter son client — réponse attendue vers le ${formatDay(dueDay)}.` });
+    setOfferTarget(null);
+  }
+  // Réponse de l'agent, une fois le délai écoulé (voir queueOffer). Réévalue avec l'état courant
+  // (le joueur a pu changer d'avis, sa production évoluer) et la lassitude accumulée
+  // (`negotiations[playerId].rejections`) : trop de refus font monter ses attentes, puis il se
+  // braque (MAX_OFFER_ATTEMPTS, voir engine/contracts.js).
+  function resolveOffer(pending) {
+    const { playerId, playerName, offer, isRenewal } = pending;
+    const rawPlayer = isRenewal ? teamsById[myTeamId].roster.find((p) => p.id === playerId) : freeAgents.find((p) => p.id === playerId);
+    if (!rawPlayer) { addMessage({ from: "Agent du joueur", subject: `Offre annulée : ${playerName}`, category: "transaction", body: `${playerName} n'est plus disponible ; l'offre a été annulée.` }); return; }
+    const player = rawPlayer;
+    const rejections = negotiations[player.id]?.rejections || 0;
     const { ctx, year, perf } = offerContext(realPlayer(player), isRenewal);
-    const result = evaluateOffer(realPlayer(player), offer, ctx, year, perf);
-    const bonusText = (offer.bonuses || []).length ? `, primes : ${offer.bonuses.map(bonusLabel).join(", ")}` : "";
-    const offerSummary = `Offre : ${money(offer.salary)} par saison sur ${offer.years} an${offer.years > 1 ? "s" : ""}, contrat à ${offer.type === "two" ? `deux volets (LAH ${money(offer.ahlSalary)})` : "un volet"}${offer.signingBonus ? `, prime à la signature de ${money(offer.signingBonus)}` : ""}${offer.noTrade ? ", clause de non-échange" : ""}${bonusText}.`;
+    const result = evaluateOffer(realPlayer(player), offer, ctx, year, perf, Math.random, rejections);
+    const offerSummary = offerSummaryText(offer);
     if (result.accept) {
-      const newContract = { years: offer.years, salary: offer.salary, type: offer.type, ahlSalary: offer.type === "two" ? offer.ahlSalary : undefined, noTrade: offer.noTrade, bonuses: offer.bonuses || [], signingBonus: offer.signingBonus || 0 };
+      const newContract = { years: offer.years, salary: offer.salary, type: offer.type, ahlSalary: offer.type === "two" ? offer.ahlSalary : undefined, noTrade: offer.noTrade, bonuses: offer.bonuses || [], signingBonus: offer.signingBonus || 0, originalYears: offer.years };
       if (isRenewal) {
         setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: t.roster.map((p) => (p.id === player.id ? { ...p, contract: newContract } : p)) })));
       } else {
@@ -617,12 +648,17 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       }
       // Prime à la signature (k$) payée tout de suite, en dollars dans la caisse.
       if (offer.signingBonus > 0) setBusiness((prev) => ({ ...prev, cash: prev.cash - offer.signingBonus * 1000 }));
+      setNegotiations((prev) => { const next = { ...prev }; delete next[player.id]; return next; });
       addMessage({ from: "Agent du joueur", subject: `${player.name} a accepté l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\n${player.name} a signé.` });
     } else {
+      const newRejections = rejections + 1;
+      const stonewalled = newRejections >= MAX_OFFER_ATTEMPTS;
+      setNegotiations((prev) => ({ ...prev, [player.id]: { rejections: newRejections, stonewalled } }));
       const why = result.factors.filter((f) => f.value < 0).map((f) => f.label.toLowerCase());
-      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${result.parts.twoWay < -0.3 ? " Mon client refuse un contrat à deux volets : il est un joueur de la LNH." : ""}${why.length ? ` Réserves de mon client : ${why.join(", ")}.` : ""}` });
+      const frustration = newRejections > 1 && !stonewalled ? " Mon client trouve que tu le fais lanterner — ses attentes ont grimpé." : "";
+      const closed = stonewalled ? ` Mon client en a assez de tes offres : il refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
+      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${result.parts.twoWay < -0.3 ? " Mon client refuse un contrat à deux volets : il est un joueur de la LNH." : ""}${why.length ? ` Réserves de mon client : ${why.join(", ")}.` : ""}${frustration}${closed}` });
     }
-    setOfferTarget(null);
   }
   function refreshFreeAgents() {
     setFreeAgents(buildFreeAgentPoolRT(16, business.staff.scoutAmateur?.rating));
@@ -811,6 +847,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     if (n <= 0) return;
     const newDay = currentDay + n;
     const due = pendingScouts.filter((m) => m.dueDay <= newDay);
+    const dueOffers = pendingOffers.filter((o) => o.dueDay <= newDay);
     setCurrentDay(newDay);
     // Rapport de développement et primes : au début de chaque mois.
     const months = monthIndex(newDay) - monthIndex(currentDay);
@@ -851,6 +888,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         });
         addMessage({ from: "Ligue", subject: `Ballottage : ${moves.placed.length} joueur${moves.placed.length > 1 ? "s" : ""} disponible${moves.placed.length > 1 ? "s" : ""}`, category: "transaction", playerIds: moves.placed.map((w) => w.player.id), body: moves.placed.map((w) => `- ${w.player.name} (${w.player.pos}, ${w.player.age} ans) — ${teamsById[w.fromTeamId].name}`).join("\n") + "\n\nRéclame-les dans l'onglet Transactions avant l'échéance (24 heures)." });
       }
+    }
+    if (dueOffers.length) {
+      setPendingOffers((prev) => prev.filter((o) => o.dueDay > newDay));
+      dueOffers.forEach(resolveOffer);
     }
     if (due.length === 0) return;
     setPendingScouts((prev) => prev.filter((m) => m.dueDay > newDay));
@@ -1261,6 +1302,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setDraft(null);
     setScoutingSpend(0);
     setFreeAgencyDone(false);
+    setNegotiations({});
     setSeasonYear(seasonYear + 1);
     advanceTo(seasonDates(seasonYear + 1).start - 1);
     addMessage({ from: "Ligue", subject: `Saison ${seasonYear + 1}-${seasonYear + 2}`, category: "general", body: `Premier match le ${formatDay(seasonDates(seasonYear + 1).start)}. Date limite des échanges : ${formatDay(seasonDates(seasonYear + 1).tradeDeadline)}.` });
@@ -1316,6 +1358,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     { key: "contracts", label: "Contrats", icon: FileText },
     { key: "finances", label: "Finances", icon: DollarSign },
     { key: "staff", label: "Personnel", icon: UserCog },
+    { key: "training", label: "Entraînement", icon: HeartPulse },
     { key: "inbox", label: "Messagerie", icon: Mail },
     { key: "standings", label: "Classement", icon: Trophy },
     { key: "playoffs", label: "Séries", icon: Award },
@@ -1328,7 +1371,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
-      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} onClose={() => setOfferTarget(null)} onSubmit={submitOffer} />}
+      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.hockeyOpsDirector?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 200, background: `linear-gradient(180deg, ${myTeam.color}33, var(--navy2) 160px)`, padding: "20px 12px", display: "flex", flexDirection: "column", gap: 3, borderRight: "1px solid var(--line)" }}>
@@ -1404,7 +1447,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
-        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} cohesion={linesByTeam[myTeamId]?.cohesion ?? 100} onSetTrainingFocus={setTrainingFocus} />}
+        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
+
+        {tab === "training" && <TrainingCenter business={business} myTeam={myTeam} cohesion={linesByTeam[myTeamId]?.cohesion ?? 100} onSetDelegation={setDelegation} onSetTrainingFocus={setTrainingFocus} />}
 
         {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
 

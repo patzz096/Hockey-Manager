@@ -2,7 +2,7 @@ import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { h2Style } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
-import { buyoutTerms, formatMoney } from "../engine/cap";
+import { buyoutTerms, formatMoney, payroll } from "../engine/cap";
 import { money } from "../ui/format";
 
 export function ContractsPanel({ myTeam, onSelectPlayer, seasonYear, buyoutOpen = false, deadCap = [] }) {
@@ -13,12 +13,12 @@ export function ContractsPanel({ myTeam, onSelectPlayer, seasonYear, buyoutOpen 
     return p[key];
   };
   const sorted = sortRows(myTeam.roster, ck, cd, cAcc);
-  const totalPayroll = myTeam.roster.reduce((a, p) => a + (p.contract?.salary || 0) + (p.contract?.bonuses || []).reduce((x, b) => x + b.amount, 0), 0);
+  const totalPayroll = payroll(myTeam.roster);
   const benchmark = teamOvrBenchmark(myTeam);
   return (
     <div>
       <h2 style={h2Style}>Contrats de l'équipe</h2>
-      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: -8, marginBottom: 6 }}>Masse salariale totale (primes de rendement maximales comprises) : <strong style={{ color: "var(--ice)" }}>{money(totalPayroll)} par saison</strong></p>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: -8, marginBottom: 6 }}>Masse salariale totale (primes de rendement maximales et primes à la signature étalées comprises) : <strong style={{ color: "var(--ice)" }}>{money(totalPayroll)} par saison</strong></p>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 14 }}>Clique un joueur pour ouvrir son profil : prolongation et rachat se font dans son volet « Gestion du joueur ». {buyoutOpen ? "Période de rachat ouverte (jusqu'au 1er juillet) : 2/3 du salaire restant (1/3 avant 26 ans), étalé sur le double des années." : "Les rachats sont permis entre la fin des séries et le 1er juillet."}</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
         <thead><tr>

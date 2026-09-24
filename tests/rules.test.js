@@ -88,6 +88,9 @@ describe("statistiques des séries", () => {
     const goals = Object.values(st).reduce((a, s) => a + s.g, 0);
     expect(goals).toBe(games.reduce((a, g) => a + g.homeScore + g.awayScore, 0));
     expect(Object.values(st).reduce((a, s) => a + s.gwg, 0)).toBe(games.length);
+    // Une victoire créditée au gardien partant du côté vainqueur, une par match joué.
+    expect(Object.values(st).reduce((a, s) => a + s.w, 0)).toBe(games.length);
+    expect(Object.values(st).some((s) => s.player.pos === "G" && s.w > 0)).toBe(true);
   });
 });
 

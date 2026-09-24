@@ -16,8 +16,10 @@ export function capFor(year) {
 export function floorFor(year) { return Math.round(capFor(year) * 0.74 / 100) * 100; }
 
 // Masse salariale de l'alignement. Les joueurs en LTIR comptent toujours (comme dans la LNH).
-// Primes de rendement : leur montant maximal compte sur le plafond (comme dans la LNH).
-const hitOf = (c) => (c?.salary || 0) + (c?.bonuses || []).reduce((a, b) => a + (b.amount || 0), 0);
+// Primes de rendement : leur montant maximal compte sur le plafond (comme dans la LNH). Prime à
+// la signature : étalée également sur la durée d'origine du contrat (`originalYears`, fixée à la
+// signature ; à défaut, la durée restante), même si elle est payée comptant dès la signature.
+const hitOf = (c) => (c?.salary || 0) + (c?.bonuses || []).reduce((a, b) => a + (b.amount || 0), 0) + (c?.signingBonus || 0) / (c?.originalYears || c?.years || 1);
 export function payroll(roster) { return roster.reduce((a, p) => a + hitOf(p.contract), 0); }
 
 // Cap mort de la saison `year` : [{ label, amount, seasons: [2027, 2028, ...], kind }].

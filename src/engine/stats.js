@@ -4,7 +4,7 @@
 export function aggregateStats(games, teamsById, everyone, seedTeams = []) {
   const stats = {};
   const entry = (id, team) => {
-    if (!stats[id]) stats[id] = { g: 0, a: 0, pts: 0, hits: 0, pim: 0, shots: 0, plusMinus: 0, blocks: 0, faceoffWins: 0, gp: 0, gwg: 0, player: everyone[id]?.player || { id, name: "?", pos: "?" }, team: everyone[id]?.team || team };
+    if (!stats[id]) stats[id] = { g: 0, a: 0, pts: 0, hits: 0, pim: 0, shots: 0, plusMinus: 0, blocks: 0, faceoffWins: 0, gp: 0, gwg: 0, w: 0, player: everyone[id]?.player || { id, name: "?", pos: "?" }, team: everyone[id]?.team || team };
     return stats[id];
   };
   seedTeams.forEach((t) => t.roster.forEach((p) => entry(p.id, t)));
@@ -21,6 +21,9 @@ export function aggregateStats(games, teamsById, everyone, seedTeams = []) {
     const goals = (g.box.goalLog || []).filter((e) => e.side === winSide && e.type !== "SO");
     const gw = goals[loserGoals];
     if (gw?.scorerId) entry(gw.scorerId, teamsById[g[winSide]]).gwg++;
+    // Victoire créditée au gardien partant du côté vainqueur (simplification : pas de relève).
+    const winnerGoalieId = winSide === "home" ? g.box.homeGoalie?.playerId : g.box.awayGoalie?.playerId;
+    if (winnerGoalieId) entry(winnerGoalieId, teamsById[g[winSide]]).w++;
   });
   Object.values(stats).forEach((s) => (s.pts = s.g + s.a));
   return stats;
