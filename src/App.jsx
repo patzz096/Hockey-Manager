@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse } from "lucide-react";
+import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, facilityUpgradeCost, autoTuneFinances, computeGameFinance } from "./engine/finance";
@@ -167,6 +167,25 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // Joueurs qui occupent une place dans l'alignement (la LTIR libère la place).
   const rosterCount = (roster) => roster.filter((p) => !myCapOpts.ltirIds.includes(p.id)).length;
   const txWindow = transactionWindow(seasonYear, currentDay);
+  // Aperçu (affichage seulement, non persisté) des séances que l'IA choisirait pour le mois
+  // affiché du calendrier quand l'entraînement est délégué — sinon rien n'apparaît tant que le
+  // temps n'a pas avancé (runTrainingWeeks ne calcule les séances qu'au fil des jours). Même
+  // heuristique que runTrainingWeeks (engine/training.js autoTrainingSessions/autoTrainingFocus).
+  const trainingPreview = useMemo(() => {
+    if (business.delegation.training !== "delegated") return {};
+    const myRoster = teamsById[myTeamId]?.roster || [];
+    const avgCondition = myRoster.length ? myRoster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myRoster.length : BASE_CONDITION;
+    const curCohesion = linesByTeam[myTeamId]?.cohesion ?? 100;
+    const myGameDays = new Set(schedule.filter((g) => g.home === myTeamId || g.away === myTeamId).map((g) => roundDay(seasonYear, g.round)));
+    const preview = {};
+    const rangeStart = Math.max(calendarMonth, currentDay), rangeEnd = addMonths(calendarMonth, 1) + 7;
+    for (let d = rangeStart; d < rangeEnd; d++) {
+      if ((business.trainingSchedule || {})[d]) continue;
+      const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) <= d + 7).length;
+      preview[d] = myGameDays.has(d) ? [autoTrainingFocus(avgCondition, curCohesion, upcoming)] : autoTrainingSessions(avgCondition, curCohesion, upcoming);
+    }
+    return preview;
+  }, [business.delegation.training, business.trainingSchedule, teamsById, myTeamId, linesByTeam, schedule, seasonYear, calendarMonth, currentDay]);
   // Phase de la saison : régulière → séries → repêchage → agents libres → nouvelle saison.
   const phase = currentRound !== null ? "regular" : !playoffs ? "endRegular" : !playoffs.champion ? "playoffs" : !draft ? "preDraft" : !draftDone(draft) ? "draft" : !freeAgencyDone ? "preFreeAgency" : "offseason";
   const mySeries = useMemo(() => (playoffs ? seriesOfTeam(playoffs, myTeamId) : null), [playoffs, myTeamId]);
@@ -713,7 +732,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const myRoster = teamsById[myTeamId]?.roster || [];
     const avgCondition = myRoster.length ? myRoster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myRoster.length : BASE_CONDITION;
     const curCohesion = linesByTeam[myTeamId]?.cohesion ?? 100;
-    const coachRatings = [business.staff.headCoach?.rating, business.staff.fitnessCoach?.rating].filter((r) => r != null);
+    // Le DG contribue aussi à la cohésion (culture d'équipe), avec l'entraîneur-chef et l'entraîneur physique.
+    const coachRatings = [business.staff.headCoach?.rating, business.staff.fitnessCoach?.rating, business.staff.gm?.rating].filter((r) => r != null);
     const coachRating = coachRatings.length ? coachRatings.reduce((a, r) => a + r, 0) / coachRatings.length : 50;
     const fitnessSkill = business.staff.fitnessCoach?.devSkill;
     const scheduled = business.trainingSchedule || {};
@@ -918,15 +938,18 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function refreshStaffMarket() {
     setStaffMarket(buildStaffMarketRT(6));
   }
+  // Le directeur des opérations hockey embauche l'ensemble du personnel hockey (tout sauf les
+  // finances, et lui-même) quand délégué.
   function autoManageHockeyOps() {
-    const fillableRoles = ["headCoach", "assistantOff", "assistantDef", "scoutAmateur", "scoutPro"];
+    const fillableRoles = Object.keys(STAFF_ROLES).filter((r) => r !== "hockeyOpsDirector" && r !== "financeDirector");
     const vacant = fillableRoles.filter((r) => !business.staff[r]);
     if (vacant.length === 0) return;
+    // Le personnel n'a pas de coût direct sur la caisse (aucun salaire de personnel n'y est
+    // débité) : pas de filtre d'abordabilité ici, seulement le meilleur candidat par poste vacant.
     let market = [...staffMarket];
-    let cash = business.cash;
     const hires = [];
     vacant.forEach((role) => {
-      const candidates = market.filter((c) => c.role === role && c.salary < cash * 0.15).sort((a, b) => b.rating - a.rating);
+      const candidates = market.filter((c) => c.role === role).sort((a, b) => b.rating - a.rating);
       if (candidates.length > 0) { hires.push(candidates[0]); market = market.filter((c) => c.id !== candidates[0].id); }
     });
     if (hires.length === 0) return;
@@ -1077,9 +1100,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // Progression des joueurs (répétée `months` fois si plusieurs mois passent d'un coup).
   function monthlyTick(months, label) {
     if (business.delegation.hockeyOps === "delegated") autoManageHockeyOps();
-    // L'entraîneur physique contribue aussi au développement des joueurs (engine/training.js).
-    const devCoaches = [business.staff.headCoach, business.staff.assistantOff, business.staff.assistantDef, business.staff.fitnessCoach].filter(Boolean);
-    const coachDev = devCoaches.reduce((a, c) => a + (c.devSkill || 50), 0) / devCoaches.length || 50;
+    // L'entraîneur physique et le directeur général (repêchage, gestion des espoirs) contribuent
+    // aussi au développement des joueurs (engine/training.js).
+    const devCoaches = [business.staff.headCoach, business.staff.assistantOff, business.staff.assistantDef, business.staff.fitnessCoach, business.staff.gm].filter(Boolean);
+    const coachDev = devCoaches.reduce((a, c) => a + (c.devSkill ?? c.rating ?? 50), 0) / devCoaches.length || 50;
     const scoutProRating = business.staff.scoutPro?.rating || 50;
     const devBonus = ((coachDev - 50) / 50) * 0.5;
     const scoutBonus = ((scoutProRating - 50) / 50) * 0.2;
@@ -1345,6 +1369,15 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const myLines = linesByTeam[myTeamId];
   const myStanding = standings.find((s) => s.id === myTeamId);
   const myRank = standings.findIndex((s) => s.id === myTeamId) + 1;
+  // Petit cadenas sur les onglets hors saison pour ce qu'ils proposent (séries avant qu'elles
+  // commencent, repêchage avant la saison morte, transactions/agents libres hors des fenêtres
+  // ouvertes) : la page reste accessible (utile pour consulter l'historique), seul un badge prévient.
+  const TAB_LOCK_REASON = {
+    playoffs: phase === "regular" ? "Saison régulière en cours — les séries n'ont pas commencé." : null,
+    draft: ["regular", "endRegular", "playoffs"].includes(phase) ? "Saison en cours — le repêchage a lieu en saison morte." : null,
+    transactions: !txWindow.open ? txWindow.reason : null,
+    freeagents: !txWindow.open ? txWindow.reason : null,
+  };
   const navItems = [
     { key: "roster", label: "Alignement", icon: Users },
     { key: "lines", label: "Trios", icon: Layers },
@@ -1371,7 +1404,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
-      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.hockeyOpsDirector?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
+      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.gm?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
       {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 200, background: `linear-gradient(180deg, ${myTeam.color}33, var(--navy2) 160px)`, padding: "20px 12px", display: "flex", flexDirection: "column", gap: 3, borderRight: "1px solid var(--line)" }}>
@@ -1379,14 +1412,18 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           <TeamCrest team={myTeam} size={34} />
           <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, color: myTeam.color, lineHeight: 1.15 }}>{myTeam.name}</div>
         </div>
-        {navItems.map(({ key, label, icon: Icon }) => (
-          <button key={key} className={`nav-btn${tab === key ? " is-active" : ""}`} onClick={() => setTab(key)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", borderRadius: 7, border: "none", background: tab === key ? "linear-gradient(90deg, rgba(92,200,255,0.20), rgba(92,200,255,0.04))" : "transparent", color: tab === key ? "var(--ice)" : "var(--iceMuted)", fontSize: 14, fontWeight: tab === key ? 600 : 500, cursor: "pointer", textAlign: "left" }}>
+        {navItems.map(({ key, label, icon: Icon }) => {
+          const lockReason = TAB_LOCK_REASON[key];
+          return (
+          <button key={key} title={lockReason || undefined} className={`nav-btn${tab === key ? " is-active" : ""}`} onClick={() => setTab(key)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", borderRadius: 7, border: "none", background: tab === key ? "linear-gradient(90deg, rgba(92,200,255,0.20), rgba(92,200,255,0.04))" : "transparent", color: tab === key ? "var(--ice)" : "var(--iceMuted)", fontSize: 14, fontWeight: tab === key ? 600 : 500, cursor: "pointer", textAlign: "left" }}>
             <Icon size={16} color={tab === key ? "var(--accent)" : "currentColor"} /> {label}
+            {lockReason && <Lock size={11} color="var(--iceMuted)" style={{ marginLeft: "auto" }} />}
             {key === "inbox" && messages.filter((m) => !m.read).length > 0 && (
-              <span style={{ marginLeft: "auto", background: "var(--red)", color: "#fff", borderRadius: 10, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{messages.filter((m) => !m.read).length}</span>
+              <span style={{ marginLeft: lockReason ? 4 : "auto", background: "var(--red)", color: "#fff", borderRadius: 10, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{messages.filter((m) => !m.read).length}</span>
             )}
           </button>
-        ))}
+          );
+        })}
         <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}><span style={{ color: "var(--ice)" }}>{formatDay(currentDay)}</span><br />Plafond : <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} compact /><br />Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
       </div>
       <div key={tab} className="tab-view" style={{ flex: 1, padding: "24px 32px", overflow: "auto", background: "radial-gradient(1100px 480px at 75% -12%, rgba(92,200,255,0.08), transparent 60%)" }}>
@@ -1438,7 +1475,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 
@@ -1469,7 +1506,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             {scheduleFilter === "mine" && (
               <MonthlyCalendar
                 monthDay={calendarMonth} currentDay={currentDay} myTeam={myTeam} teamsById={teamsById} schedule={schedule} seasonYear={seasonYear}
-                trainingSchedule={business.trainingSchedule} delegation={business.delegation.training}
+                trainingSchedule={business.trainingSchedule} delegation={business.delegation.training} trainingPreview={trainingPreview}
                 onPrevMonth={() => setCalendarMonth((d) => addMonths(d, -1))} onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
                 onSchedule={scheduleTraining} onCancelTraining={cancelTraining} onWatchGame={setWatchingGame}
               />

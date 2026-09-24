@@ -14,9 +14,11 @@ const SLOT_LABEL = ["Matin", "Après-midi"];
 // peut donc recevoir qu'une séance, le matin. `trainingSchedule[day]` est un tableau
 // [séance du matin, séance de l'après-midi], chaque case pouvant être une clé de TRAINING_FOCUSES
 // ou null. Cliquer une case libre à venir ouvre un petit sélecteur de programme ; cliquer une
-// séance déjà planifiée l'annule. Les matchs joués ouvrent le visionneur. `monthDay` doit
-// toujours être le 1er du mois affiché (voir engine/calendar.js `monthStartDay`/`addMonths`).
-export function MonthlyCalendar({ monthDay, currentDay, myTeam, teamsById, schedule, seasonYear, trainingSchedule, delegation, onPrevMonth, onNextMonth, onSchedule, onCancelTraining, onWatchGame }) {
+// séance déjà planifiée l'annule. Les matchs joués ouvrent le visionneur. En délégué,
+// `trainingPreview` (App.jsx) affiche un aperçu non confirmé (italique, « ? ») des séances que
+// l'IA choisirait, tant que le temps n'a pas réellement avancé. `monthDay` doit toujours être le
+// 1er du mois affiché (voir engine/calendar.js `monthStartDay`/`addMonths`).
+export function MonthlyCalendar({ monthDay, currentDay, myTeam, teamsById, schedule, seasonYear, trainingSchedule, delegation, trainingPreview = {}, onPrevMonth, onNextMonth, onSchedule, onCancelTraining, onWatchGame }) {
   const [picker, setPicker] = useState(null); // { day, slot }
   const monthStart = dayToDate(monthDay);
   const year = monthStart.getUTCFullYear(), month = monthStart.getUTCMonth();
@@ -76,6 +78,18 @@ export function MonthlyCalendar({ monthDay, currentDay, myTeam, teamsById, sched
                 </div>
               );
             }
+            if (!manual && !isPast) {
+              const previewKey = trainingPreview[day]?.[slot];
+              const previewFocus = previewKey ? TRAINING_FOCUSES[previewKey] : null;
+              if (previewFocus) {
+                return (
+                  <div title={`Prévision de l'IA (pas encore confirmée) : ${previewFocus.desc}`} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 9, color: "var(--iceMuted)", fontStyle: "italic" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", border: "1px solid var(--iceMuted)", flexShrink: 0 }} />
+                    {previewFocus.label} ?
+                  </div>
+                );
+              }
+            }
             const canSchedule = manual && !isPast;
             if (!canSchedule) return null;
             return (
@@ -108,7 +122,7 @@ export function MonthlyCalendar({ monthDay, currentDay, myTeam, teamsById, sched
       </div>
       <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 10 }}>
         {manual
-          ? "Planifie jusqu'à 2 séances par jour (matin et après-midi) ; un jour de match ne permet qu'une seule séance, le matin, puisque le match compte pour l'autre case. Les séances planifiées remplacent le programme par défaut de l'onglet Personnel cette semaine-là."
+          ? "Planifie jusqu'à 2 séances par jour (matin et après-midi) ; un jour de match ne permet qu'une seule séance, le matin, puisque le match compte pour l'autre case. Les séances planifiées remplacent le programme par défaut de l'onglet Entraînement cette semaine-là."
           : "Entraînement délégué — les séances affichées ont été choisies automatiquement selon la forme de l'effectif et la cohésion."}
       </p>
     </div>

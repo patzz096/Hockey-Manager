@@ -103,11 +103,15 @@ export const BONUS_KINDS = {
   plusMinus: { label: "Différentiel (+/-)", short: "+/-", skater: true },
   w: { label: "Victoires", short: "V", goalie: true },
 };
+// Primes de performance façon FM24 (buts, points, victoires, etc.) : permises sur n'importe quel
+// contrat, avec un maximum plus élevé pour les cas prévus par la vraie convention de la LNH
+// (contrat d'entrée, 35 ans et plus sur un an) et un maximum standard sinon.
+export const STANDARD_BONUS_MAX = 2000;
 export function bonusRules(player, offer, year) {
   const veteran = player.age >= 35 && offer.years === 1;
   if (offer.elc) return { allowed: true, max: ELC_BONUS_MAX, why: "Contrat d'entrée : primes de l'annexe A permises." };
   if (veteran) return { allowed: true, max: VETERAN_BONUS_MAX, why: "Joueur de 35 ans et plus sur un contrat d'un an : primes permises." };
-  return { allowed: false, max: 0, why: `Primes de rendement réservées aux contrats d'entrée et aux joueurs de 35 ans et plus sur un contrat d'un an (${player.age} ans, ${offer.years} an${offer.years > 1 ? "s" : ""}).` };
+  return { allowed: true, max: STANDARD_BONUS_MAX, why: "Primes de performance ajoutées au contrat." };
 }
 const fmt = (k) => (k >= 1000 ? `${(k / 1000).toLocaleString("fr-CA", { maximumFractionDigits: 3 })} M$` : `${Math.round(k * 1000).toLocaleString("fr-CA")} $`);
 export function bonusLabel(b) { return `${b.target} ${BONUS_KINDS[b.kind]?.short || b.kind} : ${fmt(b.amount)}`; }
@@ -217,8 +221,14 @@ export function evaluateOffer(player, offer, ctx, year = CURRENT_YEAR, perf = nu
 // presque exactement la vraie demande. `gmRating` : cote du DG (20-99), ou null si le poste est
 // vacant (estimation la plus large possible). Le bruit est stable pour un joueur/DG donnés
 // (basé sur son id), pour ne pas changer à chaque rendu.
+// Imprécision de l'estimation d'un DG selon sa cote (20-99) : large et peu fiable sans DG ou
+// avec un DG faible, resserrée avec un excellent DG. Réutilisée pour les contrats (gmEstimate)
+// et pour l'évaluation d'échange (TransactionsCenter).
+export function gmSpread(gmRating = null) {
+  return gmRating == null ? 0.4 : clamp(0.42 - (clamp(gmRating, 20, 99) - 20) / 79 * 0.37, 0.05, 0.4);
+}
 export function gmEstimate(player, ask, gmRating = null) {
-  const spread = gmRating == null ? 0.4 : clamp(0.42 - (clamp(gmRating, 20, 99) - 20) / 79 * 0.37, 0.05, 0.4);
+  const spread = gmSpread(gmRating);
   const n = (hash(player.id + "gm") % 1000) / 1000 - 0.5; // -0.5..0.5, stable par joueur
   const salary = round25(ask.salary * (1 + n * 2 * spread));
   const yearsNoise = spread > 0.2 ? (n >= 0 ? 1 : -1) : 0;

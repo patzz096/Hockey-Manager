@@ -2,11 +2,19 @@ import { formatDay } from "../engine/calendar";
 import { useState } from "react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
+import { gmSpread } from "../engine/contracts";
 import { h2Style, btnStyle, inputStyle, scoutQualityColor } from "../ui/theme";
 import { StarRating, PlayerLink } from "./common";
 import { money } from "../ui/format";
 
-export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true } }) {
+// Valeur d'échange approximative d'un joueur pour l'évaluation du DG : cote actuelle, avec un
+// supplément pour le potentiel des jeunes joueurs (un espoir vaut plus que sa seule cote actuelle).
+function tradeValue(ovr, potential, age) {
+  const upside = age <= 24 ? Math.max(0, (potential ?? ovr) - ovr) * 0.4 : 0;
+  return ovr + upside;
+}
+
+export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);
   const [partnerId, setPartnerId] = useState(otherTeams[0]?.id);
   const [myIds, setMyIds] = useState([]);
@@ -72,6 +80,27 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
           ))}
         </div>
       )}
+      {(myIds.length > 0 || theirIds.length > 0) && partner && (() => {
+        const sideValue = (team, ids) => team.roster.filter((p) => ids.includes(p.id)).reduce((a, p) => {
+          const scoutInfo = team.id === myTeamId ? null : getScoutInfo(p, team.id, myTeamId, staff, scoutKnowledge);
+          const shown = perceivedRatings(p, scoutInfo);
+          return a + tradeValue(shown.ovr, shown.potential, p.age);
+        }, 0);
+        const mine = sideValue(myTeam, myIds), theirs = sideValue(partner, theirIds);
+        const spread = gmSpread(gmRating);
+        const diff = theirs - mine;
+        const lean = Math.abs(diff) <= Math.max(mine, theirs) * spread ? "équilibré" : diff > 0 ? "favorable" : "défavorable";
+        const leanColor = lean === "équilibré" ? "var(--gold)" : lean === "favorable" ? "var(--win)" : "var(--loss)";
+        return (
+          <div style={{ background: "var(--navy2)", border: "1px solid #ffffff1a", borderRadius: 6, padding: 10, marginBottom: 12, fontSize: 12 }}>
+            <strong>Évaluation du DG</strong> {gmRating == null && <span style={{ color: "var(--iceMuted)" }}>(aucun DG en poste : très approximative)</span>}
+            <div style={{ marginTop: 4, color: "var(--iceMuted)" }}>
+              Valeur envoyée : <strong style={{ color: "var(--ice)" }}>{mine.toFixed(0)}</strong> · valeur reçue : <strong style={{ color: "var(--ice)" }}>{theirs.toFixed(0)}</strong>
+              {" · "}Échange <strong style={{ color: leanColor }}>{lean}</strong> pour toi {gmRating != null && <span>(marge d'erreur ± {Math.round(spread * 100)} %)</span>}
+            </div>
+          </div>
+        );
+      })()}
       {!txWindow.open && <div style={{ fontSize: 13, color: "var(--loss)", marginBottom: 8 }}>{txWindow.reason}</div>}
       <button onClick={confirmTrade} disabled={!txWindow.open || (myIds.length === 0 && theirIds.length === 0)} style={{ ...btnStyle("var(--red)"), opacity: txWindow.open ? 1 : 0.5 }}>Conclure l'échange</button>
     </div>

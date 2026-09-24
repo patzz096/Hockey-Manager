@@ -17,6 +17,9 @@ const factorColor = (v) => (v >= 0.4 ? "var(--win)" : v >= 0.1 ? "#7FD6A0" : v >
 const label = { display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--iceMuted)", marginBottom: 4 };
 const input = { background: "var(--navy)", color: "var(--ice)", border: "1px solid var(--line)", borderRadius: 5, padding: "4px 6px", fontSize: 12, fontFamily: "inherit" };
 const clampNum = (v, lo, hi) => (Number.isNaN(v) ? lo : Math.max(lo, Math.min(hi, v)));
+// Suggestions rapides façon FM24 : ajoutent une prime déjà remplie, modifiable ensuite.
+const SKATER_BONUS_PRESETS = [{ kind: "g", target: 15, amount: 300 }, { kind: "pts", target: 50, amount: 500 }, { kind: "a", target: 25, amount: 300 }];
+const GOALIE_BONUS_PRESETS = [{ kind: "w", target: 25, amount: 100 }, { kind: "w", target: 40, amount: 200 }, { kind: "gp", target: 50, amount: 150 }];
 
 function FactorBar({ f }) {
   const pct = (f.value + 1) * 50;
@@ -141,6 +144,15 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
           <div style={label}><span>Primes de rendement</span>{rules.allowed && <span>{k$(bonusSum)} / {k$(rules.max)} maximum</span>}</div>
           {!rules.allowed ? <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{rules.why}</div> : (<>
             <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6 }}>{rules.why} Le montant maximal compte sur le plafond ; la prime est versée à la fin de la saison régulière si l'objectif est atteint.</div>
+            {bonuses.length < 4 && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                {(isGoalie ? GOALIE_BONUS_PRESETS : SKATER_BONUS_PRESETS).map((p, i) => (
+                  <button key={i} onClick={() => setBonuses([...bonuses, { kind: p.kind, target: p.target, amount: p.amount }])} style={{ ...btnStyle("var(--steel)"), fontSize: 10, padding: "3px 8px" }}>
+                    +{p.target} {BONUS_KINDS[p.kind].short} → {k$(p.amount)}
+                  </button>
+                ))}
+              </div>
+            )}
             {bonuses.map((b, i) => (
               <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5, flexWrap: "wrap" }}>
                 <select aria-label="Objectif" value={b.kind} onChange={(e) => setBonuses(bonuses.map((x, j) => (j === i ? { ...x, kind: e.target.value } : x)))} style={input}>

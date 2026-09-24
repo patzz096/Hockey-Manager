@@ -217,9 +217,12 @@ tests/engine.test.js       tests du moteur
 **Gestion**
 - Trios/paires/gardiens éditables par glisser-déposer ou clic-clic (échange), sur un schéma
   de patinoire façon FM24, avec liste de joueurs par position à droite
-- Personnel : entraîneur-chef, adjoints (avec compétence de développement séparée),
-  entraîneur physique, dépisteurs amateur/pro, directeur des finances, directeur des
-  opérations hockey — avec primes de performance et option délégation (contrôle manuel ou IA)
+- Personnel : directeur général (négociation de contrat, échanges, cohésion, développement),
+  entraîneur-chef, adjoints (avec compétence de développement séparée), entraîneur physique,
+  dépisteurs amateur/pro, directeur des finances, directeur des opérations hockey — avec
+  primes de performance et option délégation (contrôle manuel ou IA). Le directeur des
+  opérations hockey embauche l'ensemble du personnel hockey (tout sauf les finances, et
+  lui-même) quand délégué à chaque avancement de mois
 - Entraînement façon FM24 (`engine/training.js`, onglet dédié « Entraînement », séparé de
   Personnel) : condition physique par
   joueur (récupère avec le repos, chute avec les matchs joués, atténuée par l'endurance —
@@ -250,16 +253,24 @@ tests/engine.test.js       tests du moteur
   - Montant et durée ajustables au curseur ou saisis directement au clavier (`ContractOfferModal`).
   - Attentes du joueur estimées par ton directeur général plutôt que révélées telles quelles :
     plage floue autour de la vraie demande, resserrée selon la cote du DG (`gmEstimate`) —
-    sans DG en poste, estimation à l'aveugle (plage maximale).
+    sans DG en poste, estimation à l'aveugle (plage maximale). Même principe pour évaluer un
+    échange (`TransactionsCenter`, valeur envoyée/reçue et verdict favorable/équilibré/
+    défavorable selon la cote du DG).
   - Trop d'offres refusées d'affilée pour un même joueur font monter ses attentes
     (`frustrationMultiplier`) puis, au-delà de 3 refus, il refuse toute négociation pour le
     reste de la saison (`MAX_OFFER_ATTEMPTS`, remis à zéro en début de saison).
   - Prime à la signature désormais comptée sur le plafond salarial, étalée sur la durée
     d'origine du contrat (`capHit`/`payroll`, `contract.originalYears`).
-  - Primes de rendement (contrats d'entrée, 35 ans et plus sur un an) : buts, passes, points,
-    +/-, matchs joués, et victoires pour les gardiens (`BONUS_KINDS`), payées en fin de
-    saison régulière selon les statistiques réellement atteintes
+  - Primes de rendement façon FM24, permises sur n'importe quel contrat (maximum plus élevé
+    pour un contrat d'entrée ou 35 ans et plus sur un an) : buts, passes, points, +/-, matchs
+    joués, victoires pour les gardiens (`BONUS_KINDS`), avec des suggestions rapides
+    préremplies (ex. 15 buts et plus, 50 points et plus, 40 victoires et plus) ; payées en fin
+    de saison régulière selon les statistiques réellement atteintes
 - Messagerie interne recevant tous les rapports (progression, finances, transactions, dépistage)
+- Petit cadenas sur les onglets hors saison pour ce qu'ils proposent (Séries avant les
+  séries, Repêchage hors saison morte, Transactions/Agents libres hors des fenêtres
+  ouvertes) : l'onglet reste consultable, le badge prévient juste qu'il n'y a rien à y faire
+  pour l'instant
 
 **Interface**
 - Joueurs cliquables partout (composant `PlayerLink`) : alignement, trios (double-clic),

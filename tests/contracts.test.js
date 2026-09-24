@@ -29,10 +29,12 @@ describe("contrats LNH", () => {
     expect(older.years).toBe(2);
   });
 
-  it("réserve les primes de rendement aux recrues et aux 35 ans et plus (contrat d'un an)", () => {
+  it("permet des primes de rendement sur n'importe quel contrat, avec un maximum plus élevé pour les recrues et les 35 ans et plus (un an)", () => {
     expect(bonusRules({ age: 36 }, { years: 1 }).allowed).toBe(true);
-    expect(bonusRules({ age: 36 }, { years: 2 }).allowed).toBe(false);
-    expect(bonusRules({ age: 28 }, { years: 1 }).allowed).toBe(false);
+    expect(bonusRules({ age: 36 }, { years: 2 }).allowed).toBe(true);
+    expect(bonusRules({ age: 28 }, { years: 1 }).allowed).toBe(true);
+    expect(bonusRules({ age: 36 }, { years: 1 }).max).toBeGreaterThan(bonusRules({ age: 28 }, { years: 1 }).max);
+    expect(bonusRules({ age: 28 }, { years: 1 }).max).toBeGreaterThan(0);
     const c = { salary: 800, bonuses: [{ kind: "pts", target: 40, amount: 300 }, { kind: "g", target: 30, amount: 200 }] };
     expect(earnedBonuses(c, { pts: 45, g: 12 })).toHaveLength(1);
     expect(capHit(c)).toBe(1300);
