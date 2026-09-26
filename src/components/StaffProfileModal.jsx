@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { starsFor } from "../engine/attributes";
-import { STAFF_ROLES } from "../engine/staff";
+import { STAFF_ROLES, STAFF_ATTRS, STAFF_ATTR_LABELS } from "../engine/staff";
 import { formatDay } from "../engine/calendar";
 import { money } from "../ui/format";
 import { btnStyle } from "../ui/theme";
-import { StarRating, ConfirmButton, InfoCard } from "./common";
+import { StarRating, ConfirmButton, InfoCard, AttrRow } from "./common";
 
 // Profil plein écran d'un membre du personnel (en poste ou candidat du marché), même traitement
 // que le profil joueur (PlayerModal) : occupe toute la page plutôt qu'une fenêtre flottante.
@@ -13,6 +13,10 @@ import { StarRating, ConfirmButton, InfoCard } from "./common";
 // reste réservée aux joueurs dépistés.
 export function StaffProfileModal({ staff, role, isHired, benchmark, team, pendingOffer, negotiation, onOffer, onFire, onClose }) {
   const [offered, setOffered] = useState(staff.salary);
+  const spec = STAFF_ATTRS[role];
+  // Regroupe les attributs du poste par catégorie (Entraînement / Gestion / Dépistage), dans
+  // l'ordre du tableau de référence.
+  const categories = spec ? spec.reduce((acc, [cat, key]) => { (acc[cat] ||= []).push(key); return acc; }, {}) : null;
   return (
     <div style={{ position: "fixed", inset: 0, background: "var(--navy)", zIndex: 80, display: "flex", flexDirection: "column" }}>
       <div style={{ background: `linear-gradient(90deg, ${team.color}, ${team.color}99)`, padding: "16px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
@@ -28,7 +32,7 @@ export function StaffProfileModal({ staff, role, isHired, benchmark, team, pendi
             <InfoCard label="COTE" accent="var(--gold)">
               <StarRating value={starsFor(staff.rating, benchmark)} size={16} />
             </InfoCard>
-            {staff.devSkill != null && (
+            {!spec && staff.devSkill != null && (
               <InfoCard label="DÉVELOPPEMENT DES JOUEURS" accent="var(--steel)">
                 <StarRating value={starsFor(staff.devSkill, benchmark)} size={16} color="#7A9EDB" />
               </InfoCard>
@@ -37,6 +41,17 @@ export function StaffProfileModal({ staff, role, isHired, benchmark, team, pendi
               <div style={{ fontSize: 14, fontWeight: 600 }}>{money(staff.salary)} par saison</div>
             </InfoCard>
           </div>
+
+          {categories && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px", marginBottom: 16 }}>
+              {Object.entries(categories).map(([cat, keys]) => (
+                <div key={cat} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, letterSpacing: 0.5, color: "var(--iceMuted)", marginBottom: 4, borderBottom: "1px solid #ffffff1a", paddingBottom: 3 }}>{cat.toUpperCase()}</div>
+                  {keys.map((k) => <AttrRow key={k} label={STAFF_ATTR_LABELS[k]} val={staff.attrs[k]} />)}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div style={{ background: "var(--navy2)", border: "1px solid #ffffff22", borderRadius: 4, padding: 16 }}>
             {isHired ? (

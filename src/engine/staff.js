@@ -11,19 +11,53 @@ export const STAFF_ROLES = { hockeyOpsDirector: "Directeur des opérations hocke
 
 export const STAFF_BASE_SALARY = { hockeyOpsDirector: 2200, gm: 2100, financeDirector: 1800, headCoach: 1800, assistantOff: 900, assistantDef: 900, fitnessCoach: 950, scoutAmateur: 700, scoutPro: 900, broadcastDirector: 1300 };
 
+// Libellés des attributs détaillés du personnel (échelle interne 20-99, affichée sur /20).
+export const STAFF_ATTR_LABELS = {
+  trainOff: "Entraînement offensif", trainDef: "Entraînement défensif", trainGoalie: "Entraînement des gardiens",
+  devProspects: "Développement des prospects", skillOff: "Compétences offensives", skillDef: "Compétences défensives",
+  motivation: "Motivation", discipline: "Discipline", tactics: "Tactique", inGameTactics: "Tactique en match",
+  playerManagement: "Gestion des joueurs", negotiation: "Négociation", finance: "Prudence financière",
+  scoutSkill: "Évaluation des habiletés", scoutPotential: "Évaluation du potentiel",
+};
+// Attributs détaillés par poste (catégorie, clé) : la cote générale (`rating`) d'un candidat est
+// la moyenne de ces attributs plutôt qu'un chiffre isolé. Les postes absents d'ici (entraîneur
+// physique, directeur général, directeur des communications) gardent une seule cote générale.
+export const STAFF_ATTRS = {
+  headCoach: [["Entraînement", "trainOff"], ["Entraînement", "trainDef"], ["Entraînement", "trainGoalie"], ["Entraînement", "devProspects"], ["Gestion", "motivation"], ["Gestion", "discipline"], ["Gestion", "tactics"], ["Gestion", "inGameTactics"], ["Gestion", "playerManagement"]],
+  assistantOff: [["Entraînement", "trainOff"], ["Entraînement", "skillOff"], ["Entraînement", "devProspects"], ["Gestion", "tactics"]],
+  assistantDef: [["Entraînement", "trainDef"], ["Entraînement", "skillDef"], ["Entraînement", "devProspects"], ["Gestion", "tactics"]],
+  scoutAmateur: [["Dépistage", "scoutSkill"], ["Dépistage", "scoutPotential"], ["Gestion", "negotiation"]],
+  scoutPro: [["Dépistage", "scoutSkill"], ["Dépistage", "scoutPotential"]],
+  financeDirector: [["Gestion", "negotiation"], ["Gestion", "finance"], ["Gestion", "discipline"]],
+  hockeyOpsDirector: [["Gestion", "playerManagement"], ["Gestion", "negotiation"], ["Gestion", "tactics"], ["Gestion", "finance"]],
+};
+
+// Un candidat : `attrs` (poste couvert par STAFF_ATTRS) ou une seule cote générale sinon. `rating`
+// (cote générale) est toujours la moyenne des attributs quand il y en a — utilisée telle quelle
+// par tous les effets de jeu existants (délai/qualité de dépistage, primes de performance, etc.).
+// Pour un entraîneur (chef ou adjoint), `devSkill` reprend directement l'attribut "Développement
+// des prospects" (vitesse de progression des joueurs, voir App.jsx monthlyTick).
+function generateStaffCandidate(rng, id, role, fitnessDevRoles) {
+  const spec = STAFF_ATTRS[role];
+  const fn = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)];
+  const ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
+  let rating, attrs;
+  if (spec) {
+    attrs = {};
+    spec.forEach(([, key]) => { attrs[key] = Math.round(40 + rng() * 55); });
+    rating = Math.round(spec.reduce((a, [, key]) => a + attrs[key], 0) / spec.length);
+  } else {
+    rating = Math.round(40 + rng() * 55);
+  }
+  const salary = Math.round(STAFF_BASE_SALARY[role] * Math.pow(rating / 70, 1.6) * (0.85 + rng() * 0.3));
+  const devSkill = attrs?.devProspects ?? (fitnessDevRoles.includes(role) ? Math.round(35 + rng() * 60) : undefined);
+  return { id, name: `${fn} ${ln}`, role, rating, salary, devSkill, attrs };
+}
+
 export function buildStaffMarket(rng, count = 12) {
   const roles = Object.keys(STAFF_ROLES);
-  const coachRoles = ["headCoach", "assistantOff", "assistantDef", "fitnessCoach"];
   const list = [];
-  for (let i = 0; i < count; i++) {
-    const role = roles[i % roles.length];
-    const rating = Math.round(40 + rng() * 55);
-    const fn = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)];
-    const ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
-    const salary = Math.round(STAFF_BASE_SALARY[role] * Math.pow(rating / 70, 1.6) * (0.85 + rng() * 0.3));
-    const devSkill = coachRoles.includes(role) ? Math.round(35 + rng() * 60) : undefined;
-    list.push({ id: `STAFF-${i}`, name: `${fn} ${ln}`, role, rating, salary, devSkill });
-  }
+  for (let i = 0; i < count; i++) list.push(generateStaffCandidate(rng, `STAFF-${i}`, roles[i % roles.length], ["fitnessCoach"]));
   return list;
 }
 
@@ -44,18 +78,8 @@ export function evaluateStaffOffer(candidate, offeredSalary, rejections = 0, rng
 }
 
 export function buildStaffMarketRT(count = 6) {
-  const rng = Math.random;
   const roles = Object.keys(STAFF_ROLES);
-  const coachRoles = ["headCoach", "assistantOff", "assistantDef", "fitnessCoach"];
   const list = [];
-  for (let i = 0; i < count; i++) {
-    const role = roles[i % roles.length];
-    const rating = Math.round(40 + rng() * 55);
-    const fn = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)];
-    const ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
-    const salary = Math.round(STAFF_BASE_SALARY[role] * Math.pow(rating / 70, 1.6) * (0.85 + rng() * 0.3));
-    const devSkill = coachRoles.includes(role) ? Math.round(35 + rng() * 60) : undefined;
-    list.push({ id: `STAFF-${Date.now()}-${i}`, name: `${fn} ${ln}`, role, rating, salary, devSkill });
-  }
+  for (let i = 0; i < count; i++) list.push(generateStaffCandidate(Math.random, `STAFF-${Date.now()}-${i}`, roles[i % roles.length], ["fitnessCoach"]));
   return list;
 }

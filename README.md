@@ -218,13 +218,26 @@ tests/engine.test.js       tests du moteur
 - Trios/paires/gardiens éditables par glisser-déposer ou clic-clic (échange), sur un schéma
   de patinoire façon FM24, avec liste de joueurs par position à droite
 - Personnel : directeur général (négociation de contrat, échanges, cohésion, développement),
-  entraîneur-chef, adjoints (avec compétence de développement séparée), entraîneur physique,
-  dépisteurs amateur/pro, directeur des finances, directeur des opérations hockey — chacun avec
-  une cote en étoiles (pas de note générale chiffrée à côté, contrairement aux joueurs dépistés)
-  et option délégation (contrôle manuel ou IA). Cliquer un nom (en poste ou candidat du marché)
-  ouvre son profil, en pleine page comme celui d'un joueur. Le directeur des opérations hockey
-  embauche l'ensemble du personnel hockey (tout sauf les finances, et lui-même) quand délégué à
-  chaque avancement de mois, instantanément
+  entraîneur-chef, adjoints, entraîneur physique, dépisteurs amateur/pro, directeur des
+  finances, directeur des opérations hockey — chacun avec une cote en étoiles (pas de note
+  générale chiffrée à côté, contrairement aux joueurs dépistés) et option délégation (contrôle
+  manuel ou IA). Cliquer un nom (en poste ou candidat du marché) ouvre son profil, en pleine
+  page comme celui d'un joueur. Le directeur des opérations hockey embauche l'ensemble du
+  personnel hockey (tout sauf les finances, et lui-même) quand délégué à chaque avancement de
+  mois, instantanément
+  - Attributs détaillés par poste (`engine/staff.js` STAFF_ATTRS/STAFF_ATTR_LABELS, échelle
+    interne 20-99 affichée sur /20 comme les joueurs) pour l'entraîneur-chef (entraînements
+    offensif/défensif/gardiens, développement des prospects, motivation, discipline, tactique,
+    tactique en match, gestion des joueurs), les adjoints (entraînement et compétences dans
+    leur spécialité, développement des prospects, tactique), les dépisteurs (évaluation des
+    habiletés/du potentiel, négociation pour l'amateur) et les directeurs des finances/opérations
+    hockey (négociation, prudence financière, discipline, tactique, gestion des joueurs selon le
+    poste). La **cote générale** (celle affichée en étoiles) est la moyenne de ces attributs ;
+    l'entraîneur physique, le DG et le directeur des communications gardent une seule cote
+    générale, sans détail. Le développement des prospects (entraîneur-chef/adjoints), la
+    précision/rapidité des rapports de dépistage, et les primes de performance mensuelles
+    (finances selon le profit, entraîneurs selon les victoires, dépisteur pro selon le
+    développement des prospects) utilisent directement cette cote générale
   - Embauche manuelle façon négociation de contrat de joueur (`engine/staff.js`
     evaluateStaffOffer) : une offre de salaire n'est pas acceptée sur-le-champ, le candidat
     répond après un délai de 1 à 3 jours, avec une probabilité d'acceptation qui dépend de
