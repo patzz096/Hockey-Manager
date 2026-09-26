@@ -190,11 +190,20 @@ tests/engine.test.js       tests du moteur
 
 - Statistiques des séries cumulées à part (onglet Statistiques : saison régulière / séries,
   buts gagnants) et archivées dans la carrière (S = saison, SÉ = séries)
+- Équipe de la semaine (onglet Statistiques, façon FM) : 3 attaquants, 2 défenseurs et un
+  gardien, meilleurs performeurs (points, puis % d'arrêts pour le gardien) des 7 derniers
+  jours de calendrier (`engine/stats.js` teamOfTheWeek)
 - Plafond salarial (`engine/cap.js`) : 104 M$ en 2026-2027, 113,5 M$ en 2027-2028 (annoncés),
   puis +5 %/an (hypothèse) ; plancher ≈ 74 % ; seul l'alignement LNH compte. Échanges
   (des deux côtés), offres, prolongations et rappels refusés s'ils font dépasser le plafond
   (une équipe au-dessus peut seulement réduire). Maximum 23 joueurs dans l'alignement.
   L'ordinateur signe ses agents libres sous le plafond
+- Marché vivant en saison régulière, pas seulement le 1er juillet (`engine/offseason.js`
+  aiSignFreeAgentsInSeason/aiTradesAmongCpu, appelés chaque mois tant que les échanges/
+  signatures sont ouverts) : quelques équipes de l'ordinateur signent un agent libre pour
+  combler un trou de position, et quelques paires d'équipes s'échangent un joueur chacune pour
+  la même raison (jamais ta propre équipe, jamais leur meilleur joueur au poste) — annoncé dans
+  la messagerie (« Mouvements autour de la ligue »)
 - Rachats de contrat (entre la fin des séries et le 1er juillet) : 2/3 du salaire restant
   (1/3 avant 26 ans), étalé sur le double des années restantes ; le joueur devient agent
   libre et le paiement annuel compte en cap mort (`buyoutTerms`)
@@ -324,8 +333,8 @@ tests/engine.test.js       tests du moteur
   profondeur, statistiques, feuille de match, sommaire des buts (buteur et passeurs),
   échanges, agents libres, contrats, rapport de progression, et liens « Profils » dans les
   messages qui citent des joueurs
-- Profil (joueur ou personnel) en pleine page (`PlayerModal`, `StaffProfileModal`) plutôt qu'une
-  petite fenêtre flottante — toute la page du jeu y passe, comme un véritable écran dédié
+- Profil du personnel (`StaffProfileModal`) en pleine page ; profil joueur (`PlayerModal`) en
+  fenêtre flottante compacte (comme à l'origine)
 - Mode "Sim en direct" avec horloge de période, sommaire de buts et stats en temps réel
   (uniquement pour le prochain match à jouer — les matchs déjà joués n'ont qu'une feuille de
   match statique, pas de rejeu « en direct »)

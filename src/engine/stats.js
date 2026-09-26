@@ -52,3 +52,33 @@ export function aggregateStats(games, teamsById, everyone, seedTeams = []) {
 export function leadersOf(stats) {
   return Object.values(stats).filter((s) => s.player.pos !== "G" && s.gp > 0).sort((a, b) => b.pts - a.pts || b.g - a.g);
 }
+
+const FWD_POS = ["C", "LW", "RW"], D_POS = ["LD", "RD"];
+// Équipe de la semaine (façon FM) : les 3 attaquants et 2 défenseurs les plus productifs (points,
+// puis buts) et le gardien le plus efficace (% d'arrêts, minimum 1 départ, victoires en
+// départage) sur les 7 derniers jours de calendrier (jour réel du match, voir engine/calendar.js
+// gameDay). Retourne null tant qu'aucun match n'a été joué cette semaine-là.
+export function teamOfTheWeek(schedule, seasonYear, currentDay, teamsById, everyone) {
+  const weekStart = currentDay - 6;
+  const weekGames = schedule.filter((g) => g.played && g.box && gameDay(seasonYear, g) >= weekStart && gameDay(seasonYear, g) <= currentDay);
+  if (weekGames.length === 0) return null;
+  const stats = aggregateStats(weekGames, teamsById, everyone);
+  const skaters = Object.values(stats).filter((s) => s.gp > 0 && s.player.pos !== "G");
+  const byPts = (a, b) => b.pts - a.pts || b.g - a.g;
+  const forwards = skaters.filter((s) => FWD_POS.includes(s.player.pos)).sort(byPts).slice(0, 3);
+  const defense = skaters.filter((s) => D_POS.includes(s.player.pos)).sort(byPts).slice(0, 2);
+  const goalieTotals = {};
+  weekGames.forEach((g) => {
+    [[g.box.homeGoalie, teamsById[g.home]], [g.box.awayGoalie, teamsById[g.away]]].forEach(([gl, team]) => {
+      if (!gl?.playerId) return;
+      const e = (goalieTotals[gl.playerId] ||= { saves: 0, shotsAgainst: 0, gp: 0, w: 0, player: everyone[gl.playerId]?.player, team });
+      e.saves += gl.saves || 0; e.shotsAgainst += gl.shotsAgainst || 0; e.gp++;
+    });
+    const winSide = g.homeScore > g.awayScore ? "home" : "away";
+    const wGoalie = winSide === "home" ? g.box.homeGoalie : g.box.awayGoalie;
+    if (wGoalie?.playerId && goalieTotals[wGoalie.playerId]) goalieTotals[wGoalie.playerId].w++;
+  });
+  const goalie = Object.values(goalieTotals).filter((g) => g.player).sort((a, b) => (b.shotsAgainst ? b.saves / b.shotsAgainst : 0) - (a.shotsAgainst ? a.saves / a.shotsAgainst : 0) || b.w - a.w)[0] || null;
+  if (forwards.length < 3 || defense.length < 2 || !goalie) return null;
+  return { forwards, defense, goalie, weekStart, weekEnd: currentDay };
+}

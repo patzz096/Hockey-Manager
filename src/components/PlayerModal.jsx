@@ -167,22 +167,21 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
   const shown = isMine ? perceivedRatings(player, null) : perceivedRatings(player, scoutInfo);
   const qColor = scoutQualityColor(scoutInfo.quality);
   return (
-    <div style={{ position: "fixed", inset: 0, background: "var(--navy)", zIndex: 80, display: "flex", flexDirection: "column" }}>
-      <div style={{ background: `linear-gradient(90deg, ${owner.color}, ${owner.color}99)`, padding: "16px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ position: "relative" }}>
-            <PlayerFace player={player} size={56} color={owner.color} />
-            <span style={{ position: "absolute", right: -4, bottom: -2, background: "var(--navy)", border: "1px solid #ffffff55", borderRadius: 10, padding: "0 5px", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 11, color: "#fff" }}>{player.number ?? player.pos}</span>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#00000099", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 80, padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--navy2)", border: `1px solid ${owner.color}55`, borderRadius: 4, width: 500, maxWidth: "94vw", maxHeight: "90vh", overflow: "auto" }}>
+        <div style={{ background: `linear-gradient(90deg, ${owner.color}, ${owner.color}99)`, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ position: "relative" }}>
+              <PlayerFace player={player} size={56} color={owner.color} />
+              <span style={{ position: "absolute", right: -4, bottom: -2, background: "var(--navy)", border: "1px solid #ffffff55", borderRadius: 10, padding: "0 5px", fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 11, color: "#fff" }}>{player.number ?? player.pos}</span>
+            </div>
+            <div>
+              <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 17, color: "#fff" }}>{player.name}<InjuryBadge injury={injuries[player.id]} day={currentDay} /></div>
+              <div style={{ fontSize: 12, color: "#ffffffcc" }}>{NATION_FLAG[player.nationality] || "🏳️"} {owner.name} · {player.pos} · {player.age} ans</div>
+            </div>
           </div>
-          <div>
-            <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 19, color: "#fff" }}>{player.name}<InjuryBadge injury={injuries[player.id]} day={currentDay} /></div>
-            <div style={{ fontSize: 12, color: "#ffffffcc" }}>{NATION_FLAG[player.nationality] || "🏳️"} {owner.name} · {player.pos} · {player.age} ans</div>
-          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}><X size={18} /></button>
         </div>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}><X size={22} /></button>
-      </div>
-      <div style={{ flex: 1, overflow: "auto" }}>
-        <div style={{ maxWidth: 920, margin: "0 auto", padding: "0 28px 32px" }}>
         <ActionsPanel actions={actions} known={known || isMine} onClose={onClose} />
         <div style={{ display: "flex", borderBottom: "1px solid #ffffff1a", padding: "0 8px" }}>
           <button onClick={() => setTab("profile")} style={tabStyle(tab === "profile", owner.color)}>Profil</button>
@@ -307,7 +306,6 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
             <button onClick={() => onEdit(player)} style={{ ...btnStyle("var(--steel)"), width: "100%", justifyContent: "center" }}>Modifier ce joueur</button>
           )}
           </>)}
-        </div>
         </div>
       </div>
     </div>

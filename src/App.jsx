@@ -11,8 +11,9 @@ import { createDraft, aiPick, makePick, draftDone, upcomingDraftClass } from "./
 import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promoteFromJunior } from "./engine/minorLeagues";
 import { DEFAULT_MISSIONS, DEFAULT_COVERAGE, MAX_EXTRA_SCOUTS, weeklyScouting, regionLabel, scoutRoster, buildScoutMarket, missionSummary } from "./engine/scoutingZones";
 import { ScoutingCenter } from "./components/ScoutingCenter";
-import { expireContracts, aiFreeAgency, agePlayers } from "./engine/offseason";
-import { aggregateStats, leadersOf } from "./engine/stats";
+import { expireContracts, aiFreeAgency, agePlayers, aiSignFreeAgentsInSeason, aiTradesAmongCpu } from "./engine/offseason";
+import { aggregateStats, leadersOf, teamOfTheWeek } from "./engine/stats";
+import { TeamOfTheWeek } from "./components/TeamOfTheWeek";
 import { capStatus, fitsUnderCap, ROSTER_MAX, formatMoney, deadCapFor, buyoutTerms, retentionEntry, MAX_RETAINED_CONTRACTS } from "./engine/cap";
 import { injuriesFromGame, dressTeam, isInjured, ltirEligible, injuryLabel } from "./engine/injuries";
 import { waiverExempt, placeOnWaivers, resolveWaivers, aiWaiverCandidates, aiMonthlyMoves } from "./engine/waivers";
@@ -234,6 +235,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [statsMode, setStatsMode] = useState("regular");
 
   const leaders = useMemo(() => leadersOf(seasonStats), [seasonStats]);
+  const weeklyTeam = useMemo(() => teamOfTheWeek(schedule, seasonYear, currentDay, teamsById, everyone), [schedule, seasonYear, currentDay, teamsById, everyone]);
   const playoffLeaders = useMemo(() => leadersOf(playoffStats), [playoffStats]);
   const teamHitTotals = useMemo(() => {
     const totals = {};
@@ -1275,6 +1277,26 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       ? recentGames.reduce((a, g) => a + g.attendance / (g.tiers.reduce((s, t) => s + t.capacity, 0) || 1), 0) / recentGames.length
       : 0.6;
     setBusiness((prev) => ({ ...prev, fanEngagement: applyEngagementDelta(prev.fanEngagement, utilization, monthWinPct, prev.facilities.marketing, prev.staff.broadcastDirector?.rating) }));
+    // Activité du marché des équipes de l'ordinateur, EN SAISON (engine/offseason.js) : sans ça,
+    // seul le 1er juillet voyait l'IA bouger, et les échanges/signatures semblaient à l'arrêt le
+    // reste de l'année. `workingTeams` chaîne les deux résultats (jamais ta propre équipe) avant
+    // de les fusionner par setTeams fonctionnel, pour ne jamais écraser la progression de ton
+    // effectif déjà appliquée plus haut dans ce même appel.
+    if (phase === "regular" && txWindow.open) {
+      let workingTeams = teams;
+      const signResult = aiSignFreeAgentsInSeason(workingTeams, freeAgents, myTeamId, seasonYear, Math.random, 3);
+      if (signResult) { workingTeams = signResult.teams; setFreeAgents(signResult.freeAgents); }
+      const tradeResult = aiTradesAmongCpu(workingTeams, myTeamId, seasonYear, Math.random, 2);
+      if (tradeResult) workingTeams = tradeResult.teams;
+      if (signResult || tradeResult) {
+        const changedById = Object.fromEntries(workingTeams.filter((t) => t.id !== myTeamId).map((t) => [t.id, t]));
+        setTeams((prev) => prev.map((t) => changedById[t.id] || t));
+        const marketLines = [];
+        if (signResult) marketLines.push(...signResult.signings.map((s) => `${teamsById[s.teamId].name} signe ${s.player.name} (${s.player.pos}).`));
+        if (tradeResult) marketLines.push(...tradeResult.trades.map((t) => `${teamsById[t.teamAId].name} envoie ${t.playerFromA.name} à ${teamsById[t.teamBId].name} contre ${t.playerFromB.name}.`));
+        addMessage({ from: "Ligue", subject: `Mouvements autour de la ligue — ${label}`, category: "transaction", body: marketLines.join("\n") });
+      }
+    }
     setProfitThisMonth(0);
     setWinsThisMonth(0);
   }
@@ -1534,7 +1556,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
       {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.gm?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
-      <div style={{ width: 200, background: `linear-gradient(180deg, ${myTeam.color}33, var(--navy2) 160px)`, padding: "20px 12px", display: "flex", flexDirection: "column", gap: 3, borderRight: "1px solid var(--line)" }}>
+      <div style={{ width: 200, background: "var(--navy2)", padding: "20px 12px", display: "flex", flexDirection: "column", gap: 2, borderRight: "1px solid var(--line)" }}>
         <div style={{ padding: "0 8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
           <TeamCrest team={myTeam} size={34} />
           <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, color: myTeam.color, lineHeight: 1.15, flex: 1 }}>{myTeam.name}</div>
@@ -1548,7 +1570,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {navItems.map(({ key, label, icon: Icon }) => {
           const lockReason = TAB_LOCK_REASON[key];
           return (
-          <button key={key} title={lockReason || undefined} className={`nav-btn${tab === key ? " is-active" : ""}`} onClick={() => setTab(key)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", borderRadius: 7, border: "none", background: tab === key ? "linear-gradient(90deg, rgba(92,200,255,0.20), rgba(92,200,255,0.04))" : "transparent", color: tab === key ? "var(--ice)" : "var(--iceMuted)", fontSize: 14, fontWeight: tab === key ? 600 : 500, cursor: "pointer", textAlign: "left" }}>
+          <button key={key} title={lockReason || undefined} className={`nav-btn${tab === key ? " is-active" : ""}`} onClick={() => setTab(key)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", borderRadius: 6, border: "none", background: tab === key ? "rgba(92,200,255,0.10)" : "transparent", color: tab === key ? "var(--ice)" : "var(--iceMuted)", fontSize: 14, fontWeight: tab === key ? 600 : 500, cursor: "pointer", textAlign: "left" }}>
             <Icon size={16} color={tab === key ? "var(--accent)" : "currentColor"} /> {label}
             {lockReason && <Lock size={11} color="var(--iceMuted)" style={{ marginLeft: "auto" }} />}
           </button>
@@ -1556,7 +1578,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         })}
         <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}><span style={{ color: "var(--ice)" }}>{formatDay(currentDay)}</span><br />Plafond : <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} compact /><br />Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
       </div>
-      <div key={tab} className="tab-view" style={{ flex: 1, padding: "24px 32px", overflow: "auto", background: "radial-gradient(1100px 480px at 75% -12%, rgba(92,200,255,0.08), transparent 60%)" }}>
+      <div key={tab} className="tab-view" style={{ flex: 1, padding: "24px 32px", overflow: "auto", background: "var(--navy)" }}>
         {notice && <div onClick={() => setNotice(null)} style={{ background: "#B84A4A33", border: "1px solid var(--loss)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 13, cursor: "pointer" }}>{notice} <span style={{ color: "var(--iceMuted)", fontSize: 11 }}>(clique pour fermer)</span></div>}
         {compareBase && (
           <div style={{ background: "rgba(92,200,255,0.14)", border: "1px solid var(--accent)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1677,6 +1699,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           </div>
         )}
 
+        {tab === "stats" && statsMode === "regular" && <TeamOfTheWeek tow={weeklyTeam} onSelectPlayer={selectPlayer} />}
         {tab === "stats" && <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
           {[["regular", "Saison régulière"], ["playoffs", "Séries éliminatoires"]].map(([k, l]) => <button key={k} onClick={() => setStatsMode(k)} style={{ ...btnStyle(statsMode === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>)}
         </div>}
