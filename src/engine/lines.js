@@ -27,7 +27,9 @@ export function buildLines(roster) {
   // roles : rôles demandés (id du joueur → rôle) ; vide = rôle naturel de chaque joueur.
   // cohesion : rodage du système de jeu (engine/training.js) ; 100 = pleinement rodé (la
   // valeur par défaut pour les 31 autres équipes, jamais suivie que pour la tienne).
-  return { forwards, defense, goalies, pp: pp.units, pk: pk.units, special: { pp: pp.id, pk: pk.id }, roles: {}, strategy: { ...DEFAULT_STRATEGY }, mentality: { ...DEFAULT_MENTALITY }, cohesion: 100 };
+  // captain/alternates : purement honorifique (badge C/A dans l'interface), voir App.jsx
+  // setCaptain/toggleAlternate — n'affecte pas la simulation.
+  return { forwards, defense, goalies, pp: pp.units, pk: pk.units, special: { pp: pp.id, pk: pk.id }, roles: {}, strategy: { ...DEFAULT_STRATEGY }, mentality: { ...DEFAULT_MENTALITY }, cohesion: 100, captain: null, alternates: [] };
 }
 
 export function lineInfo(playerId, lines) {

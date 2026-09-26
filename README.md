@@ -217,6 +217,13 @@ tests/engine.test.js       tests du moteur
 **Gestion**
 - Trios/paires/gardiens éditables par glisser-déposer ou clic-clic (échange), sur un schéma
   de patinoire façon FM24, avec liste de joueurs par position à droite
+- Clic droit sur un joueur de l'alignement (façon FM) : menu contextuel avec voir le profil,
+  comparer avec un autre joueur (attribut par attribut, deux patineurs ou deux gardiens entre
+  eux), les actions déjà offertes par son profil (rappel/renvoi, ballottage, LTIR, contrat,
+  rachat, réclamation, repêchage — celles à confirmation ouvrent le profil plutôt que d'agir
+  sans confirmer), nommer capitaine/adjoint (badge C/A, purement honorifique) et mettre/retirer
+  du marché des échanges (liste visible en tête de l'onglet Transactions, organisationnel —
+  n'affecte pas les décisions de l'IA)
 - Personnel : directeur général (négociation de contrat, échanges, cohésion, développement),
   entraîneur-chef, adjoints, entraîneur physique, dépisteurs amateur/pro, directeur des
   finances, directeur des opérations hockey — chacun avec une cote en étoiles (pas de note

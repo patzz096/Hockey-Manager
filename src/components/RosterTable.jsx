@@ -7,7 +7,7 @@ import { scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerFace, InjuryBadge } from "./common";
 
-export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowledge, onSelect, injuries = {}, day = 0 }) {
+export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowledge, onSelect, onContextMenu, injuries = {}, day = 0 }) {
   const [sortKey, sortDir, toggleSort] = useSort("ovr");
   const benchmark = teamOvrBenchmark({ roster });
   const accessor = (p, key) => {
@@ -43,10 +43,10 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, scoutKnowl
           const qColor = scoutQualityColor(scoutInfo.quality);
           const cond = p.condition ?? BASE_CONDITION;
           return (
-          <tr key={p.id} onClick={() => onSelect(p)} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }}
+          <tr key={p.id} onClick={() => onSelect(p)} onContextMenu={onContextMenu ? (e) => { e.preventDefault(); onContextMenu(e, p); } : undefined} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{p.number ?? "—"}</td>
-            <td style={{ padding: "5px 10px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><PlayerFace player={p} size={26} />{p.name}<InjuryBadge injury={injuries[p.id]} day={day} /></span></td>
+            <td style={{ padding: "5px 10px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><PlayerFace player={p} size={26} />{p.name}{lines?.captain === p.id && <span title="Capitaine" style={{ fontSize: 10, fontWeight: 700, color: "var(--gold)", border: "1px solid var(--gold)", borderRadius: 3, padding: "0 4px" }}>C</span>}{(lines?.alternates || []).includes(p.id) && <span title="Adjoint" style={{ fontSize: 10, fontWeight: 700, color: "var(--iceMuted)", border: "1px solid var(--iceMuted)", borderRadius: 3, padding: "0 4px" }}>A</span>}<InjuryBadge injury={injuries[p.id]} day={day} /></span></td>
             <td style={{ padding: "7px 10px" }}>{p.pos}</td>
             <td style={{ padding: "7px 10px" }}>{p.age}</td>
             <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{lineLabel(p.id, lines)}</td>

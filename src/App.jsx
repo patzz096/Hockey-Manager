@@ -36,6 +36,8 @@ import { autoUnits, bestSpecial, specialUnits, specialSystems } from "./engine/s
 import { PlayerEditorModal } from "./components/PlayerEditorModal";
 import { PlayerModal } from "./components/PlayerModal";
 import { StaffProfileModal } from "./components/StaffProfileModal";
+import { ComparePlayersModal } from "./components/ComparePlayersModal";
+import { ContextMenu } from "./components/ContextMenu";
 import { RosterTable } from "./components/RosterTable";
 import { StaffCenter } from "./components/StaffCenter";
 import { TrainingCenter } from "./components/TrainingCenter";
@@ -137,6 +139,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // evaluateStaffOffer) : { [candidateId]: { rejections, stonewalled } }.
   const [pendingStaffOffers, setPendingStaffOffers] = useState([]);
   const [staffNegotiations, setStaffNegotiations] = useState({});
+  // Marché des échanges : joueurs de ton effectif que tu signales disponibles (purement
+  // organisationnel — n'affecte pas les décisions de l'IA), visible dans l'onglet Transactions.
+  const [tradeBlockIds, setTradeBlockIds] = useState([]);
+  // Menu contextuel (clic droit sur un joueur) et comparaison de deux joueurs.
+  const [ctxMenu, setCtxMenu] = useState(null); // { x, y, player }
+  const [compareBase, setCompareBase] = useState(null); // joueur en attente d'un second choix
+  const [comparePlayers, setComparePlayers] = useState(null); // [p1, p2]
   const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), merchItems: DEFAULT_MERCH_ITEMS.map((i) => ({ ...i })), fanEngagement: DEFAULT_ENGAGEMENT, tvDeal: negotiateTvDeal(DEFAULT_ENGAGEMENT, 0.5, FIRST_SEASON), staff: { hockeyOpsDirector: null, gm: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null, broadcastDirector: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
@@ -460,8 +469,19 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     });
   }
   function selectPlayer(player, team = null) {
+    if (compareBase) {
+      const real = realPlayer(player);
+      if (real.id === compareBase.id) { setNotice("Choisis un second joueur, différent du premier."); return; }
+      if (real.pos === "G" !== (compareBase.pos === "G")) { setNotice("Compare deux gardiens ou deux patineurs entre eux."); return; }
+      setComparePlayers([compareBase, real]);
+      setCompareBase(null);
+      return;
+    }
     if (team?.id === myTeamId) setSelectedPlayer({ player: staffViewPlayer(realPlayer(player), business.staff), team: myTeamView });
     else setSelectedPlayer({ player, team });
+  }
+  function toggleTradeBlock(playerId) {
+    setTradeBlockIds((prev) => (prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]));
   }
   function openCreatePlayer() {
     setSelectedPlayer(null);
@@ -544,6 +564,19 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
   function resetNaturalRoles() {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], roles: naturalRoles(teamsById[myTeamId].roster) } }));
+  }
+  // Capitaine / adjoints : purement honorifiques (badge C/A), un capitaine et jusqu'à 2 adjoints.
+  const MAX_ALTERNATES = 2;
+  function setCaptain(playerId) {
+    setLinesByTeam((prev) => { const cur = prev[myTeamId]; return { ...prev, [myTeamId]: { ...cur, captain: cur.captain === playerId ? null : playerId, alternates: (cur.alternates || []).filter((id) => id !== playerId) } }; });
+  }
+  function toggleAlternate(playerId) {
+    setLinesByTeam((prev) => {
+      const cur = prev[myTeamId];
+      const alternates = cur.alternates || [];
+      const next = alternates.includes(playerId) ? alternates.filter((id) => id !== playerId) : alternates.length < MAX_ALTERNATES ? [...alternates, playerId] : alternates;
+      return { ...prev, [myTeamId]: { ...cur, alternates: next } };
+    });
   }
   function updateMentality(field, value) {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], mentality: { ...prev[myTeamId].mentality, [field]: value } } }));
@@ -1105,6 +1138,37 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     }
     return out;
   }
+  // Menu contextuel (clic droit) sur un joueur : profil/comparaison en tête, puis les actions du
+  // profil (playerActions), puis capitaine/adjoints et marché des échanges pour ton effectif —
+  // les actions à confirmation (rachat, etc.) ouvrent le profil plutôt que d'agir sans confirmer.
+  function openPlayerContextMenu(e, player) {
+    const onMyRoster = teamsById[myTeamId].roster.some((p) => p.id === player.id);
+    const items = [
+      { label: "Voir le profil", onClick: () => selectPlayer(player, onMyRoster ? myTeam : null) },
+      { label: "Comparer avec…", onClick: () => setCompareBase(realPlayer(player)) },
+    ];
+    const actions = playerActions(player);
+    if (actions.length) {
+      items.push(null);
+      actions.forEach((a) => {
+        if (a.status) { items.push({ status: a.status }); return; }
+        items.push({ label: a.label, color: a.color, disabled: a.disabled, onClick: a.confirmLabel ? () => selectPlayer(player, onMyRoster ? myTeam : null) : a.onClick });
+      });
+    }
+    if (onMyRoster && player.pos !== "G") {
+      items.push(null);
+      const isCaptain = myLines.captain === player.id;
+      const isAlt = (myLines.alternates || []).includes(player.id);
+      items.push({ label: isCaptain ? "Retirer le C" : "Nommer capitaine (C)", color: "var(--gold)", onClick: () => setCaptain(player.id) });
+      items.push({ label: isAlt ? "Retirer le A" : "Nommer adjoint (A)", color: "var(--gold)", disabled: !isAlt && (myLines.alternates || []).length >= MAX_ALTERNATES, onClick: () => toggleAlternate(player.id) });
+    }
+    if (onMyRoster) {
+      items.push(null);
+      const onBlock = tradeBlockIds.includes(player.id);
+      items.push({ label: onBlock ? "Retirer du marché des échanges" : "Mettre sur le marché des échanges", color: onBlock ? "var(--loss)" : "var(--accent)", onClick: () => toggleTradeBlock(player.id) });
+    }
+    setCtxMenu({ x: e.clientX, y: e.clientY, items });
+  }
   function toggleClaim(playerId) {
     setMyClaims((prev) => (prev.includes(playerId) ? prev.filter((x) => x !== playerId) : [...prev, playerId]));
   }
@@ -1466,6 +1530,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
       {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
+      {comparePlayers && <ComparePlayersModal players={comparePlayers} team={myTeam} onClose={() => setComparePlayers(null)} />}
+      {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
       {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.gm?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 200, background: `linear-gradient(180deg, ${myTeam.color}33, var(--navy2) 160px)`, padding: "20px 12px", display: "flex", flexDirection: "column", gap: 3, borderRight: "1px solid var(--line)" }}>
@@ -1492,6 +1558,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       </div>
       <div key={tab} className="tab-view" style={{ flex: 1, padding: "24px 32px", overflow: "auto", background: "radial-gradient(1100px 480px at 75% -12%, rgba(92,200,255,0.08), transparent 60%)" }}>
         {notice && <div onClick={() => setNotice(null)} style={{ background: "#B84A4A33", border: "1px solid var(--loss)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 13, cursor: "pointer" }}>{notice} <span style={{ color: "var(--iceMuted)", fontSize: 11 }}>(clique pour fermer)</span></div>}
+        {compareBase && (
+          <div style={{ background: "rgba(92,200,255,0.14)", border: "1px solid var(--accent)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Mode comparaison : clique un second {compareBase.pos === "G" ? "gardien" : "patineur"} pour comparer avec <strong>{compareBase.name}</strong>.</span>
+            <button onClick={() => setCompareBase(null)} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Annuler</button>
+          </div>
+        )}
         {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={() => playLive(false)} onEndOfPeriod={() => playLive(true)} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")}
           shiftPicker={shiftPicker} onOpenShiftPicker={openShiftPicker} onPickForward={(i) => updateShiftPicker({ forwardIdx: i })} onPickDefense={(i) => updateShiftPicker({ defenseIdx: i })} onSendShift={sendShift} onCancelShift={cancelShiftPicker} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
@@ -1527,7 +1599,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
               <button onClick={openCreatePlayer} style={btnStyle("var(--win)")}>+ Créer un joueur</button>
             </div>
             <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 14 }}>Clique un joueur pour voir ses cotes détaillées, puis "Modifier ce joueur" pour l'éditer.</p>
-            <RosterTable roster={myTeam.roster} lines={myLines} staff={business.staff} myTeamId={myTeamId} teamId={myTeamId} scoutKnowledge={scoutKnowledge} onSelect={(p) => selectPlayer(p, myTeam)} injuries={injuries} day={currentDay} />
+            <RosterTable roster={myTeam.roster} lines={myLines} staff={business.staff} myTeamId={myTeamId} teamId={myTeamId} scoutKnowledge={scoutKnowledge} onSelect={(p) => selectPlayer(p, myTeam)} onContextMenu={openPlayerContextMenu} injuries={injuries} day={currentDay} />
           </div>
         )}
 
@@ -1539,7 +1611,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 

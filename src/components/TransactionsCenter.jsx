@@ -14,7 +14,7 @@ function tradeValue(ovr, potential, age) {
   return ovr + upside;
 }
 
-export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null }) {
+export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);
   const [partnerId, setPartnerId] = useState(otherTeams[0]?.id);
   const [myIds, setMyIds] = useState([]);
@@ -48,9 +48,23 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
     );
   }
 
+  const onBlock = myTeam.roster.filter((p) => tradeBlockIds.includes(p.id));
   return (
     <div>
       <h2 style={h2Style}>Échanges</h2>
+      {onBlock.length > 0 && (
+        <div style={{ background: "var(--navy)", border: "1px solid var(--accent)", borderRadius: 4, padding: "10px 14px", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: 0.5, marginBottom: 6 }}>MARCHÉ DES ÉCHANGES — JOUEURS DISPONIBLES</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {onBlock.map((p) => (
+              <span key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, background: "#ffffff0f", borderRadius: 3, padding: "3px 8px", fontSize: 12 }}>
+                <PlayerLink player={p} team={myTeam} onSelect={onSelectPlayer} /> ({p.pos})
+                <button onClick={() => onToggleTradeBlock(p.id)} title="Retirer du marché" style={{ background: "none", border: "none", color: "var(--iceMuted)", cursor: "pointer", padding: 0, fontSize: 12 }}>✕</button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>Équipe partenaire</div>
         <select value={partner?.id} onChange={(e) => changePartner(e.target.value)} style={inputStyle}>
