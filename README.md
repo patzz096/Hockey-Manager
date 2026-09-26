@@ -49,7 +49,7 @@ src/
     scouting.js            getScoutInfo (brouillard de dépistage)
   ui/                      thème (couleurs, styles), formatage, hook de tri
   components/              un fichier par écran ou onglet
-    match/                 feuille de match, sim en direct, visionneur, sommaire des buts
+    match/                 feuille de match, sim en direct, sommaire des buts
 tests/engine.test.js       tests du moteur
 ```
 
@@ -235,14 +235,19 @@ tests/engine.test.js       tests du moteur
   direct, l'énergie de chaque joueur (initialisée à sa condition) baisse avec son temps de
   glace et se voit sur les trios/paires du sélecteur de mise en jeu (« état de forme ») —
   de quoi rendre coûteux d'envoyer toujours le trio no 1. Séances planifiables directement
-  au calendrier (onglet Calendrier, vue « Mon équipe »), jusqu'à 2 par jour (matin et
-  après-midi) — un jour de match n'en permet qu'une, le matin, puisque le match compte pour
-  l'autre case : le programme par défaut (onglet Entraînement) ne s'applique que les semaines
-  sans séance planifiée ; en délégué, l'IA choisit et affiche ses propres séances chaque jour
-- Calendrier mensuel pour ton équipe (`MonthlyCalendar`) : matchs et séances d'entraînement
-  du mois sur une grille classique (case matin/après-midi par jour), navigation mois par
-  mois, séance planifiée ou annulée d'un clic ; le calendrier complet (toutes les équipes,
-  par ronde) reste disponible à côté
+  dans l'onglet Entraînement, jusqu'à 2 par jour (matin et après-midi) — un jour de match
+  n'en permet qu'une, le matin, puisque le match compte pour l'autre case : le programme
+  par défaut ne s'applique que les semaines sans séance planifiée ; en délégué, l'IA choisit
+  et affiche ses propres séances chaque jour
+- Calendrier mensuel pour ton équipe (`MonthlyCalendar`, onglet **Entraînement**) : matchs
+  (pour contexte) et séances d'entraînement du mois sur une grille classique (case
+  matin/après-midi par jour), navigation mois par mois, séance planifiée ou annulée d'un clic
+- Calendrier de la ligue (onglet **Calendrier**) réaliste façon LNH : les 32 équipes ne
+  jouent jamais toutes le même soir — chaque ronde du calendrier aller-retour est étalée sur
+  quelques jours consécutifs (`slot`/`gameDay`, `src/engine/calendar.js` et `league.js`).
+  Vue « Calendrier complet » et vue « Mon équipe seulement » affichent la même liste groupée
+  par jour, simplement filtrée à ton équipe. Le bouton **Simuler la journée** ne simule que
+  les matchs de la prochaine journée où il y en a (peut être un sous-ensemble d'une ronde)
 - Finances : billetterie à 3 paliers, stationnement, 10 items de concession, marchandise
   itemisée (chandail, casquette, t-shirt, souvenir — `engine/finance.js`), installations
   améliorables, bilan détaillé par match local (billetterie, concessions, marchandise,
@@ -289,10 +294,11 @@ tests/engine.test.js       tests du moteur
 **Interface**
 - Joueurs cliquables partout (composant `PlayerLink`) : alignement, trios (double-clic),
   profondeur, statistiques, feuille de match, sommaire des buts (buteur et passeurs),
-  visionneur de match, échanges, agents libres, contrats, rapport de progression, et liens
-  « Profils » dans les messages qui citent des joueurs
-- Visionneur de match animé 2D (rejeu du résultat déjà simulé, pas une physique en direct)
+  échanges, agents libres, contrats, rapport de progression, et liens « Profils » dans les
+  messages qui citent des joueurs
 - Mode "Sim en direct" avec horloge de période, sommaire de buts et stats en temps réel
+  (uniquement pour le prochain match à jouer — les matchs déjà joués n'ont qu'une feuille de
+  match statique, pas de rejeu « en direct »)
 - Choix du trio et de la paire de défense pour chaque mise au jeu, en sim en direct (bouton
   « Choisir le trio et la paire ») : avantage du dernier changement comme dans la vraie LNH — les
   visiteurs envoient toujours leur ligne en premier (visible), l'équipe locale réplique en

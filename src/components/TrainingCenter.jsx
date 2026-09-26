@@ -2,11 +2,14 @@ import { attr20, starsFor, teamOvrBenchmark } from "../engine/attributes";
 import { BASE_CONDITION, TRAINING_FOCUSES, conditionColor, conditionLabel, cohesionColor, cohesionLabel } from "../engine/training";
 import { h2Style, btnStyle, attr20Color } from "../ui/theme";
 import { StarRating } from "./common";
+import { MonthlyCalendar } from "./MonthlyCalendar";
 
 // Entraînement (forme physique, cohésion tactique, délégation) — séparé de Personnel : c'est un
 // système à part entière (engine/training.js), même si l'entraîneur physique lui-même se gère
-// toujours dans Personnel (embauche/congédiement, comme le reste du personnel).
-export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, onSetTrainingFocus }) {
+// toujours dans Personnel (embauche/congédiement, comme le reste du personnel). Le calendrier de
+// planification des séances (matin/après-midi) vit ici plutôt que dans l'onglet Calendrier,
+// puisqu'il s'agit d'entraînement et non de matchs.
+export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, onSetTrainingFocus, calendarMonth, currentDay, teamsById, schedule, seasonYear, trainingPreview, onPrevMonth, onNextMonth, onScheduleTraining, onCancelTraining }) {
   const avgCondition = myTeam.roster.length ? myTeam.roster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myTeam.roster.length : BASE_CONDITION;
   const coach = business.staff.fitnessCoach;
   const benchmark = teamOvrBenchmark(myTeam);
@@ -50,7 +53,7 @@ export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, on
         </div>
       </div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>La cohésion baisse quand tu changes ta stratégie et remonte à l'entraînement — un système bien rodé rend pleinement les bonus/malus de ta stratégie. Un entraîneur physique en poste accélère la récupération de la forme et contribue au développement des joueurs.</p>
-      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>Planifie jusqu'à 2 séances précises par jour (matin et après-midi) dans l'onglet <strong>Calendrier</strong> (vue « Mon équipe ») — un jour de match n'en permet qu'une, le matin. Le programme par défaut ci-dessous ne s'applique que les semaines où tu n'as rien planifié.</p>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>Planifie jusqu'à 2 séances précises par jour (matin et après-midi) ci-dessous — un jour de match n'en permet qu'une, le matin. Le programme par défaut ci-dessous ne s'applique que les semaines où tu n'as rien planifié.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 10, marginBottom: 10 }}>
         {Object.entries(TRAINING_FOCUSES).map(([key, f]) => (
           <button key={key} disabled={delegated} onClick={() => onSetTrainingFocus(key)} style={{ ...btnStyle(business.trainingFocus === key ? "var(--accent)" : "var(--steel)"), flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, opacity: delegated ? 0.55 : 1, cursor: delegated ? "default" : "pointer" }}>
@@ -60,6 +63,13 @@ export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, on
         ))}
       </div>
       {delegated && <p style={{ fontSize: 11, color: "var(--iceMuted)" }}>Entraînement délégué — l'accent est choisi automatiquement chaque jour.</p>}
+
+      <h2 style={h2Style}>Planification</h2>
+      <MonthlyCalendar
+        monthDay={calendarMonth} currentDay={currentDay} myTeam={myTeam} teamsById={teamsById} schedule={schedule} seasonYear={seasonYear}
+        trainingSchedule={business.trainingSchedule} delegation={business.delegation.training} trainingPreview={trainingPreview}
+        onPrevMonth={onPrevMonth} onNextMonth={onNextMonth} onSchedule={onScheduleTraining} onCancelTraining={onCancelTraining}
+      />
     </div>
   );
 }

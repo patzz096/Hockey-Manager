@@ -5,7 +5,7 @@ import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBon
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
-import { FIRST_SEASON, seasonDates, roundDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths } from "./engine/calendar";
+import { FIRST_SEASON, seasonDates, gameDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths } from "./engine/calendar";
 import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, lotteryIneligible, ROUND_NAMES } from "./engine/playoffs";
 import { createDraft, aiPick, makePick, draftDone, upcomingDraftClass } from "./engine/draft";
 import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promoteFromJunior } from "./engine/minorLeagues";
@@ -39,7 +39,6 @@ import { PlayerModal } from "./components/PlayerModal";
 import { RosterTable } from "./components/RosterTable";
 import { StaffCenter } from "./components/StaffCenter";
 import { TrainingCenter } from "./components/TrainingCenter";
-import { MonthlyCalendar } from "./components/MonthlyCalendar";
 import { StandingsTable } from "./components/StandingsTable";
 import { StatsTables } from "./components/StatsTables";
 import { StrategyEditor } from "./components/StrategyEditor";
@@ -48,7 +47,6 @@ import { TeamCrest } from "./components/common";
 import { CustomizationPanel } from "./components/CustomizationPanel";
 import { useCustomization } from "./custom/CustomizationContext";
 import { BoxscoreView } from "./components/match/BoxscoreView";
-import { LiveMatchViewer } from "./components/match/LiveMatchViewer";
 import { LiveSimPanel, clockDisplay, livePeriod } from "./components/match/LiveSimPanel";
 import { PlayoffsPanel } from "./components/PlayoffsPanel";
 import { RolesPanel } from "./components/RolesPanel";
@@ -118,7 +116,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [tab, setTab] = useState("roster");
   const [rngSeed, setRngSeed] = useState(1000);
   const [expandedGameId, setExpandedGameId] = useState(null);
-  const [watchingGame, setWatchingGame] = useState(null);
   const [liveMatch, setLiveMatch] = useState(null);
   // Choix du trio / de la paire à envoyer sur la glace pour la prochaine mise au jeu (sim en
   // direct). { myIsHome, oppShift: {forwardIdx, defenseIdx}, forwardIdx, defenseIdx }.
@@ -145,7 +142,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const myFarmView = useMemo(() => (farmByTeam[myTeamId] || []).map((p) => staffViewPlayer(p, business.staff)), [farmByTeam, myTeamId, business.staff]);
   const realPlayer = (p) => findPlayer(p.id) || p;
   const standings = useMemo(() => computeStandings(teams, schedule), [teams, schedule]);
-  const currentRound = useMemo(() => { const n = schedule.find((g) => !g.played); return n ? n.round : null; }, [schedule]);
+  // Jour du prochain match à jouer, tous calendriers confondus (voir engine/calendar.js
+  // gameDay) — les matchs d'une même ronde ne se jouent plus tous le même soir.
+  const currentGameDay = useMemo(() => {
+    const unplayed = schedule.filter((g) => !g.played);
+    return unplayed.length ? Math.min(...unplayed.map((g) => gameDay(seasonYear, g))) : null;
+  }, [schedule, seasonYear]);
   const dates = seasonDates(seasonYear);
   // Cuvée du prochain repêchage : celle de la saison, ou la suivante une fois le repêchage passé.
   const classYear = draft && draftDone(draft) ? seasonYear + 1 : seasonYear;
@@ -176,18 +178,18 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const myRoster = teamsById[myTeamId]?.roster || [];
     const avgCondition = myRoster.length ? myRoster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myRoster.length : BASE_CONDITION;
     const curCohesion = linesByTeam[myTeamId]?.cohesion ?? 100;
-    const myGameDays = new Set(schedule.filter((g) => g.home === myTeamId || g.away === myTeamId).map((g) => roundDay(seasonYear, g.round)));
+    const myGameDays = new Set(schedule.filter((g) => g.home === myTeamId || g.away === myTeamId).map((g) => gameDay(seasonYear, g)));
     const preview = {};
     const rangeStart = Math.max(calendarMonth, currentDay), rangeEnd = addMonths(calendarMonth, 1) + 7;
     for (let d = rangeStart; d < rangeEnd; d++) {
       if ((business.trainingSchedule || {})[d]) continue;
-      const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) <= d + 7).length;
+      const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && gameDay(seasonYear, g) <= d + 7).length;
       preview[d] = myGameDays.has(d) ? [autoTrainingFocus(avgCondition, curCohesion, upcoming)] : autoTrainingSessions(avgCondition, curCohesion, upcoming);
     }
     return preview;
   }, [business.delegation.training, business.trainingSchedule, teamsById, myTeamId, linesByTeam, schedule, seasonYear, calendarMonth, currentDay]);
   // Phase de la saison : régulière → séries → repêchage → agents libres → nouvelle saison.
-  const phase = currentRound !== null ? "regular" : !playoffs ? "endRegular" : !playoffs.champion ? "playoffs" : !draft ? "preDraft" : !draftDone(draft) ? "draft" : !freeAgencyDone ? "preFreeAgency" : "offseason";
+  const phase = currentGameDay !== null ? "regular" : !playoffs ? "endRegular" : !playoffs.champion ? "playoffs" : !draft ? "preDraft" : !draftDone(draft) ? "draft" : !freeAgencyDone ? "preFreeAgency" : "offseason";
   const mySeries = useMemo(() => (playoffs ? seriesOfTeam(playoffs, myTeamId) : null), [playoffs, myTeamId]);
   const nextMyGame = useMemo(() => {
     if (phase === "playoffs") {
@@ -199,7 +201,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     }
     return schedule.find((g) => !g.played && (g.home === myTeamId || g.away === myTeamId));
   }, [schedule, myTeamId, phase, mySeries, playoffs]);
-  const rounds = useMemo(() => [...new Set(schedule.map((g) => g.round))], [schedule]);
+  // Jours de calendrier distincts où au moins un match a lieu, triés — remplace le regroupement
+  // par ronde (qui laissait croire que toute la ligue joue le même soir).
+  const gameDays = useMemo(() => [...new Set(schedule.map((g) => gameDay(seasonYear, g)))].sort((a, b) => a - b), [schedule, seasonYear]);
 
   // Statistiques tirées des feuilles de match (saison régulière et séries, séparément).
   const everyone = useMemo(() => {
@@ -262,7 +266,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     });
   }
   function startLiveMatch(game) {
-    setWatchingGame(null);
     setExpandedGameId(null);
     setShiftPicker(null);
     const dressedHome = dressTeam(teamsById[game.home], linesByTeam[game.home], injuries, currentDay);
@@ -373,7 +376,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     processFinance([finalGame]);
     setLiveMatch(null);
     setShiftPicker(null);
-    setWatchingGame(null);
   }
   // Joue des matchs le jour `day` : les blessés sont retirés des alignements (remplacés par les
   // meilleurs disponibles), puis de nouvelles blessures sont tirées. La simulation elle-même
@@ -401,9 +403,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       addMessage({ from: "Thérapeute de l'équipe", subject: `Blessure : ${p.name}`, category: "general", playerIds: [p.id], body: `${p.name} est blessé (${injuryLabel(x, x.since)}). Retour prévu vers le ${formatDay(x.until)}.\nIl est remplacé automatiquement dans les trios.${ltirEligible(x, x.since) ? "\n\nAbsence de plus de 24 jours : tu peux le placer sur la liste des blessés à long terme (LTIR) dans l'onglet Profondeur, ce qui libère sa place et permet de dépasser le plafond de son salaire." : ""}` });
     });
   }
-  function simRound() {
-    if (currentRound === null) return;
-    const slate = playSlate(schedule.filter((g) => !g.played && g.round === currentRound), roundDay(seasonYear, currentRound), injuries, rng);
+  // Simule tous les matchs de la prochaine journée où il y en a (calendrier LNH réaliste :
+  // toutes les équipes ne jouent jamais toutes le même soir, voir engine/calendar.js gameDay).
+  function simDay() {
+    if (currentGameDay === null) return;
+    const slate = playSlate(schedule.filter((g) => !g.played && gameDay(seasonYear, g) === currentGameDay), currentGameDay, injuries, rng);
     const newlyPlayed = slate.played;
     const byId = Object.fromEntries(newlyPlayed.map((g) => [g.id, g]));
     const updated = schedule.map((g) => byId[g.id] || g);
@@ -414,26 +418,28 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     processFinance(newlyPlayed);
     setSchedule(updated);
     setRngSeed((s) => s + 7);
-    advanceTo(roundDay(seasonYear, currentRound));
+    advanceTo(currentGameDay);
   }
   function simToSeasonEnd() {
     const newlyPlayed = [];
     let inj = injuries;
     const fresh = [];
-    [...new Set(schedule.filter((g) => !g.played).map((g) => g.round))].sort((a, b) => a - b).forEach((round) => {
-      const slate = playSlate(schedule.filter((g) => !g.played && g.round === round), roundDay(seasonYear, round), inj, rng);
+    const days = [...new Set(schedule.filter((g) => !g.played).map((g) => gameDay(seasonYear, g)))].sort((a, b) => a - b);
+    days.forEach((day) => {
+      const slate = playSlate(schedule.filter((g) => !g.played && gameDay(seasonYear, g) === day), day, inj, rng);
       inj = slate.injuries; fresh.push(...slate.fresh); newlyPlayed.push(...slate.played);
     });
     const byId = Object.fromEntries(newlyPlayed.map((g) => [g.id, g]));
     const updated = schedule.map((g) => byId[g.id] || g);
     setInjuries(inj);
-    announceInjuries(fresh.filter((x) => x.until > roundDay(seasonYear, Math.max(...schedule.map((g) => g.round)))));
+    const lastDay = days.length ? days[days.length - 1] : currentGameDay;
+    announceInjuries(fresh.filter((x) => x.until > lastDay));
     const wins = newlyPlayed.filter((g) => (g.home === myTeamId && g.homeScore > g.awayScore) || (g.away === myTeamId && g.awayScore > g.homeScore)).length;
     if (wins > 0) setWinsThisMonth((w) => w + wins);
     processFinance(newlyPlayed);
     setSchedule(updated);
     setRngSeed((s) => s + 13);
-    advanceTo(roundDay(seasonYear, Math.max(...schedule.map((g) => g.round))));
+    advanceTo(lastDay);
   }
   function setTierPrice(key, price) { setBusiness((prev) => ({ ...prev, ticketTiers: prev.ticketTiers.map((t) => (t.key === key ? { ...t, price } : t)) })); }
   function setParkingPrice(price) { setBusiness((prev) => ({ ...prev, parking: { ...prev.parking, price } })); }
@@ -729,7 +735,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // retard sur l'appelant (mise à jour React groupée) : sans conséquence, la fatigue et la
   // cohésion évoluent doucement d'une semaine à l'autre.
   function runTrainingWeeks(fromDay, weeks) {
-    const gamesOf = (teamId, from, to) => schedule.filter((g) => g.played && (g.home === teamId || g.away === teamId) && roundDay(seasonYear, g.round) > from && roundDay(seasonYear, g.round) <= to).length;
+    const gamesOf = (teamId, from, to) => schedule.filter((g) => g.played && (g.home === teamId || g.away === teamId) && gameDay(seasonYear, g) > from && gameDay(seasonYear, g) <= to).length;
     const myRoster = teamsById[myTeamId]?.roster || [];
     const avgCondition = myRoster.length ? myRoster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myRoster.length : BASE_CONDITION;
     const curCohesion = linesByTeam[myTeamId]?.cohesion ?? 100;
@@ -739,14 +745,14 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const fitnessSkill = business.staff.fitnessCoach?.devSkill;
     const scheduled = business.trainingSchedule || {};
     const delegated = business.delegation.training === "delegated";
-    const myGameDays = new Set(schedule.filter((g) => g.home === myTeamId || g.away === myTeamId).map((g) => roundDay(seasonYear, g.round)));
+    const myGameDays = new Set(schedule.filter((g) => g.home === myTeamId || g.away === myTeamId).map((g) => gameDay(seasonYear, g)));
 
     const weeklySessions = [];
     const autoPlacements = {};
     for (let w = 0; w < weeks; w++) {
       const weekStart = fromDay + w * 7, weekEnd = weekStart + 7;
       if (delegated) {
-        const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) <= weekEnd + 7).length;
+        const upcoming = schedule.filter((g) => !g.played && (g.home === myTeamId || g.away === myTeamId) && gameDay(seasonYear, g) <= weekEnd + 7).length;
         const pair = autoTrainingSessions(avgCondition, curCohesion, upcoming);
         const single = autoTrainingFocus(avgCondition, curCohesion, upcoming);
         const sessions = [];
@@ -789,7 +795,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // Un jour de match occupe la case de l'après-midi (un match compte pour une séance) : seule
   // celle du matin reste disponible ce jour-là. `day` : jour absolu (voir engine/calendar.js).
   function scheduleTraining(day, slot, focusKey) {
-    const isGameDay = schedule.some((g) => (g.home === myTeamId || g.away === myTeamId) && roundDay(seasonYear, g.round) === day);
+    const isGameDay = schedule.some((g) => (g.home === myTeamId || g.away === myTeamId) && gameDay(seasonYear, g) === day);
     if (isGameDay && slot === 1) { setNotice("L'après-midi est déjà occupé par le match ce jour-là — une seule séance possible, le matin."); return; }
     setBusiness((prev) => {
       const daySlots = prev.trainingSchedule[day] || [null, null];
@@ -1181,7 +1187,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setPlayoffs(p);
     const qualified = p.rounds[0].some((x) => x.high === myTeamId || x.low === myTeamId);
     addMessage({ from: "Ligue", subject: `Séries éliminatoires ${seasonYear + 1}`, category: "general", body: qualified ? `Ton équipe est qualifiée ! Adversaire au premier tour : ${teamsById[p.rounds[0].find((x) => x.high === myTeamId || x.low === myTeamId)[p.rounds[0].find((x) => x.high === myTeamId || x.low === myTeamId).high === myTeamId ? "low" : "high"]].name}.` : "Ton équipe n'est pas qualifiée pour les séries cette année." });
-    advanceTo(roundDay(seasonYear, Math.max(...schedule.map((g) => g.round))) + 3);
+    advanceTo(Math.max(...schedule.map((g) => gameDay(seasonYear, g))) + 3);
     setTab("playoffs");
   }
   // Enregistre des matchs de séries et annonce les séries terminées.
@@ -1425,7 +1431,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
       {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.gm?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
-      {watchingGame && <LiveMatchViewer game={watchingGame} home={teamsById[watchingGame.home]} away={teamsById[watchingGame.away]} onClose={() => setWatchingGame(null)} onSelectPlayer={selectPlayer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 200, background: `linear-gradient(180deg, ${myTeam.color}33, var(--navy2) 160px)`, padding: "20px 12px", display: "flex", flexDirection: "column", gap: 3, borderRight: "1px solid var(--line)" }}>
         <div style={{ padding: "0 8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -1454,13 +1459,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           <div>
             <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 3 }}>{formatDay(currentDay)} · Saison {seasonYear}-{seasonYear + 1} · {PHASE_LABEL[phase]}</div>
             {nextMyGame ? (
-              <div style={{ fontSize: 14 }}>Prochain match — <strong>{teamsById[nextMyGame.home].name}</strong> vs <strong>{teamsById[nextMyGame.away].name}</strong><span style={{ color: "var(--iceMuted)" }}> ({typeof nextMyGame.round === "number" ? `${formatDay(roundDay(seasonYear, nextMyGame.round))}` : nextMyGame.round})</span></div>
+              <div style={{ fontSize: 14 }}>Prochain match — <strong>{teamsById[nextMyGame.home].name}</strong> vs <strong>{teamsById[nextMyGame.away].name}</strong><span style={{ color: "var(--iceMuted)" }}> ({typeof nextMyGame.round === "number" ? `${formatDay(gameDay(seasonYear, nextMyGame))}` : nextMyGame.round})</span></div>
             ) : (<div style={{ fontSize: 14, color: "var(--iceMuted)" }}>{NEXT_STEP[phase]}</div>)}
             <div style={{ fontSize: 11, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)", marginTop: 3 }}>{txWindow.open ? "Échanges et signatures ouverts" : "Échanges et signatures gelés"} — {txWindow.reason}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {phase === "regular" && <>
-              <button onClick={simRound} disabled={!!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler la ronde</button>
+              <button onClick={simDay} disabled={!!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler la journée</button>
               <button onClick={simToSeasonEnd} disabled={!!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> Simuler la saison</button>
             </>}
             {phase === "endRegular" && <button onClick={startPlayoffs} style={btnStyle("var(--red)")}><Award size={14} /> Commencer les séries</button>}
@@ -1506,7 +1511,14 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
 
-        {tab === "training" && <TrainingCenter business={business} myTeam={myTeam} cohesion={linesByTeam[myTeamId]?.cohesion ?? 100} onSetDelegation={setDelegation} onSetTrainingFocus={setTrainingFocus} />}
+        {tab === "training" && (
+          <TrainingCenter
+            business={business} myTeam={myTeam} cohesion={linesByTeam[myTeamId]?.cohesion ?? 100} onSetDelegation={setDelegation} onSetTrainingFocus={setTrainingFocus}
+            calendarMonth={calendarMonth} currentDay={currentDay} teamsById={teamsById} schedule={schedule} seasonYear={seasonYear} trainingPreview={trainingPreview}
+            onPrevMonth={() => setCalendarMonth((d) => addMonths(d, -1))} onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
+            onScheduleTraining={scheduleTraining} onCancelTraining={cancelTraining}
+          />
+        )}
 
         {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
 
@@ -1519,26 +1531,19 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <h2 style={{ ...h2Style, marginBottom: 0 }}>Calendrier</h2>
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => setScheduleFilter("mine")} style={{ ...btnStyle(scheduleFilter === "mine" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Mon équipe (vue mensuelle)</button>
+                <button onClick={() => setScheduleFilter("mine")} style={{ ...btnStyle(scheduleFilter === "mine" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Mon équipe seulement</button>
                 <button onClick={() => setScheduleFilter("all")} style={{ ...btnStyle(scheduleFilter === "all" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Calendrier complet</button>
               </div>
             </div>
-            {scheduleFilter === "mine" && (
-              <MonthlyCalendar
-                monthDay={calendarMonth} currentDay={currentDay} myTeam={myTeam} teamsById={teamsById} schedule={schedule} seasonYear={seasonYear}
-                trainingSchedule={business.trainingSchedule} delegation={business.delegation.training} trainingPreview={trainingPreview}
-                onPrevMonth={() => setCalendarMonth((d) => addMonths(d, -1))} onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
-                onSchedule={scheduleTraining} onCancelTraining={cancelTraining} onWatchGame={setWatchingGame}
-              />
-            )}
-            {scheduleFilter === "all" && <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: 520, overflow: "auto", paddingRight: 6, marginTop: 12 }}>
-              {rounds.map((r) => {
-                const roundGames = schedule.filter((g) => g.round === r && (scheduleFilter === "all" || g.home === myTeamId || g.away === myTeamId));
-                if (roundGames.length === 0) return null;
+            <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -2, marginBottom: 12 }}>Comme dans la vraie LNH, les équipes ne jouent pas toutes le même soir — les séances d'entraînement se planifient dans l'onglet <strong>Entraînement</strong>.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: 520, overflow: "auto", paddingRight: 6 }}>
+              {gameDays.map((day) => {
+                const dayGames = schedule.filter((g) => gameDay(seasonYear, g) === day && (scheduleFilter === "all" || g.home === myTeamId || g.away === myTeamId));
+                if (dayGames.length === 0) return null;
                 return (
-                <div key={r}>
-                  <div style={{ fontSize: 11, color: "var(--iceMuted)", letterSpacing: 1, marginBottom: 6 }}>RONDE {r}</div>
-                  {roundGames.map((g) => {
+                <div key={day}>
+                  <div style={{ fontSize: 11, color: "var(--iceMuted)", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" }}>{formatDay(day)}</div>
+                  {dayGames.map((g) => {
                     const involved = g.home === myTeamId || g.away === myTeamId;
                     const expanded = expandedGameId === g.id;
                     return (
@@ -1548,7 +1553,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
                           <span style={{ flex: 1 }}>{teamsById[g.home].name}</span>
                           <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, minWidth: 50, textAlign: "center" }}>{g.played ? `${g.homeScore} – ${g.awayScore}${g.decidedIn === "OT" ? " (P)" : g.decidedIn === "SO" ? " (TB)" : ""}` : "à venir"}</span>
                           <span style={{ flex: 1, textAlign: "right" }}>{teamsById[g.away].name}</span>
-                          {g.played && <button onClick={(e) => { e.stopPropagation(); setWatchingGame(g); }} style={{ ...btnStyle("var(--red)"), fontSize: 11, padding: "4px 8px" }}>Regarder</button>}
                           {g.played && (expanded ? <ChevronUp size={14} color="var(--iceMuted)" /> : <ChevronDown size={14} color="var(--iceMuted)" />)}
                         </div>
                         {expanded && g.played && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
@@ -1558,7 +1562,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
                 </div>
                 );
               })}
-            </div>}
+            </div>
           </div>
         )}
 

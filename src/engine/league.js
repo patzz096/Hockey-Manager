@@ -6,6 +6,7 @@ import { seededRandom } from "./random";
 import { buildStaffMarket } from "./staff";
 import { capFor, payroll } from "./cap";
 import { CURRENT_YEAR, minSalaryFor } from "./contracts";
+import { ROUND_SPACING } from "./calendar";
 
 // Les contrats générés (joueurs sans vrai contrat) sont réduits au besoin pour que chaque équipe
 // commence à 96 % du plafond au plus.
@@ -37,6 +38,10 @@ export function initLeague(custom = null) {
   return { teams, freeAgents, staffMarket, farmByTeam };
 }
 
+// Chaque ronde du calendrier (toutes les équipes s'affrontent une fois) est étalée sur
+// ROUND_SPACING jours consécutifs plutôt que jouée le même soir par tout le monde à la fois
+// (`slot`, voir engine/calendar.js `gameDay`) : plus proche d'un calendrier LNH réel, où toutes
+// les équipes ne jouent jamais toutes en même temps.
 export function buildSchedule(teams) {
   const ids = teams.map((t) => t.id);
   const games = [];
@@ -49,7 +54,8 @@ export function buildSchedule(teams) {
       for (let i = 0; i < n / 2; i++) {
         const home = arr[i], away = arr[n - 1 - i];
         const [h, a] = leg === 0 ? [home, away] : [away, home];
-        games.push({ id: `${round}-${i}`, round, home: h, away: a, played: false, homeScore: null, awayScore: null, box: null });
+        const slot = i % ROUND_SPACING;
+        games.push({ id: `${round}-${i}`, round, slot, home: h, away: a, played: false, homeScore: null, awayScore: null, box: null });
       }
       arr.splice(1, 0, arr.pop());
     }

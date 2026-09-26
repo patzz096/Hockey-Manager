@@ -28,6 +28,11 @@ export function seasonDates(year) {
   };
 }
 export function roundDay(year, round) { return seasonDates(year).start + (round - 1) * ROUND_SPACING; }
+// Jour réel d'un match donné : les ROUND_SPACING matchs d'une même ronde (voir
+// engine/league.js buildSchedule) sont étalés sur autant de jours consécutifs (`game.slot`,
+// 0..ROUND_SPACING-1) plutôt que joués tous le même soir par les 32 équipes à la fois — comme
+// dans la vraie LNH, où le calendrier complet ne se joue jamais en même temps pour tout le monde.
+export function gameDay(year, game) { return roundDay(year, game.round) + (game.slot || 0); }
 
 // Calendrier mensuel (onglet Calendrier, vue "mon équipe") : premier jour du mois contenant
 // `day`, et premier jour du mois `n` mois plus loin (n négatif = mois précédents).
