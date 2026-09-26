@@ -2,11 +2,11 @@ import { formatDay } from "../engine/calendar";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { draftLabel } from "../ui/format";
-import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
+import { h2Style, scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 
-export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendingScouts, onSelectPlayer, freeAgents, onRefreshFreeAgents, txWindow = { open: true } }) {
+export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendingScouts, onSelectPlayer, freeAgents, txWindow = { open: true } }) {
   const [fak, fad, faToggle] = useSort("ovr");
   const faAcc = (p, key) => {
     if (key === "draft") return p.draftPick || 9999;
@@ -18,10 +18,7 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
   return (
     <div>
       <h2 style={h2Style}>Agents libres</h2>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: -8, marginBottom: 12 }}>
-        <p style={{ fontSize: 12, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)" }}>{txWindow.open ? "Joueurs sans contrat. Clique un joueur pour le dépister ou lui offrir un contrat depuis son profil." : txWindow.reason}</p>
-        <button onClick={onRefreshFreeAgents} style={btnStyle("var(--steel)")}>Rafraîchir le marché</button>
-      </div>
+      <p style={{ fontSize: 12, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)", marginTop: -8, marginBottom: 12 }}>{txWindow.open ? "Joueurs sans contrat. Clique un joueur pour le dépister ou lui offrir un contrat depuis son profil." : txWindow.reason}</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
         <thead><tr>
           <SortTh label="Joueur" sortKey="name" activeKey={fak} activeDir={fad} onSort={faToggle} />

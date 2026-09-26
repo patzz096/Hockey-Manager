@@ -220,9 +220,11 @@ tests/engine.test.js       tests du moteur
 - Personnel : directeur général (négociation de contrat, échanges, cohésion, développement),
   entraîneur-chef, adjoints (avec compétence de développement séparée), entraîneur physique,
   dépisteurs amateur/pro, directeur des finances, directeur des opérations hockey — chacun avec
-  une cote (étoiles + note /20) et option délégation (contrôle manuel ou IA). Le directeur des
-  opérations hockey embauche l'ensemble du personnel hockey (tout sauf les finances, et
-  lui-même) quand délégué à chaque avancement de mois, instantanément
+  une cote en étoiles (pas de note générale chiffrée à côté, contrairement aux joueurs dépistés)
+  et option délégation (contrôle manuel ou IA). Cliquer un nom (en poste ou candidat du marché)
+  ouvre son profil, en pleine page comme celui d'un joueur. Le directeur des opérations hockey
+  embauche l'ensemble du personnel hockey (tout sauf les finances, et lui-même) quand délégué à
+  chaque avancement de mois, instantanément
   - Embauche manuelle façon négociation de contrat de joueur (`engine/staff.js`
     evaluateStaffOffer) : une offre de salaire n'est pas acceptée sur-le-champ, le candidat
     répond après un délai de 1 à 3 jours, avec une probabilité d'acceptation qui dépend de
@@ -302,6 +304,8 @@ tests/engine.test.js       tests du moteur
   profondeur, statistiques, feuille de match, sommaire des buts (buteur et passeurs),
   échanges, agents libres, contrats, rapport de progression, et liens « Profils » dans les
   messages qui citent des joueurs
+- Profil (joueur ou personnel) en pleine page (`PlayerModal`, `StaffProfileModal`) plutôt qu'une
+  petite fenêtre flottante — toute la page du jeu y passe, comme un véritable écran dédié
 - Mode "Sim en direct" avec horloge de période, sommaire de buts et stats en temps réel
   (uniquement pour le prochain match à jouer — les matchs déjà joués n'ont qu'une feuille de
   match statique, pas de rejeu « en direct »)

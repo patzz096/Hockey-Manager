@@ -1,25 +1,24 @@
 import { useState } from "react";
-import { attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
+import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STAFF_ROLES } from "../engine/staff";
-import { h2Style, btnStyle, attr20Color } from "../ui/theme";
+import { h2Style, btnStyle } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 import { money } from "../ui/format";
 import { formatDay } from "../engine/calendar";
 
-export function StaffCard({ role, hired, benchmark, onFire }) {
+export function StaffCard({ role, hired, benchmark, onFire, onSelect }) {
   return (
     <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 14 }}>
       <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6 }}>{STAFF_ROLES[role].toUpperCase()}</div>
       {hired ? (
         <>
-          <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{hired.name}</div>
+          <div onClick={() => onSelect(hired, role, true)} style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, marginBottom: 4, cursor: "pointer" }}>{hired.name}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <StarRating value={starsFor(hired.rating, benchmark)} size={12} />
-            <span style={{ background: attr20Color(attr20(hired.rating)), color: "#0B1B2E", fontWeight: 700, fontSize: 11, borderRadius: 3, padding: "1px 7px" }}>{attr20(hired.rating)}</span>
           </div>
           {hired.devSkill != null && (
-            <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 4 }}>Développement: <span style={{ background: attr20Color(attr20(hired.devSkill)), color: "#0B1B2E", fontWeight: 700, fontSize: 10, borderRadius: 3, padding: "1px 6px" }}>{attr20(hired.devSkill)}</span></div>
+            <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>Développement: <StarRating value={starsFor(hired.devSkill, benchmark)} size={11} color="#7A9EDB" /></div>
           )}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>{money(hired.salary)} par saison</div>
           <button onClick={() => onFire(role)} style={{ ...btnStyle("var(--loss)"), width: "100%", justifyContent: "center", fontSize: 12 }}>Congédier</button>
@@ -31,7 +30,7 @@ export function StaffCard({ role, hired, benchmark, onFire }) {
   );
 }
 
-export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onOffer, pendingStaffOffers = [], staffNegotiations = {}, onFire, onRefresh, onSetDelegation, onSelectPlayer }) {
+export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onOffer, pendingStaffOffers = [], staffNegotiations = {}, onFire, onRefresh, onSetDelegation, onSelectPlayer, onSelectStaff }) {
   const [smk, smd, smToggle] = useSort("rating");
   const smAcc = (c, key) => (key === "role" ? STAFF_ROLES[c.role] : c[key]);
   const sortedStaffMarket = sortRows(staffMarket, smk, smd, smAcc);
@@ -61,7 +60,7 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
 
       <h2 style={h2Style}>Personnel en poste</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 12, marginBottom: 28 }}>
-        {Object.keys(STAFF_ROLES).map((role) => (<StaffCard key={role} role={role} hired={business.staff[role]} benchmark={benchmark} onFire={onFire} />))}
+        {Object.keys(STAFF_ROLES).map((role) => (<StaffCard key={role} role={role} hired={business.staff[role]} benchmark={benchmark} onFire={onFire} onSelect={onSelectStaff} />))}
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -84,9 +83,9 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
             const offered = offers[c.id] ?? c.salary;
             return (
               <tr key={c.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-                <td style={{ padding: "7px 10px" }}>{c.name}</td>
+                <td style={{ padding: "7px 10px", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#ffffff33" }} onClick={() => onSelectStaff(c, c.role, false)}>{c.name}</td>
                 <td style={{ padding: "7px 10px" }}>{STAFF_ROLES[c.role]}</td>
-                <td style={{ padding: "7px 10px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><StarRating value={starsFor(c.rating, benchmark)} size={12} /><span style={{ background: attr20Color(attr20(c.rating)), color: "#0B1B2E", fontWeight: 700, fontSize: 11, borderRadius: 3, padding: "1px 7px" }}>{attr20(c.rating)}</span>{c.devSkill != null && <span style={{ fontSize: 10, color: "var(--iceMuted)" }}>· dév. {attr20(c.devSkill)}</span>}</div></td>
+                <td style={{ padding: "7px 10px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><StarRating value={starsFor(c.rating, benchmark)} size={12} />{c.devSkill != null && <StarRating value={starsFor(c.devSkill, benchmark)} size={11} color="#7A9EDB" />}</div></td>
                 <td style={{ padding: "7px 10px" }}>{money(c.salary)} par saison</td>
                 <td style={{ padding: "7px 10px" }}>
                   {pending ? (

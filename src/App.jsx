@@ -17,7 +17,6 @@ import { capStatus, fitsUnderCap, ROSTER_MAX, formatMoney, deadCapFor, buyoutTer
 import { injuriesFromGame, dressTeam, isInjured, ltirEligible, injuryLabel } from "./engine/injuries";
 import { waiverExempt, placeOnWaivers, resolveWaivers, aiWaiverCandidates, aiMonthlyMoves } from "./engine/waivers";
 import { buildLines } from "./engine/lines";
-import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
 import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT, evaluateStaffOffer, MAX_STAFF_OFFER_ATTEMPTS } from "./engine/staff";
@@ -36,6 +35,7 @@ import { TacticsPlanner } from "./components/TacticsPlanner";
 import { autoUnits, bestSpecial, specialUnits, specialSystems } from "./engine/specialTeams";
 import { PlayerEditorModal } from "./components/PlayerEditorModal";
 import { PlayerModal } from "./components/PlayerModal";
+import { StaffProfileModal } from "./components/StaffProfileModal";
 import { RosterTable } from "./components/RosterTable";
 import { StaffCenter } from "./components/StaffCenter";
 import { TrainingCenter } from "./components/TrainingCenter";
@@ -123,6 +123,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [scheduleFilter, setScheduleFilter] = useState("all");
   const [calendarMonth, setCalendarMonth] = useState(() => monthStartDay(seasonDates(FIRST_SEASON).start - 1));
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedStaff, setSelectedStaff] = useState(null); // { staff, role, isHired }
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [offerTarget, setOfferTarget] = useState(null);
   // Offres de contrat en attente de réponse (délai de l'agent, voir queueOffer/advanceDays) et
@@ -690,9 +691,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       const closed = stonewalled ? ` Mon client en a assez de tes offres : il refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
       addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${result.parts.twoWay < -0.3 ? " Mon client refuse un contrat à deux volets : il est un joueur de la LNH." : ""}${why.length ? ` Réserves de mon client : ${why.join(", ")}.` : ""}${frustration}${closed}` });
     }
-  }
-  function refreshFreeAgents() {
-    setFreeAgents(buildFreeAgentPoolRT(16, business.staff.scoutAmateur?.rating));
   }
   function findPlayer(playerId) {
     for (const t of teams) { const p = t.roster.find((x) => x.id === playerId); if (p) return p; }
@@ -1467,6 +1465,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
+      {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
       {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.gm?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 200, background: `linear-gradient(180deg, ${myTeam.color}33, var(--navy2) 160px)`, padding: "20px 12px", display: "flex", flexDirection: "column", gap: 3, borderRight: "1px solid var(--line)" }}>
@@ -1544,12 +1543,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 
-        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} onRefreshFreeAgents={refreshFreeAgents} txWindow={txWindow} />}
+        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} txWindow={txWindow} />}
 
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
-        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onOffer={offerStaff} pendingStaffOffers={pendingStaffOffers} staffNegotiations={staffNegotiations} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
+        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onOffer={offerStaff} pendingStaffOffers={pendingStaffOffers} staffNegotiations={staffNegotiations} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} onSelectStaff={(staff, role, isHired) => setSelectedStaff({ staff, role, isHired })} />}
 
         {tab === "training" && (
           <TrainingCenter
