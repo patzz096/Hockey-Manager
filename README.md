@@ -219,10 +219,16 @@ tests/engine.test.js       tests du moteur
   de patinoire façon FM24, avec liste de joueurs par position à droite
 - Personnel : directeur général (négociation de contrat, échanges, cohésion, développement),
   entraîneur-chef, adjoints (avec compétence de développement séparée), entraîneur physique,
-  dépisteurs amateur/pro, directeur des finances, directeur des opérations hockey — avec
-  primes de performance et option délégation (contrôle manuel ou IA). Le directeur des
+  dépisteurs amateur/pro, directeur des finances, directeur des opérations hockey — chacun avec
+  une cote (étoiles + note /20) et option délégation (contrôle manuel ou IA). Le directeur des
   opérations hockey embauche l'ensemble du personnel hockey (tout sauf les finances, et
-  lui-même) quand délégué à chaque avancement de mois
+  lui-même) quand délégué à chaque avancement de mois, instantanément
+  - Embauche manuelle façon négociation de contrat de joueur (`engine/staff.js`
+    evaluateStaffOffer) : une offre de salaire n'est pas acceptée sur-le-champ, le candidat
+    répond après un délai de 1 à 3 jours, avec une probabilité d'acceptation qui dépend de
+    l'écart entre l'offre et son salaire demandé ; un refus donne une contre-proposition, et
+    trop de refus d'affilée (3) le font se retirer de toute négociation pour le reste de la
+    saison (même mécanique que `MAX_OFFER_ATTEMPTS` côté joueurs)
 - Entraînement façon FM24 (`engine/training.js`, onglet dédié « Entraînement », séparé de
   Personnel) : condition physique par
   joueur (récupère avec le repos, chute avec les matchs joués, atténuée par l'endurance —
@@ -299,6 +305,11 @@ tests/engine.test.js       tests du moteur
 - Mode "Sim en direct" avec horloge de période, sommaire de buts et stats en temps réel
   (uniquement pour le prochain match à jouer — les matchs déjà joués n'ont qu'une feuille de
   match statique, pas de rejeu « en direct »)
+- Sommaire des buts d'un match joué : chaque but est annoté du rang de la saison de son
+  buteur (ex. « 12e but de la saison »), calculé chronologiquement selon le jour réel du match
+  (`engine/stats.js` seasonGoalNumber, engine/calendar.js gameDay)
+- Icône enveloppe (messagerie, avec pastille des non lus) juste à côté du nom de l'équipe en
+  haut à gauche, plutôt qu'un onglet séparé dans la liste de navigation
 - Choix du trio et de la paire de défense pour chaque mise au jeu, en sim en direct (bouton
   « Choisir le trio et la paire ») : avantage du dernier changement comme dans la vraie LNH — les
   visiteurs envoient toujours leur ligne en premier (visible), l'équipe locale réplique en

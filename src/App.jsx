@@ -20,7 +20,7 @@ import { buildLines } from "./engine/lines";
 import { buildFreeAgentPoolRT } from "./engine/players";
 import { seededRandom } from "./engine/random";
 import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
-import { STAFF_ROLES, buildStaffMarketRT } from "./engine/staff";
+import { STAFF_ROLES, buildStaffMarketRT, evaluateStaffOffer, MAX_STAFF_OFFER_ATTEMPTS } from "./engine/staff";
 import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
 import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
@@ -131,6 +131,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // la saison (façon FM24) ; remis à zéro à la signature ou au début d'une nouvelle saison.
   const [pendingOffers, setPendingOffers] = useState([]);
   const [negotiations, setNegotiations] = useState({});
+  // Offres d'embauche du personnel en attente de réponse et lassitude de négociation par
+  // candidat (même principe que pendingOffers/negotiations ci-dessus, voir engine/staff.js
+  // evaluateStaffOffer) : { [candidateId]: { rejections, stonewalled } }.
+  const [pendingStaffOffers, setPendingStaffOffers] = useState([]);
+  const [staffNegotiations, setStaffNegotiations] = useState({});
   const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), merchItems: DEFAULT_MERCH_ITEMS.map((i) => ({ ...i })), fanEngagement: DEFAULT_ENGAGEMENT, tvDeal: negotiateTvDeal(DEFAULT_ENGAGEMENT, 0.5, FIRST_SEASON), staff: { hockeyOpsDirector: null, gm: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null, broadcastDirector: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
@@ -875,6 +880,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const newDay = currentDay + n;
     const due = pendingScouts.filter((m) => m.dueDay <= newDay);
     const dueOffers = pendingOffers.filter((o) => o.dueDay <= newDay);
+    const dueStaffOffers = pendingStaffOffers.filter((o) => o.dueDay <= newDay);
     setCurrentDay(newDay);
     // Rapport de développement et primes : au début de chaque mois.
     const months = monthIndex(newDay) - monthIndex(currentDay);
@@ -920,6 +926,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       setPendingOffers((prev) => prev.filter((o) => o.dueDay > newDay));
       dueOffers.forEach(resolveOffer);
     }
+    if (dueStaffOffers.length) {
+      setPendingStaffOffers((prev) => prev.filter((o) => o.dueDay > newDay));
+      dueStaffOffers.forEach(resolveStaffOffer);
+    }
     if (due.length === 0) return;
     setPendingScouts((prev) => prev.filter((m) => m.dueDay > newDay));
     const reports = {};
@@ -935,12 +945,39 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     });
     setScoutKnowledge((prev) => ({ ...prev, ...reports }));
   }
-  function hireStaff(candidate) {
-    setBusiness((prev) => ({ ...prev, staff: { ...prev.staff, [candidate.role]: candidate } }));
-    setStaffMarket((prev) => prev.filter((c) => c.id !== candidate.id));
-  }
   function fireStaff(role) {
     setBusiness((prev) => ({ ...prev, staff: { ...prev.staff, [role]: null } }));
+  }
+  // Envoie une offre d'embauche à un candidat du marché : réponse après un délai de 1 à 3 jours
+  // (voir resolveStaffOffer, advanceDays), plutôt qu'une embauche instantanée.
+  function offerStaff(candidate, offeredSalary) {
+    if (staffNegotiations[candidate.id]?.stonewalled) { setNotice(`${candidate.name} refuse toute négociation pour le reste de la saison — trop d'offres refusées.`); return; }
+    if (pendingStaffOffers.some((o) => o.candidateId === candidate.id)) { setNotice(`Une offre est déjà en attente de réponse pour ${candidate.name}.`); return; }
+    const delay = 1 + Math.floor(Math.random() * 3);
+    const dueDay = currentDay + delay;
+    setPendingStaffOffers((prev) => [...prev, { id: `STAFFOFFER-${Date.now()}-${candidate.id}`, candidateId: candidate.id, candidateName: candidate.name, role: candidate.role, offeredSalary, dueDay }]);
+    addMessage({ from: candidate.name, subject: `Offre envoyée : ${STAFF_ROLES[candidate.role]}`, category: "transaction", body: `Offre : ${money(offeredSalary)} par saison.\n\nRéponse attendue vers le ${formatDay(dueDay)}.` });
+  }
+  // Réponse du candidat, une fois le délai écoulé (voir offerStaff). Trop de refus d'affilée
+  // font monter ses attentes (staffFrustration, engine/staff.js) puis il se braque.
+  function resolveStaffOffer(pending) {
+    const { candidateId, candidateName, role, offeredSalary } = pending;
+    const candidate = staffMarket.find((c) => c.id === candidateId);
+    if (!candidate) { addMessage({ from: candidateName, subject: `Offre annulée : ${STAFF_ROLES[role]}`, category: "transaction", body: `${candidateName} n'est plus disponible ; l'offre a été annulée.` }); return; }
+    const rejections = staffNegotiations[candidateId]?.rejections || 0;
+    const result = evaluateStaffOffer(candidate, offeredSalary, rejections);
+    if (result.accept) {
+      setBusiness((prev) => ({ ...prev, staff: { ...prev.staff, [role]: { ...candidate, salary: offeredSalary } } }));
+      setStaffMarket((prev) => prev.filter((c) => c.id !== candidateId));
+      setStaffNegotiations((prev) => { const next = { ...prev }; delete next[candidateId]; return next; });
+      addMessage({ from: candidateName, subject: `${candidateName} a accepté l'offre`, category: "transaction", body: `Offre acceptée : ${money(offeredSalary)} par saison comme ${STAFF_ROLES[role]}.` });
+    } else {
+      const newRejections = rejections + 1;
+      const stonewalled = newRejections >= MAX_STAFF_OFFER_ATTEMPTS;
+      setStaffNegotiations((prev) => ({ ...prev, [candidateId]: { rejections: newRejections, stonewalled } }));
+      const closed = stonewalled ? ` J'en ai assez de tes offres : je refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
+      addMessage({ from: candidateName, subject: `${candidateName} a refusé l'offre`, category: "transaction", body: `Offre refusée : ${money(offeredSalary)} par saison.\n\nMa contre-proposition : ${money(result.counterSalary)} par saison.${closed}` });
+    }
   }
   function refreshStaffMarket() {
     setStaffMarket(buildStaffMarketRT(6));
@@ -1343,6 +1380,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setScoutingSpend(0);
     setFreeAgencyDone(false);
     setNegotiations({});
+    setStaffNegotiations({});
     // Contrat de diffusion : arrive à échéance après TV_DEAL_TERM ans, renégocié selon
     // l'engagement des partisans et le dossier de la saison qui vient de se terminer.
     const myWinPct = my && my.gp > 0 ? my.w / my.gp : 0.5;
@@ -1418,7 +1456,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     { key: "finances", label: "Finances", icon: DollarSign },
     { key: "staff", label: "Personnel", icon: UserCog },
     { key: "training", label: "Entraînement", icon: HeartPulse },
-    { key: "inbox", label: "Messagerie", icon: Mail },
     { key: "standings", label: "Classement", icon: Trophy },
     { key: "playoffs", label: "Séries", icon: Award },
     { key: "scouting", label: "Dépistage", icon: Binoculars },
@@ -1435,7 +1472,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       <div style={{ width: 200, background: `linear-gradient(180deg, ${myTeam.color}33, var(--navy2) 160px)`, padding: "20px 12px", display: "flex", flexDirection: "column", gap: 3, borderRight: "1px solid var(--line)" }}>
         <div style={{ padding: "0 8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
           <TeamCrest team={myTeam} size={34} />
-          <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, color: myTeam.color, lineHeight: 1.15 }}>{myTeam.name}</div>
+          <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, color: myTeam.color, lineHeight: 1.15, flex: 1 }}>{myTeam.name}</div>
+          <button title="Messagerie" onClick={() => setTab("inbox")} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, padding: 0, borderRadius: 6, border: "none", background: tab === "inbox" ? "rgba(92,200,255,0.20)" : "transparent", color: tab === "inbox" ? "var(--accent)" : "var(--iceMuted)", cursor: "pointer", flexShrink: 0 }}>
+            <Mail size={17} />
+            {messages.filter((m) => !m.read).length > 0 && (
+              <span style={{ position: "absolute", top: -3, right: -3, background: "var(--red)", color: "#fff", borderRadius: 10, fontSize: 9, minWidth: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, padding: "0 3px" }}>{messages.filter((m) => !m.read).length}</span>
+            )}
+          </button>
         </div>
         {navItems.map(({ key, label, icon: Icon }) => {
           const lockReason = TAB_LOCK_REASON[key];
@@ -1443,9 +1486,6 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           <button key={key} title={lockReason || undefined} className={`nav-btn${tab === key ? " is-active" : ""}`} onClick={() => setTab(key)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 11px", borderRadius: 7, border: "none", background: tab === key ? "linear-gradient(90deg, rgba(92,200,255,0.20), rgba(92,200,255,0.04))" : "transparent", color: tab === key ? "var(--ice)" : "var(--iceMuted)", fontSize: 14, fontWeight: tab === key ? 600 : 500, cursor: "pointer", textAlign: "left" }}>
             <Icon size={16} color={tab === key ? "var(--accent)" : "currentColor"} /> {label}
             {lockReason && <Lock size={11} color="var(--iceMuted)" style={{ marginLeft: "auto" }} />}
-            {key === "inbox" && messages.filter((m) => !m.read).length > 0 && (
-              <span style={{ marginLeft: lockReason ? 4 : "auto", background: "var(--red)", color: "#fff", borderRadius: 10, fontSize: 10, padding: "1px 6px", fontWeight: 700 }}>{messages.filter((m) => !m.read).length}</span>
-            )}
           </button>
           );
         })}
@@ -1509,7 +1549,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
-        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onHire={hireStaff} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
+        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onOffer={offerStaff} pendingStaffOffers={pendingStaffOffers} staffNegotiations={staffNegotiations} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} />}
 
         {tab === "training" && (
           <TrainingCenter
@@ -1555,7 +1595,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
                           <span style={{ flex: 1, textAlign: "right" }}>{teamsById[g.away].name}</span>
                           {g.played && (expanded ? <ChevronUp size={14} color="var(--iceMuted)" /> : <ChevronDown size={14} color="var(--iceMuted)" />)}
                         </div>
-                        {expanded && g.played && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
+                        {expanded && g.played && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} schedule={schedule} seasonYear={seasonYear} />}
                       </div>
                     );
                   })}

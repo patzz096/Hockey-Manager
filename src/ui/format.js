@@ -33,3 +33,5 @@ export function contractLabel(contract) {
 export function draftLabel(player) {
   return player.draftPick ? `${player.draftPick}e rang (${player.draftYear})` : "Non repêché";
 }
+
+export function ordinalFr(n) { return n === 1 ? "1er" : `${n}e`; }

@@ -1,3 +1,23 @@
+import { gameDay } from "./calendar";
+
+// Numéro (1er, 2e, ...) du but marqué par `scorerId` dans sa saison, au sens du calendrier
+// (jour réel du match, voir engine/calendar.js gameDay) : compte tous ses buts dans les matchs
+// joués jusqu'à ce jour inclusivement (matchs d'un autre jour), plus ceux du match `game`
+// jusqu'à l'index `goalIndex` inclusivement (dans l'ordre chronologique de son goalLog).
+export function seasonGoalNumber(schedule, seasonYear, game, scorerId, goalIndex) {
+  const day = gameDay(seasonYear, game);
+  let count = 0;
+  schedule.forEach((g) => {
+    if (!g.played || !g.box) return;
+    const gDay = gameDay(seasonYear, g);
+    if (gDay > day || (gDay === day && g.id !== game.id)) return;
+    const goals = g.box.goalLog || [];
+    const limit = g.id === game.id ? goalIndex + 1 : goals.length;
+    for (let i = 0; i < limit; i++) if (goals[i].scorerId === scorerId) count++;
+  });
+  return count;
+}
+
 // Statistiques individuelles cumulées à partir des feuilles de match.
 // `everyone` : { id: { player, team } } pour retrouver l'équipe actuelle d'un joueur ; un joueur
 // parti (échange, marché) garde ses statistiques, rattachées à sa dernière équipe connue.

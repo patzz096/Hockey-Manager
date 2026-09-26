@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STAFF_ROLES } from "../engine/staff";
 import { h2Style, btnStyle, attr20Color } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 import { money } from "../ui/format";
+import { formatDay } from "../engine/calendar";
 
 export function StaffCard({ role, hired, benchmark, onFire }) {
   return (
@@ -29,11 +31,12 @@ export function StaffCard({ role, hired, benchmark, onFire }) {
   );
 }
 
-export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onHire, onFire, onRefresh, onSetDelegation, onSelectPlayer }) {
+export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onOffer, pendingStaffOffers = [], staffNegotiations = {}, onFire, onRefresh, onSetDelegation, onSelectPlayer }) {
   const [smk, smd, smToggle] = useSort("rating");
   const smAcc = (c, key) => (key === "role" ? STAFF_ROLES[c.role] : c[key]);
   const sortedStaffMarket = sortRows(staffMarket, smk, smd, smAcc);
   const benchmark = teamOvrBenchmark(myTeam);
+  const [offers, setOffers] = useState({}); // { [candidateId]: montant offert en cours d'édition }
   return (
     <div>
       <h2 style={h2Style}>Délégation</h2>
@@ -65,25 +68,41 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
         <h2 style={{ ...h2Style, marginBottom: 0 }}>Marché des candidats</h2>
         <button onClick={onRefresh} style={btnStyle("var(--steel)")}>Rafraîchir le marché</button>
       </div>
-      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 12 }}>Embaucher un candidat remplace automatiquement la personne en poste pour ce rôle.</p>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 12 }}>Embaucher un candidat remplace automatiquement la personne en poste pour ce rôle. Comme pour un joueur, une offre n'est pas acceptée sur-le-champ : le candidat prend quelques jours pour répondre, et une offre trop basse par rapport à son salaire demandé risque d'être refusée.</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 30 }}>
         <thead><tr>
           <SortTh label="Nom" sortKey="name" activeKey={smk} activeDir={smd} onSort={smToggle} />
           <SortTh label="Poste" sortKey="role" activeKey={smk} activeDir={smd} onSort={smToggle} />
           <SortTh label="Cote" sortKey="rating" activeKey={smk} activeDir={smd} onSort={smToggle} />
           <SortTh label="Salaire demandé" sortKey="salary" activeKey={smk} activeDir={smd} onSort={smToggle} />
-          <th></th>
+          <th>Offre</th>
         </tr></thead>
         <tbody>
-          {sortedStaffMarket.map((c) => (
-            <tr key={c.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-              <td style={{ padding: "7px 10px" }}>{c.name}</td>
-              <td style={{ padding: "7px 10px" }}>{STAFF_ROLES[c.role]}</td>
-              <td style={{ padding: "7px 10px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><StarRating value={starsFor(c.rating, benchmark)} size={12} /><span style={{ background: attr20Color(attr20(c.rating)), color: "#0B1B2E", fontWeight: 700, fontSize: 11, borderRadius: 3, padding: "1px 7px" }}>{attr20(c.rating)}</span>{c.devSkill != null && <span style={{ fontSize: 10, color: "var(--iceMuted)" }}>· dév. {attr20(c.devSkill)}</span>}</div></td>
-              <td style={{ padding: "7px 10px" }}>{money(c.salary)} par saison</td>
-              <td style={{ padding: "7px 10px" }}><button onClick={() => onHire(c)} style={btnStyle("var(--win)")}>Embaucher</button></td>
-            </tr>
-          ))}
+          {sortedStaffMarket.map((c) => {
+            const pending = pendingStaffOffers.find((o) => o.candidateId === c.id);
+            const neg = staffNegotiations[c.id];
+            const offered = offers[c.id] ?? c.salary;
+            return (
+              <tr key={c.id} style={{ borderBottom: "1px solid #ffffff11" }}>
+                <td style={{ padding: "7px 10px" }}>{c.name}</td>
+                <td style={{ padding: "7px 10px" }}>{STAFF_ROLES[c.role]}</td>
+                <td style={{ padding: "7px 10px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><StarRating value={starsFor(c.rating, benchmark)} size={12} /><span style={{ background: attr20Color(attr20(c.rating)), color: "#0B1B2E", fontWeight: 700, fontSize: 11, borderRadius: 3, padding: "1px 7px" }}>{attr20(c.rating)}</span>{c.devSkill != null && <span style={{ fontSize: 10, color: "var(--iceMuted)" }}>· dév. {attr20(c.devSkill)}</span>}</div></td>
+                <td style={{ padding: "7px 10px" }}>{money(c.salary)} par saison</td>
+                <td style={{ padding: "7px 10px" }}>
+                  {pending ? (
+                    <span style={{ fontSize: 12, color: "var(--iceMuted)", fontStyle: "italic" }}>Offre envoyée ({money(pending.offeredSalary)}) — réponse vers le {formatDay(pending.dueDay)}</span>
+                  ) : neg?.stonewalled ? (
+                    <span style={{ fontSize: 12, color: "var(--loss)" }}>Refuse toute négociation cette saison</span>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <input type="number" min={0} step={25} value={offered} onChange={(e) => setOffers((prev) => ({ ...prev, [c.id]: Number(e.target.value) }))} style={{ width: 90, background: "var(--navy)", border: "1px solid #ffffff33", borderRadius: 3, color: "var(--ice)", padding: "4px 6px", fontSize: 12 }} />
+                      <button onClick={() => onOffer(c, offered)} style={btnStyle("var(--win)")}>Offrir</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
           {sortedStaffMarket.length === 0 && <tr><td colSpan={5} style={{ padding: 12, color: "var(--iceMuted)" }}>Aucun candidat sur le marché.</td></tr>}
         </tbody>
       </table>
