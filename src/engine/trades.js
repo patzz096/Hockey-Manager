@@ -8,18 +8,28 @@ export function tradeValue(ovr, potential, age) {
   return ovr + upside;
 }
 
-// Tolérance de l'IA : elle refuse un échange qui lui ferait perdre plus de 12 % de valeur nette
-// (avant une petite variation aléatoire stable, pour ne pas être parfaitement prévisible).
-const CPU_TRADE_TOLERANCE = 0.12;
+// L'IA n'accepte plus de perdre de valeur nette (± 3 % de bruit aléatoire, pour ne pas être un
+// seuil parfaitement net) — elle exige au moins l'équivalent, jamais un rabais.
+const CPU_TRADE_TOLERANCE = 0;
+// Protection de ses meilleurs joueurs : elle refuse de céder un joueur nettement plus valable que
+// le meilleur qu'elle recevrait, même si la somme totale des deux côtés semble correcte — un
+// paquet de joueurs de profondeur ne remplace pas une vedette, dans la vraie vie comme ici.
+const STAR_PROTECTION_RATIO = 1.15;
 
 // Évaluation d'une proposition d'échange du point de vue de l'équipe de l'ordinateur qui la
 // reçoit. `sentByCpu`/`receivedByCpu` : joueurs (vraies valeurs ovr/potential/age) que l'équipe de
 // l'ordinateur enverrait / recevrait. Refuse si la valeur reçue est trop en deçà de la valeur
-// envoyée — façon DG réaliste plutôt qu'un simple garde-fou de plafond salarial.
+// envoyée, ou si elle cède un joueur bien plus valable que tout ce qu'elle reçoit — façon DG
+// réaliste plutôt qu'un simple garde-fou de plafond salarial.
 export function evaluateTradeForCpu(sentByCpu, receivedByCpu, rng = Math.random) {
-  const valueOut = sentByCpu.reduce((a, p) => a + tradeValue(p.ovr, p.potential, p.age), 0);
-  const valueIn = receivedByCpu.reduce((a, p) => a + tradeValue(p.ovr, p.potential, p.age), 0);
-  const noise = 1 + (rng() - 0.5) * 0.1; // ± 5 %, pour ne pas être un seuil parfaitement net
-  const accept = valueIn >= valueOut * (1 - CPU_TRADE_TOLERANCE) * noise;
-  return { accept, valueOut, valueIn, diff: valueIn - valueOut };
+  const values = (list) => list.map((p) => tradeValue(p.ovr, p.potential, p.age));
+  const outValues = values(sentByCpu), inValues = values(receivedByCpu);
+  const valueOut = outValues.reduce((a, v) => a + v, 0);
+  const valueIn = inValues.reduce((a, v) => a + v, 0);
+  const noise = 1 + (rng() - 0.5) * 0.06; // ± 3 %
+  const overallOk = valueIn >= valueOut * (1 - CPU_TRADE_TOLERANCE) * noise;
+  const bestOut = outValues.length ? Math.max(...outValues) : 0;
+  const bestIn = inValues.length ? Math.max(...inValues) : 0;
+  const starProtected = bestOut === 0 || bestOut <= bestIn * STAR_PROTECTION_RATIO;
+  return { accept: overallOk && starProtected, valueOut, valueIn, diff: valueIn - valueOut };
 }

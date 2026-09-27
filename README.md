@@ -314,10 +314,13 @@ tests/engine.test.js       tests du moteur
     défavorable selon la cote du DG).
   - L'équipe adverse refuse une proposition trop favorable pour toi (`engine/trades.js`
     evaluateTradeForCpu) : elle évalue toujours sur les vraies valeurs de son effectif et du
-    tien (sans le flou du dépistage qui s'applique à toi), et refuse si elle y perdrait plus de
-    12 % de valeur nette (± 5 % de variation aléatoire, pour ne pas être un seuil parfaitement
-    net) — plus la même échelle de valeur (cote actuelle + supplément de potentiel pour les
-    jeunes) que l'aperçu affiché avant de proposer l'échange.
+    tien (sans le flou du dépistage qui s'applique à toi), avec la même échelle de valeur (cote
+    actuelle + supplément de potentiel pour les jeunes) que l'aperçu affiché avant de proposer
+    l'échange. Refus dès qu'elle y perdrait de la valeur nette (± 3 % de variation aléatoire,
+    pour ne pas être un seuil parfaitement net — elle n'accepte jamais un rabais), et refus
+    aussi si elle cède un joueur nettement plus valable (plus de 15 %) que le meilleur qu'elle
+    recevrait, même quand la somme totale des deux côtés semble correcte : un paquet de joueurs
+    de profondeur ne fait pas le poids contre une vedette.
   - Trop d'offres refusées d'affilée pour un même joueur font monter ses attentes
     (`frustrationMultiplier`) puis, au-delà de 3 refus, il refuse toute négociation pour le
     reste de la saison (`MAX_OFFER_ATTEMPTS`, remis à zéro en début de saison).
