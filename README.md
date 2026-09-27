@@ -312,6 +312,12 @@ tests/engine.test.js       tests du moteur
     sans DG en poste, estimation à l'aveugle (plage maximale). Même principe pour évaluer un
     échange (`TransactionsCenter`, valeur envoyée/reçue et verdict favorable/équilibré/
     défavorable selon la cote du DG).
+  - L'équipe adverse refuse une proposition trop favorable pour toi (`engine/trades.js`
+    evaluateTradeForCpu) : elle évalue toujours sur les vraies valeurs de son effectif et du
+    tien (sans le flou du dépistage qui s'applique à toi), et refuse si elle y perdrait plus de
+    12 % de valeur nette (± 5 % de variation aléatoire, pour ne pas être un seuil parfaitement
+    net) — plus la même échelle de valeur (cote actuelle + supplément de potentiel pour les
+    jeunes) que l'aperçu affiché avant de proposer l'échange.
   - Trop d'offres refusées d'affilée pour un même joueur font monter ses attentes
     (`frustrationMultiplier`) puis, au-delà de 3 refus, il refuse toute négociation pour le
     reste de la saison (`MAX_OFFER_ATTEMPTS`, remis à zéro en début de saison).

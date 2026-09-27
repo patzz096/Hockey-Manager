@@ -3,16 +3,10 @@ import { useState } from "react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { gmSpread } from "../engine/contracts";
+import { tradeValue } from "../engine/trades";
 import { h2Style, btnStyle, inputStyle, scoutQualityColor } from "../ui/theme";
 import { StarRating, PlayerLink } from "./common";
 import { money } from "../ui/format";
-
-// Valeur d'échange approximative d'un joueur pour l'évaluation du DG : cote actuelle, avec un
-// supplément pour le potentiel des jeunes joueurs (un espoir vaut plus que sa seule cote actuelle).
-function tradeValue(ovr, potential, age) {
-  const upside = age <= 24 ? Math.max(0, (potential ?? ovr) - ovr) * 0.4 : 0;
-  return ovr + upside;
-}
 
 export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);

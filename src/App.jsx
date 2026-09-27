@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
+import { evaluateTradeForCpu } from "./engine/trades";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
@@ -628,6 +629,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     if (!fitsUnderCap(myT.roster, seasonYear, myIn, myOut, myCapOpts)) { setNotice(`Échange refusé : ta masse salariale dépasserait le plafond de ${formatMoney(capStatus(myT.roster, seasonYear).cap)}.`); return; }
     if (!fitsUnderCap(theirT.roster, seasonYear, myOut, myIn)) { setNotice(`Échange refusé : ${theirT.name} dépasserait le plafond salarial.`); return; }
     if (rosterCount(myT.roster) - myIds.length + theirIds.length > ROSTER_MAX) { setNotice(`Échange refusé : ton alignement dépasserait ${ROSTER_MAX} joueurs.`); return; }
+    // L'IA refuse une offre trop défavorable pour elle (engine/trades.js evaluateTradeForCpu) :
+    // toujours sur les vraies valeurs (une équipe connaît son propre effectif et celui qu'on lui
+    // propose, sans le flou du dépistage qui s'applique à toi).
+    const cpuEval = evaluateTradeForCpu(theirT.roster.filter((p) => theirIds.includes(p.id)), myT.roster.filter((p) => myIds.includes(p.id)));
+    if (!cpuEval.accept) { setNotice(`${theirT.name} refuse cet échange : il juge la proposition trop défavorable pour lui.`); return; }
     const theirTeamName = teamsById[otherTeamId]?.name || "l'autre équipe";
     const myT0 = teamsById[myTeamId], theirT0 = teamsById[otherTeamId];
     const myOutNames = myT0.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
