@@ -1,4 +1,5 @@
 import { FIRST_NAMES, LAST_NAMES } from "../data/names";
+import { pickNationality } from "./players";
 
 // hockeyOpsDirector : embauche l'ensemble du personnel hockey (tout sauf financeDirector) quand
 // délégué (voir App.jsx autoManageHockeyOps). gm (directeur général) : négociation des contrats
@@ -51,10 +52,16 @@ function generateStaffCandidate(rng, id, role, fitnessDevRoles) {
   }
   const salary = Math.round(STAFF_BASE_SALARY[role] * Math.pow(rating / 70, 1.6) * (0.85 + rng() * 0.3));
   const devSkill = attrs?.devProspects ?? (fitnessDevRoles.includes(role) ? Math.round(35 + rng() * 60) : undefined);
-  return { id, name: `${fn} ${ln}`, role, rating, salary, devSkill, attrs };
+  // Âge et nationalité (façon FM/EHM) : la plupart des membres du personnel sont d'anciens
+  // joueurs ou des carriéristes de longue date, donc plus âgés qu'un joueur moyen.
+  const age = 32 + Math.floor(rng() * 45);
+  const nationality = pickNationality(rng);
+  return { id, name: `${fn} ${ln}`, role, rating, salary, devSkill, attrs, age, nationality };
 }
 
-export function buildStaffMarket(rng, count = 12) {
+// Bassin de candidats volontairement large (façon FM/EHM, qui liste des dizaines de membres de
+// personnel) pour ne pas retomber toujours sur les mêmes profils.
+export function buildStaffMarket(rng, count = 24) {
   const roles = Object.keys(STAFF_ROLES);
   const list = [];
   for (let i = 0; i < count; i++) list.push(generateStaffCandidate(rng, `STAFF-${i}`, roles[i % roles.length], ["fitnessCoach"]));
@@ -77,7 +84,7 @@ export function evaluateStaffOffer(candidate, offeredSalary, rejections = 0, rng
   return { accept: rng() < probability, probability, ask, counterSalary: Math.round((ask * 1.05) / 5) * 5 };
 }
 
-export function buildStaffMarketRT(count = 6) {
+export function buildStaffMarketRT(count = 14) {
   const roles = Object.keys(STAFF_ROLES);
   const list = [];
   for (let i = 0; i < count; i++) list.push(generateStaffCandidate(Math.random, `STAFF-${Date.now()}-${i}`, roles[i % roles.length], ["fitnessCoach"]));

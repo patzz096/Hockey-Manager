@@ -6,6 +6,7 @@ import { ROLES } from "../engine/roles";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { teamOvrBenchmark, starsFor, attr20 } from "../engine/attributes";
 import { formatDay } from "../engine/calendar";
+import { NATION_FLAG } from "../data/names";
 import { h2Style, btnStyle } from "../ui/theme";
 import { StarRating, TeamCrest, ConfirmButton } from "./common";
 import { money as fmtMoney } from "../ui/format";
@@ -183,10 +184,12 @@ function TeamView({ scouts, missions, onSetMission, market, onHire, onFire, onRe
         {market.length === 0 ? <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucun dépisteur disponible.</div> : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
-              <thead><tr>{["Nom", "Cote", "Spécialité", "Port d'attache", "Salaire", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <thead><tr>{["Nom", "Nat.", "Âge", "Cote", "Spécialité", "Port d'attache", "Salaire", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>{market.map((c) => (
                 <tr key={c.id}>
                   <td style={{ ...td, fontWeight: 600 }}>{c.name}</td>
+                  <td style={td}>{NATION_FLAG[c.nationality] || ""}</td>
+                  <td style={td}>{c.age ?? "—"}</td>
                   <td style={{ ...td, color: "var(--gold)", fontWeight: 700 }}>{attr20(c.rating)}/20</td>
                   <td style={td}>{SPEC[c.specialty]}</td>
                   <td style={td}>{regionLabel(c.home)}</td>

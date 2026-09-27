@@ -3,6 +3,7 @@ import { createScoutReport, overallEstimate, INTERNAL_SCOUT_RATING } from "./sco
 import { attr20 } from "./attributes";
 import { ROLES, roleFit, roleGroupOf } from "./roles";
 import { FIRST_NAMES, LAST_NAMES } from "../data/names";
+import { pickNationality } from "./players";
 
 // ---------------------------------------------------------------------------------------
 // Dépistage à la Football Manager : une équipe de dépisteurs, chacun envoyé en mission.
@@ -167,15 +168,17 @@ export function weeklyScouting({ missions, coverage, candidatesOf, lastReportDay
   return { coverage: next, reports, cost, finished };
 }
 
-// Marché des dépisteurs : cote, spécialité (junior ou pro), port d'attache et salaire (k$/an).
-export function buildScoutMarket(rng, count = 6) {
+// Marché des dépisteurs : cote, spécialité (junior ou pro), port d'attache, âge, nationalité et
+// salaire (k$/an). Bassin volontairement large (façon FM/EHM) pour renouveler les visages.
+export function buildScoutMarket(rng, count = 14) {
   const homes = SCOUT_REGIONS.map((r) => r.id);
   return Array.from({ length: count }, (_, i) => {
     const rating = Math.round(35 + rng() * 60);
     const specialty = rng() < 0.7 ? "junior" : "pro";
     const home = specialty === "pro" && rng() < 0.6 ? "pro" : homes[Math.floor(rng() * (homes.length - 1))];
     const fn = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)], ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
-    return { id: `SCOUT-${Math.floor(rng() * 1e9)}-${i}`, name: `${fn} ${ln}`, rating, specialty, home, salary: Math.round(180 * Math.pow(rating / 60, 1.7) / 10) * 10 };
+    const age = 30 + Math.floor(rng() * 40);
+    return { id: `SCOUT-${Math.floor(rng() * 1e9)}-${i}`, name: `${fn} ${ln}`, rating, specialty, home, age, nationality: pickNationality(rng), salary: Math.round(180 * Math.pow(rating / 60, 1.7) / 10) * 10 };
   });
 }
 

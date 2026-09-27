@@ -89,7 +89,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // et ta liste de repêchage (ordre de préférence, pour la cuvée `year`).
   // missions : { idDuDépisteur: { region, league, focus, focusValue, target, weeks, weeksDone } }.
   const [scoutMissions, setScoutMissions] = useState(DEFAULT_MISSIONS);
-  const [scoutMarket, setScoutMarket] = useState(() => buildScoutMarket(seededRandom(4242), 6));
+  const [scoutMarket, setScoutMarket] = useState(() => buildScoutMarket(seededRandom(4242), 14));
   const [scoutingSpend, setScoutingSpend] = useState(0); // frais de mission de la saison ($)
   const [scoutCoverage, setScoutCoverage] = useState(DEFAULT_COVERAGE);
   const [scoutSuggestions, setScoutSuggestions] = useState([]);
@@ -768,7 +768,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function setScoutMission(scoutId, mission) {
     setScoutMissions((prev) => ({ ...prev, [scoutId]: mission ? { ...mission, weeksDone: 0, startDay: currentDay } : null }));
   }
-  function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 6)); }
+  function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 14)); }
   // Semaines d'entraînement (voir engine/training.js) : condition physique pour toutes les
   // équipes (selon les matchs joués et l'endurance de chacun) ; cohésion tactique seulement pour
   // la tienne (les 31 autres restent pleinement rodées, voir buildLines). Jusqu'à SLOTS_PER_DAY
@@ -1019,7 +1019,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     }
   }
   function refreshStaffMarket() {
-    setStaffMarket(buildStaffMarketRT(6));
+    setStaffMarket(buildStaffMarketRT(14));
   }
   // Le directeur des opérations hockey embauche l'ensemble du personnel hockey (tout sauf les
   // finances, et lui-même) quand délégué.

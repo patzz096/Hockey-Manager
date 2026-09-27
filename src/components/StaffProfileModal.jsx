@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { starsFor } from "../engine/attributes";
 import { STAFF_ROLES, STAFF_ATTRS, STAFF_ATTR_LABELS } from "../engine/staff";
+import { NATION_FLAG, NATION_NAME } from "../data/names";
 import { formatDay } from "../engine/calendar";
 import { money } from "../ui/format";
 import { btnStyle } from "../ui/theme";
@@ -22,7 +23,11 @@ export function StaffProfileModal({ staff, role, isHired, benchmark, team, pendi
       <div style={{ background: `linear-gradient(90deg, ${team.color}, ${team.color}99)`, padding: "16px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
         <div>
           <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 19, color: "#fff" }}>{staff.name}</div>
-          <div style={{ fontSize: 12, color: "#ffffffcc" }}>{STAFF_ROLES[role]} · {isHired ? `en poste — ${team.name}` : "candidat du marché"}</div>
+          <div style={{ fontSize: 12, color: "#ffffffcc" }}>
+            {STAFF_ROLES[role]} · {isHired ? `en poste — ${team.name}` : "candidat du marché"}
+            {staff.age != null && <> · {staff.age} ans</>}
+            {staff.nationality && <> · {NATION_FLAG[staff.nationality] || ""} {NATION_NAME[staff.nationality] || staff.nationality}</>}
+          </div>
         </div>
         <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}><X size={22} /></button>
       </div>

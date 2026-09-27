@@ -1,36 +1,18 @@
 import { useState } from "react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STAFF_ROLES } from "../engine/staff";
+import { NATION_FLAG } from "../data/names";
 import { h2Style, btnStyle } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 import { money } from "../ui/format";
 import { formatDay } from "../engine/calendar";
 
-export function StaffCard({ role, hired, benchmark, onFire, onSelect }) {
-  return (
-    <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 14 }}>
-      <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 6 }}>{STAFF_ROLES[role].toUpperCase()}</div>
-      {hired ? (
-        <>
-          <div onClick={() => onSelect(hired, role, true)} style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, marginBottom: 4, cursor: "pointer" }}>{hired.name}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <StarRating value={starsFor(hired.rating, benchmark)} size={12} />
-          </div>
-          {hired.devSkill != null && (
-            <div style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>Développement: <StarRating value={starsFor(hired.devSkill, benchmark)} size={11} color="#7A9EDB" /></div>
-          )}
-          <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>{money(hired.salary)} par saison</div>
-          <button onClick={() => onFire(role)} style={{ ...btnStyle("var(--loss)"), width: "100%", justifyContent: "center", fontSize: 12 }}>Congédier</button>
-        </>
-      ) : (
-        <div style={{ fontSize: 13, color: "var(--iceMuted)" }}>Poste vacant</div>
-      )}
-    </div>
-  );
-}
-
 export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onOffer, pendingStaffOffers = [], staffNegotiations = {}, onFire, onRefresh, onSetDelegation, onSelectPlayer, onSelectStaff }) {
+  const [pok, pod, poToggle] = useSort("role");
+  const poAcc = (row, key) => (key === "role" ? STAFF_ROLES[row.role] : key === "nationality" ? (row.hired?.nationality || "") : row.hired ? row.hired[key] : -1);
+  const staffRows = Object.keys(STAFF_ROLES).map((role) => ({ role, hired: business.staff[role] }));
+  const sortedStaffRows = sortRows(staffRows, pok, pod, poAcc);
   const [smk, smd, smToggle] = useSort("rating");
   const smAcc = (c, key) => (key === "role" ? STAFF_ROLES[c.role] : c[key]);
   const sortedStaffMarket = sortRows(staffMarket, smk, smd, smAcc);
@@ -59,9 +41,39 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
       <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -18, marginBottom: 26 }}>Finances déléguées: le directeur ajuste les prix des billets et investit dans les installations après chaque match local. Opérations hockey déléguées: le directeur comble automatiquement les postes vacants (entraîneurs, adjoints, dépisteurs) à chaque avancement de mois. Entraînement : réglages séparés dans l'onglet Entraînement.</p>
 
       <h2 style={h2Style}>Personnel en poste</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 12, marginBottom: 28 }}>
-        {Object.keys(STAFF_ROLES).map((role) => (<StaffCard key={role} role={role} hired={business.staff[role]} benchmark={benchmark} onFire={onFire} onSelect={onSelectStaff} />))}
-      </div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 28 }}>
+        <thead><tr>
+          <SortTh label="Nom" sortKey="name" activeKey={pok} activeDir={pod} onSort={poToggle} />
+          <th style={{ textAlign: "left", padding: "6px 10px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid #ffffff22" }}>Nat.</th>
+          <SortTh label="Âge" sortKey="age" activeKey={pok} activeDir={pod} onSort={poToggle} />
+          <SortTh label="Poste" sortKey="role" activeKey={pok} activeDir={pod} onSort={poToggle} />
+          <SortTh label="Cote" sortKey="rating" activeKey={pok} activeDir={pod} onSort={poToggle} />
+          <SortTh label="Salaire" sortKey="salary" activeKey={pok} activeDir={pod} onSort={poToggle} />
+          <th></th>
+        </tr></thead>
+        <tbody>
+          {sortedStaffRows.map(({ role, hired }) => (
+            <tr key={role} style={{ borderBottom: "1px solid #ffffff11" }}>
+              {hired ? (
+                <>
+                  <td style={{ padding: "7px 10px", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#ffffff33" }} onClick={() => onSelectStaff(hired, role, true)}>{hired.name}</td>
+                  <td style={{ padding: "7px 10px" }}>{NATION_FLAG[hired.nationality] || "—"}</td>
+                  <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{hired.age ?? "—"}</td>
+                  <td style={{ padding: "7px 10px" }}>{STAFF_ROLES[role]}</td>
+                  <td style={{ padding: "7px 10px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><StarRating value={starsFor(hired.rating, benchmark)} size={12} />{hired.devSkill != null && <StarRating value={starsFor(hired.devSkill, benchmark)} size={11} color="#7A9EDB" />}</div></td>
+                  <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{money(hired.salary)} par saison</td>
+                  <td style={{ padding: "7px 10px" }}><button onClick={() => onFire(role)} style={{ ...btnStyle("var(--loss)"), fontSize: 11, padding: "3px 10px" }}>Congédier</button></td>
+                </>
+              ) : (
+                <>
+                  <td colSpan={6} style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{STAFF_ROLES[role]} — <em>poste vacant</em></td>
+                  <td></td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <h2 style={{ ...h2Style, marginBottom: 0 }}>Marché des candidats</h2>
@@ -71,6 +83,8 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 30 }}>
         <thead><tr>
           <SortTh label="Nom" sortKey="name" activeKey={smk} activeDir={smd} onSort={smToggle} />
+          <th style={{ textAlign: "left", padding: "6px 10px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid #ffffff22" }}>Nat.</th>
+          <SortTh label="Âge" sortKey="age" activeKey={smk} activeDir={smd} onSort={smToggle} />
           <SortTh label="Poste" sortKey="role" activeKey={smk} activeDir={smd} onSort={smToggle} />
           <SortTh label="Cote" sortKey="rating" activeKey={smk} activeDir={smd} onSort={smToggle} />
           <SortTh label="Salaire demandé" sortKey="salary" activeKey={smk} activeDir={smd} onSort={smToggle} />
@@ -84,6 +98,8 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
             return (
               <tr key={c.id} style={{ borderBottom: "1px solid #ffffff11" }}>
                 <td style={{ padding: "7px 10px", cursor: "pointer", textDecoration: "underline", textDecorationColor: "#ffffff33" }} onClick={() => onSelectStaff(c, c.role, false)}>{c.name}</td>
+                <td style={{ padding: "7px 10px" }}>{NATION_FLAG[c.nationality] || "—"}</td>
+                <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{c.age ?? "—"}</td>
                 <td style={{ padding: "7px 10px" }}>{STAFF_ROLES[c.role]}</td>
                 <td style={{ padding: "7px 10px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><StarRating value={starsFor(c.rating, benchmark)} size={12} />{c.devSkill != null && <StarRating value={starsFor(c.devSkill, benchmark)} size={11} color="#7A9EDB" />}</div></td>
                 <td style={{ padding: "7px 10px" }}>{money(c.salary)} par saison</td>
@@ -102,7 +118,7 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
               </tr>
             );
           })}
-          {sortedStaffMarket.length === 0 && <tr><td colSpan={5} style={{ padding: 12, color: "var(--iceMuted)" }}>Aucun candidat sur le marché.</td></tr>}
+          {sortedStaffMarket.length === 0 && <tr><td colSpan={7} style={{ padding: 12, color: "var(--iceMuted)" }}>Aucun candidat sur le marché.</td></tr>}
         </tbody>
       </table>
 

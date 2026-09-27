@@ -34,7 +34,7 @@ export function initLeague(custom = null) {
   const freeAgents = buildFreeAgentPool(rng, 16);
   const allPlayers = [...teams.flatMap((t) => t.roster), ...Object.values(farmByTeam).flat(), ...freeAgents];
   assignDraftInfo(allPlayers, rng);
-  const staffMarket = buildStaffMarket(rng, 12);
+  const staffMarket = buildStaffMarket(rng, 24);
   return { teams, freeAgents, staffMarket, farmByTeam };
 }
 

@@ -241,6 +241,15 @@ tests/engine.test.js       tests du moteur
   page comme celui d'un joueur. Le directeur des opérations hockey embauche l'ensemble du
   personnel hockey (tout sauf les finances, et lui-même) quand délégué à chaque avancement de
   mois, instantanément
+  - « Personnel en poste » et « Marché des candidats » en tableau clair façon FM/EHM (nom,
+    nationalité avec drapeau, âge, poste, cote, salaire) plutôt qu'une grille de cartes. Chaque
+    candidat a maintenant un âge et une nationalité (`engine/staff.js`), et le bassin de
+    candidats est large (24 à l'ouverture, 14 au rafraîchissement) pour varier les profils
+    plutôt que retomber toujours sur les mêmes têtes
+  - Dépisteurs en renfort (onglet Dépistage, `engine/scoutingZones.js` scoutRoster) : en plus
+    des deux dépisteurs en chef (personnel), jusqu'à 6 dépisteurs supplémentaires peuvent être
+    engagés en même temps, chacun avec sa propre mission (zone, recherche, cible, durée) — le
+    marché de ces dépisteurs a aussi une nationalité/âge et un bassin élargi (14 candidats)
   - Attributs détaillés par poste (`engine/staff.js` STAFF_ATTRS/STAFF_ATTR_LABELS, échelle
     interne 20-99 affichée sur /20 comme les joueurs) pour l'entraîneur-chef (entraînements
     offensif/défensif/gardiens, développement des prospects, motivation, discipline, tactique,
