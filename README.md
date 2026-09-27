@@ -175,7 +175,9 @@ tests/engine.test.js       tests du moteur
   10 derniers matchs, séquence ; palmarès des saisons
 - Séries éliminatoires (`engine/playoffs.js`) : 3 premiers de chaque division + 2 équipes
   repêchées par association, tableau fixe de la LNH, séries 4 de 7 (2-2-1-1-1), prolongation
-  sans tirs de barrage, jusqu'à la Coupe Stanley. Tes matchs de séries peuvent se jouer en direct
+  sans tirs de barrage, jusqu'à la Coupe Stanley. Tes matchs de séries peuvent se jouer en direct.
+  Ta série en cours s'ouvre automatiquement dans l'onglet Séries (avec la feuille de match de
+  chaque match déjà joué) : plus besoin de dérouler la série toi-même pour la trouver
 - Repêchage (`engine/draft.js`) : 7 rondes, ordre selon le classement (hors séries d'abord,
   puis par ronde d'élimination, champion en dernier). Loterie LNH (`runDraftLottery`) :
   16 équipes, 2 tirages, chances de 18,5 % à 0,5 %, montée maximale de 10 rangs (une équipe
@@ -311,7 +313,12 @@ tests/engine.test.js       tests du moteur
   l'affluence récente, les victoires et l'investissement marketing) : détermine les ventes de
   marchandise et la valeur du prochain contrat de diffusion
 - Transactions : échanges, agents libres, contrats, page de profondeur (LNH/LAH/prospects)
-  avec rappels/renvois. Négociation de contrat façon FM24 (`engine/contracts.js`) :
+  avec rappels/renvois.
+  - Onglet Échanges : espace sous le plafond des deux équipes et rang au classement affichés
+    d'un coup d'œil (avec écusson), filtre par position (attaquants/défenseurs/gardiens) sur
+    chaque alignement, âge et contrat (salaire × années) visibles par joueur en plus de la cote,
+    et ajout rapide à l'offre pour tes joueurs déjà mis sur le marché des échanges
+  - Négociation de contrat façon FM24 (`engine/contracts.js`) :
   - Offre envoyée à l'agent, réponse après un délai de 1 à 3 jours (`business` pending
     offers, résolue dans `advanceDays`) plutôt qu'instantanée — un message confirme l'envoi,
     un second la décision une fois le délai écoulé.
@@ -329,7 +336,10 @@ tests/engine.test.js       tests du moteur
     pour ne pas être un seuil parfaitement net — elle n'accepte jamais un rabais), et refus
     aussi si elle cède un joueur nettement plus valable (plus de 15 %) que le meilleur qu'elle
     recevrait, même quand la somme totale des deux côtés semble correcte : un paquet de joueurs
-    de profondeur ne fait pas le poids contre une vedette.
+    de profondeur ne fait pas le poids contre une vedette. Réponse « typique » variée (façon DG
+    réel) à l'acceptation comme au refus (`engine/trades.js` tradeResponseLine), annoncée par
+    message du DG de l'équipe adverse ; un refus explique aussi la raison (valeur insuffisante
+    ou joueur trop précieux cédé)
   - Trop d'offres refusées d'affilée pour un même joueur font monter ses attentes
     (`frustrationMultiplier`) puis, au-delà de 3 refus, il refuse toute négociation pour le
     reste de la saison (`MAX_OFFER_ATTEMPTS`, remis à zéro en début de saison).

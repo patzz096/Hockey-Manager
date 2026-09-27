@@ -31,5 +31,47 @@ export function evaluateTradeForCpu(sentByCpu, receivedByCpu, rng = Math.random)
   const bestOut = outValues.length ? Math.max(...outValues) : 0;
   const bestIn = inValues.length ? Math.max(...inValues) : 0;
   const starProtected = bestOut === 0 || bestOut <= bestIn * STAR_PROTECTION_RATIO;
-  return { accept: overallOk && starProtected, valueOut, valueIn, diff: valueIn - valueOut };
+  const accept = overallOk && starProtected;
+  // `reason` explique un refus (utilisé pour varier le message de l'IA, voir tradeResponseLine) :
+  // "star" si la vraie cause est de céder un joueur trop précieux, "value" sinon.
+  const reason = accept ? null : !starProtected ? "star" : "value";
+  return { accept, valueOut, valueIn, diff: valueIn - valueOut, reason };
+}
+
+// ------------------------- Réponses « typiques » des équipes adverses -------------------------
+// Phrases variées façon DG réel, pour ne pas répéter toujours la même ligne de refus/acceptation.
+// Le choix est aléatoire (purement cosmétique, n'affecte pas la décision) mais stable pour un
+// même essai grâce à `rng` fourni par l'appelant si la reproductibilité importe.
+const REJECT_VALUE_LINES = [
+  "Cette offre ne reflète pas la valeur de nos joueurs.",
+  "On ne peut pas accepter un échange qui nous désavantage à ce point.",
+  "Nos dépisteurs jugent cette proposition nettement insuffisante.",
+  "Il faudra bonifier l'offre pour qu'on la considère sérieusement.",
+  "Notre direction juge que ça ne vaut pas le coup pour nous, désolé.",
+  "Reviens avec plus de valeur et on en reparle.",
+];
+const REJECT_STAR_LINES = [
+  "On ne cède pas un joueur de ce calibre pour un groupe de pièces secondaires.",
+  "Ce joueur est trop important pour notre équipe pour partir dans un échange comme celui-ci.",
+  "Il nous faudrait un joueur de calibre comparable en retour, pas plusieurs pièces de profondeur.",
+  "Notre personnel de dépistage n'endosse pas cet échange : rien en retour ne vaut vraiment cette pièce.",
+  "Un paquet de joueurs de profondeur ne remplace pas une vedette à nos yeux.",
+];
+const ACCEPT_GENEROUS_LINES = [
+  "Nos dépisteurs recommandent fortement cet échange — marché conclu.",
+  "C'est une offre qu'on ne pouvait pas refuser.",
+  "Notre direction est ravie de cette transaction.",
+  "Franchement, on ne s'attendait pas à une si bonne offre.",
+];
+const ACCEPT_FAIR_LINES = [
+  "Un échange équitable pour les deux équipes — on embarque.",
+  "Ça répond à nos besoins actuels, marché conclu.",
+  "Notre personnel juge cette offre raisonnable.",
+  "Ça nous convient, on signe l'échange.",
+];
+function pick(list, rng) { return list[Math.floor(rng() * list.length)]; }
+// Ligne de réponse « typique » à afficher/annoncer, selon le résultat d'evaluateTradeForCpu.
+export function tradeResponseLine(evalResult, rng = Math.random) {
+  if (evalResult.accept) return pick(evalResult.diff > evalResult.valueOut * 0.15 ? ACCEPT_GENEROUS_LINES : ACCEPT_FAIR_LINES, rng);
+  return pick(evalResult.reason === "star" ? REJECT_STAR_LINES : REJECT_VALUE_LINES, rng);
 }

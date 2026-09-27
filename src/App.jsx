@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
-import { evaluateTradeForCpu } from "./engine/trades";
+import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
 import { initLeague, buildSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
@@ -633,8 +633,14 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     // toujours sur les vraies valeurs (une équipe connaît son propre effectif et celui qu'on lui
     // propose, sans le flou du dépistage qui s'applique à toi).
     const cpuEval = evaluateTradeForCpu(theirT.roster.filter((p) => theirIds.includes(p.id)), myT.roster.filter((p) => myIds.includes(p.id)));
-    if (!cpuEval.accept) { setNotice(`${theirT.name} refuse cet échange : il juge la proposition trop défavorable pour lui.`); return; }
     const theirTeamName = teamsById[otherTeamId]?.name || "l'autre équipe";
+    if (!cpuEval.accept) {
+      const myOutRejected = myT.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
+      const theirOutRejected = theirT.roster.filter((p) => theirIds.includes(p.id)).map((p) => p.name);
+      addMessage({ from: `Directeur général — ${theirTeamName}`, subject: `Échange refusé par ${theirTeamName}`, category: "transaction", body: `Proposition : tu envoies ${myOutRejected.join(", ") || "rien"}, tu reçois ${theirOutRejected.join(", ") || "rien"}.\n\n« ${tradeResponseLine(cpuEval)} »` });
+      setNotice(`${theirTeamName} refuse cet échange.`);
+      return;
+    }
     const myT0 = teamsById[myTeamId], theirT0 = teamsById[otherTeamId];
     const myOutNames = myT0.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
     const theirOutNames = theirT0.roster.filter((p) => theirIds.includes(p.id)).map((p) => p.name);
@@ -657,7 +663,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     });
     if (retained.length) setDeadCap((prev) => [...prev, ...retained]);
     setInjuries((prev) => Object.fromEntries(Object.entries(prev).map(([id, i]) => [id, [...myIds, ...theirIds].includes(id) ? { ...i, ltir: false, teamId: myIds.includes(id) ? otherTeamId : myTeamId } : i])));
-    const body = `Tu envoies: ${myOutNames.join(", ") || "rien"}\nTu reçois: ${theirOutNames.join(", ") || "rien"}${retained.length ? `\nSalaire retenu : ${retained.map((e) => `${e.label.replace("Salaire retenu — ", "")} ${formatMoney(e.amount)}/saison`).join(", ")}` : ""}`;
+    const body = `Tu envoies: ${myOutNames.join(", ") || "rien"}\nTu reçois: ${theirOutNames.join(", ") || "rien"}${retained.length ? `\nSalaire retenu : ${retained.map((e) => `${e.label.replace("Salaire retenu — ", "")} ${formatMoney(e.amount)}/saison`).join(", ")}` : ""}\n\n« ${tradeResponseLine(cpuEval)} » — Directeur général, ${theirTeamName}`;
     addMessage({ from: "Directeur général adjoint", subject: `Échange conclu avec ${theirTeamName}`, category: "transaction", playerIds: [...myIds, ...theirIds], body });
   }
   function openOffer(player, isRenewal = false) {
@@ -1639,7 +1645,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 

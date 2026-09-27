@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { ROUND_NAMES } from "../engine/playoffs";
 import { h2Style } from "../ui/theme";
 import { TeamCrest } from "./common";
@@ -18,9 +19,9 @@ function SeriesCard({ s, teamsById, myTeamId, rankOf, open, onToggle }) {
     <div onClick={onToggle} style={{ background: "var(--navy)", border: `1px solid ${involved ? "rgba(255,194,71,0.55)" : "#ffffff1a"}`, borderRadius: 4, padding: "8px 10px", cursor: "pointer", minWidth: 220 }}>
       {row(s.high, s.winsHigh)}
       {row(s.low, s.winsLow)}
-      <div style={{ fontSize: 11, color: s.winner ? "var(--win)" : "var(--iceMuted)", marginTop: 3 }}>
-        {s.winner ? `${team(s.winner).name} l'emporte ${Math.max(s.winsHigh, s.winsLow)}-${Math.min(s.winsHigh, s.winsLow)}` : s.games.length ? `Série ${s.winsHigh === s.winsLow ? "égale" : "menée"} ${Math.max(s.winsHigh, s.winsLow)}-${Math.min(s.winsHigh, s.winsLow)}` : "À venir"}
-        {s.games.length > 0 && <span> · {open ? "masquer" : "voir"} les matchs</span>}
+      <div style={{ fontSize: 11, color: s.winner ? "var(--win)" : "var(--iceMuted)", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
+        <span>{s.winner ? `${team(s.winner).name} l'emporte ${Math.max(s.winsHigh, s.winsLow)}-${Math.min(s.winsHigh, s.winsLow)}` : s.games.length ? `Série ${s.winsHigh === s.winsLow ? "égale" : "menée"} ${Math.max(s.winsHigh, s.winsLow)}-${Math.min(s.winsHigh, s.winsLow)}` : "À venir"}</span>
+        {s.games.length > 0 && <span style={{ display: "flex", alignItems: "center", gap: 2, color: "var(--accent)" }}> · {open ? "masquer" : "voir"} les matchs {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}</span>}
       </div>
     </div>
   );
@@ -29,6 +30,13 @@ function SeriesCard({ s, teamsById, myTeamId, rankOf, open, onToggle }) {
 export function PlayoffsPanel({ playoffs, teamsById, myTeamId, linesByTeam, onSelectPlayer }) {
   const [openSeries, setOpenSeries] = useState(null);
   const [openGame, setOpenGame] = useState(null);
+  // Ouvre automatiquement ta série en cours (façon "on ne voit pas les sommaires" — le clic pour
+  // déplier une série n'était pas assez visible) ; se réajuste si ta série change (élimination,
+  // tour suivant).
+  const myActiveSeriesId = playoffs?.rounds.flat().find((s) => !s.winner && (s.high === myTeamId || s.low === myTeamId))?.id
+    ?? playoffs?.rounds.flat().filter((s) => s.high === myTeamId || s.low === myTeamId).slice(-1)[0]?.id
+    ?? null;
+  useEffect(() => { if (myActiveSeriesId) setOpenSeries(myActiveSeriesId); }, [myActiveSeriesId]);
   if (!playoffs) return <div><h2 style={h2Style}>Séries éliminatoires</h2><p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Les séries commencent à la fin de la saison régulière : 16 équipes (3 premières de chaque division + 2 équipes repêchées par association), séries 4 de 7.</p></div>;
   const all = playoffs.rounds.flat();
   const selected = all.find((s) => s.id === openSeries);
@@ -57,11 +65,13 @@ export function PlayoffsPanel({ playoffs, teamsById, myTeamId, linesByTeam, onSe
           <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>{teamsById[selected.high].name} vs {teamsById[selected.low].name}</div>
           {selected.games.map((g, i) => (
             <div key={g.id} style={{ marginBottom: 4 }}>
-              <div onClick={() => setOpenGame(openGame === g.id ? null : g.id)} style={{ display: "flex", gap: 10, background: "#ffffff08", padding: "7px 12px", borderRadius: 3, fontSize: 13, cursor: "pointer" }}>
+              <div onClick={() => setOpenGame(openGame === g.id ? null : g.id)} style={{ display: "flex", alignItems: "center", gap: 10, background: openGame === g.id ? "var(--navy2)" : "#ffffff08", padding: "7px 12px", borderRadius: 3, fontSize: 13, cursor: "pointer", border: "1px solid transparent" }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")} onMouseLeave={(e) => (e.currentTarget.style.borderColor = "transparent")}>
                 <span style={{ color: "var(--iceMuted)", width: 60 }}>Match {i + 1}</span>
                 <span style={{ flex: 1 }}>{teamsById[g.home].name}</span>
                 <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600 }}>{g.homeScore} – {g.awayScore}{g.decidedIn === "OT" ? " (P)" : ""}</span>
                 <span style={{ flex: 1, textAlign: "right" }}>{teamsById[g.away].name}</span>
+                {openGame === g.id ? <ChevronUp size={14} color="var(--iceMuted)" /> : <ChevronDown size={14} color="var(--iceMuted)" />}
               </div>
               {openGame === g.id && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={onSelectPlayer} />}
             </div>
