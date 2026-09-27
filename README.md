@@ -340,6 +340,13 @@ tests/engine.test.js       tests du moteur
     réel) à l'acceptation comme au refus (`engine/trades.js` tradeResponseLine), annoncée par
     message du DG de l'équipe adverse ; un refus explique aussi la raison (valeur insuffisante
     ou joueur trop précieux cédé)
+  - Choix de repêchage échangeables (ronde + équipe d'origine, repêchage à venir seulement,
+    `engine/draft.js` ownedPicks/pickKey, `pickTrades` dans App.jsx remis à zéro chaque nouvelle
+    saison) : liste par ronde sous chaque alignement dans l'onglet Échanges, avec la valeur
+    approximative du choix (`engine/trades.js` pickValue, décroissante selon la ronde) et le nom
+    de l'équipe d'origine quand le choix a déjà changé de mains ; entre dans l'évaluation du DG et
+    dans celle de l'IA adverse au même titre qu'un joueur. Une fois échangé, le choix apparaît
+    dans le tableau « Tes choix » du Repêchage avec son équipe d'origine.
   - Trop d'offres refusées d'affilée pour un même joueur font monter ses attentes
     (`frustrationMultiplier`) puis, au-delà de 3 refus, il refuse toute négociation pour le
     reste de la saison (`MAX_OFFER_ATTEMPTS`, remis à zéro en début de saison).

@@ -75,6 +75,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [currentDay, setCurrentDay] = useState(() => seasonDates(FIRST_SEASON).start - 1);
   const [playoffs, setPlayoffs] = useState(null);
   const [draft, setDraft] = useState(null);
+  // Choix de repêchage échangés cette saison : { "ronde-équipeOrigine": équipeQuiLePossèdeMaintenant }.
+  // Remis à zéro à chaque nouvelle saison (voir startNewSeason) — un choix ne se négocie que pour
+  // le repêchage à venir, pas pour les années futures.
+  const [pickTrades, setPickTrades] = useState({});
   const [freeAgencyDone, setFreeAgencyDone] = useState(false);
   const [history, setHistory] = useState([]);
   const [careerStats, setCareerStats] = useState({});
@@ -615,8 +619,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       pk: specialUnits(l, "pk").map((u) => Object.fromEntries(Object.entries(u).map(([k, id]) => [k, id === playerId ? undefined : id]))),
     };
   }
-  function executeTrade(otherTeamId, myIds, theirIds, retention = {}) {
-    if (myIds.length === 0 && theirIds.length === 0) return;
+  // `myPicks`/`theirPicks` : choix de repêchage inclus dans l'échange, sous la forme
+  // { round, origTeamId, key } (voir engine/draft.js ownedPicks) — le repêchage à venir seulement.
+  function executeTrade(otherTeamId, myIds, theirIds, retention = {}, myPicks = [], theirPicks = []) {
+    if (myIds.length === 0 && theirIds.length === 0 && myPicks.length === 0 && theirPicks.length === 0) return;
     if (!txWindow.open) return;
     const myT = teamsById[myTeamId], theirT = teamsById[otherTeamId];
     const sal = (t, ids) => t.roster.filter((p) => ids.includes(p.id)).reduce((a, p) => a + (p.contract?.salary || 0), 0);
@@ -632,18 +638,27 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     // L'IA refuse une offre trop défavorable pour elle (engine/trades.js evaluateTradeForCpu) :
     // toujours sur les vraies valeurs (une équipe connaît son propre effectif et celui qu'on lui
     // propose, sans le flou du dépistage qui s'applique à toi).
-    const cpuEval = evaluateTradeForCpu(theirT.roster.filter((p) => theirIds.includes(p.id)), myT.roster.filter((p) => myIds.includes(p.id)));
+    const pickLabel = (k) => `Choix de ronde ${k.round} (${teamsById[k.origTeamId]?.name || k.origTeamId})`;
+    const cpuEval = evaluateTradeForCpu(theirT.roster.filter((p) => theirIds.includes(p.id)), myT.roster.filter((p) => myIds.includes(p.id)), Math.random, theirPicks, myPicks);
     const theirTeamName = teamsById[otherTeamId]?.name || "l'autre équipe";
     if (!cpuEval.accept) {
-      const myOutRejected = myT.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
-      const theirOutRejected = theirT.roster.filter((p) => theirIds.includes(p.id)).map((p) => p.name);
+      const myOutRejected = [...myT.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name), ...myPicks.map(pickLabel)];
+      const theirOutRejected = [...theirT.roster.filter((p) => theirIds.includes(p.id)).map((p) => p.name), ...theirPicks.map(pickLabel)];
       addMessage({ from: `Directeur général — ${theirTeamName}`, subject: `Échange refusé par ${theirTeamName}`, category: "transaction", body: `Proposition : tu envoies ${myOutRejected.join(", ") || "rien"}, tu reçois ${theirOutRejected.join(", ") || "rien"}.\n\n« ${tradeResponseLine(cpuEval)} »` });
       setNotice(`${theirTeamName} refuse cet échange.`);
       return;
     }
     const myT0 = teamsById[myTeamId], theirT0 = teamsById[otherTeamId];
-    const myOutNames = myT0.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
-    const theirOutNames = theirT0.roster.filter((p) => theirIds.includes(p.id)).map((p) => p.name);
+    const myOutNames = [...myT0.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name), ...myPicks.map(pickLabel)];
+    const theirOutNames = [...theirT0.roster.filter((p) => theirIds.includes(p.id)).map((p) => p.name), ...theirPicks.map(pickLabel)];
+    if (myPicks.length || theirPicks.length) {
+      setPickTrades((prev) => {
+        const next = { ...prev };
+        myPicks.forEach((k) => { next[k.key] = otherTeamId; });
+        theirPicks.forEach((k) => { next[k.key] = myTeamId; });
+        return next;
+      });
+    }
     setTeams((prev) => {
       const myT = prev.find((t) => t.id === myTeamId);
       const theirT = prev.find((t) => t.id === otherTeamId);
@@ -1388,7 +1403,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const ineligible = lotteryIneligible(lotteryHistory, seasonYear);
     const lottery = runDraftLottery(baseOrder, 16, seededRandom(seasonYear * 101 + 7), ineligible);
     setLotteryHistory((prev) => [...prev, { year: seasonYear, winners: lottery.winners }]);
-    setDraft({ ...createDraft(seasonYear, lottery.order), lottery: { draws: lottery.draws, baseOrder, ineligible: [...ineligible] } });
+    setDraft({ ...createDraft(seasonYear, lottery.order, pickTrades), lottery: { draws: lottery.draws, baseOrder, ineligible: [...ineligible] } });
     addMessage({ from: "Ligue", subject: `Loterie du repêchage ${seasonYear + 1}`, category: "general", body: lottery.draws.map((d) => `Choix n° ${d.pick} : ${teamsById[d.winner].name} (${d.from}e pire dossier)${d.movedTo ? ` — ${teamsById[d.drawn].name}, tirée, ne peut monter que de 10 rangs et passe au ${d.movedTo}e rang` : ""}`).join("\n") });
     const expiring = (teamsById[myTeamId]?.roster || []).filter((p) => (p.contract?.years ?? 1) <= 1);
     if (expiring.length) addMessage({ from: "Directeur général adjoint", subject: `Contrats échus le ${formatDay(dates.freeAgency)}`, category: "transaction", playerIds: expiring.map((p) => p.id), body: `Ces joueurs deviendront agents libres le 1er juillet si tu ne les prolonges pas (onglet Contrats) :\n${expiring.map((p) => `- ${p.name} (${p.pos})`).join("\n")}` });
@@ -1473,6 +1488,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setLinesByTeam((prev) => Object.fromEntries(aged.map((t) => [t.id, t.id === myTeamId ? prev[t.id] : { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality }])));
     setPlayoffs(null);
     setDraft(null);
+    setPickTrades({});
     setScoutingSpend(0);
     setFreeAgencyDone(false);
     setNegotiations({});
@@ -1645,7 +1661,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 

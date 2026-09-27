@@ -8,6 +8,12 @@ export function tradeValue(ovr, potential, age) {
   return ovr + upside;
 }
 
+// Valeur approximative d'un choix au repêchage selon la ronde, sur la même échelle que
+// tradeValue (un joueur de 50-60 de cote) — un 1er tour vaut une jeune pièce prometteuse, un choix
+// de fin de repêchage vaut presque rien.
+export const PICK_VALUE_BY_ROUND = [58, 42, 32, 25, 20, 16, 13];
+export function pickValue(round) { return PICK_VALUE_BY_ROUND[round - 1] ?? 10; }
+
 // L'IA n'accepte plus de perdre de valeur nette (± 3 % de bruit aléatoire, pour ne pas être un
 // seuil parfaitement net) — elle exige au moins l'équivalent, jamais un rabais.
 const CPU_TRADE_TOLERANCE = 0;
@@ -21,11 +27,12 @@ const STAR_PROTECTION_RATIO = 1.15;
 // l'ordinateur enverrait / recevrait. Refuse si la valeur reçue est trop en deçà de la valeur
 // envoyée, ou si elle cède un joueur bien plus valable que tout ce qu'elle reçoit — façon DG
 // réaliste plutôt qu'un simple garde-fou de plafond salarial.
-export function evaluateTradeForCpu(sentByCpu, receivedByCpu, rng = Math.random) {
+export function evaluateTradeForCpu(sentByCpu, receivedByCpu, rng = Math.random, sentPicks = [], receivedPicks = []) {
   const values = (list) => list.map((p) => tradeValue(p.ovr, p.potential, p.age));
   const outValues = values(sentByCpu), inValues = values(receivedByCpu);
-  const valueOut = outValues.reduce((a, v) => a + v, 0);
-  const valueIn = inValues.reduce((a, v) => a + v, 0);
+  const pickValues = (list) => list.reduce((a, k) => a + pickValue(k.round), 0);
+  const valueOut = outValues.reduce((a, v) => a + v, 0) + pickValues(sentPicks);
+  const valueIn = inValues.reduce((a, v) => a + v, 0) + pickValues(receivedPicks);
   const noise = 1 + (rng() - 0.5) * 0.06; // ± 3 %
   const overallOk = valueIn >= valueOut * (1 - CPU_TRADE_TOLERANCE) * noise;
   const bestOut = outValues.length ? Math.max(...outValues) : 0;

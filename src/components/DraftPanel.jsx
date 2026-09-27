@@ -87,7 +87,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
           ))}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", margin: "14px 0 6px" }}>TES CHOIX</div>
           {myPicks.map((k) => { const p = k.playerId && draft.pool.find((x) => x.id === k.playerId); return (
-            <div key={k.overall} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #ffffff11" }}>R{k.round} · #{k.overall} — {p ? `${p.name} (${p.pos})` : <span style={{ color: "var(--iceMuted)" }}>à venir</span>}</div>
+            <div key={k.overall} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #ffffff11" }}>R{k.round} · #{k.overall}{k.origTeamId && k.origTeamId !== myTeam.id ? <span style={{ color: "var(--gold)", fontSize: 11 }}> (choix de {teamsById[k.origTeamId]?.name})</span> : ""} — {p ? `${p.name} (${p.pos})` : <span style={{ color: "var(--iceMuted)" }}>à venir</span>}</div>
           ); })}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", margin: "14px 0 6px" }}>DERNIERS CHOIX</div>
           {recent.map((k) => { const p = draft.pool.find((x) => x.id === k.playerId); return (

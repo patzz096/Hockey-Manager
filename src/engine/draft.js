@@ -42,9 +42,20 @@ export function upcomingDraftClass(year) {
   return classCache.get(year);
 }
 
-export function createDraft(year, order) {
+// Clé d'un choix pour le suivi des échanges (ronde + équipe d'origine, avant tout échange).
+export function pickKey(round, origTeamId) { return `${round}-${origTeamId}`; }
+
+// `pickTrades` : { [pickKey]: équipe qui détient actuellement ce choix } — construit au fil des
+// échanges de la saison (voir App.jsx), vide par défaut (aucun choix échangé).
+export function createDraft(year, order, pickTrades = {}) {
   const picks = [];
-  for (let r = 0; r < DRAFT_ROUNDS; r++) order.forEach((teamId, i) => picks.push({ overall: r * order.length + i + 1, round: r + 1, teamId, playerId: null }));
+  for (let r = 0; r < DRAFT_ROUNDS; r++) {
+    order.forEach((origTeamId, i) => {
+      const key = pickKey(r + 1, origTeamId);
+      const teamId = pickTrades[key] || origTeamId;
+      picks.push({ overall: r * order.length + i + 1, round: r + 1, teamId, origTeamId, playerId: null });
+    });
+  }
   return { year, picks, pool: picks.length + 32 === DRAFT_CLASS_SIZE ? upcomingDraftClass(year) : generateDraftClass(year, picks.length + 32), current: 0 };
 }
 
@@ -72,3 +83,17 @@ export function makePick(draft, playerId) {
 }
 
 export function draftDone(draft) { return !draft || draft.current >= draft.picks.length; }
+
+// Choix de repêchage (ronde + équipe d'origine) actuellement détenus par `teamId`, en tenant
+// compte des échanges déjà conclus (`pickTrades`) — utilisé avant même que le repêchage existe
+// (createDraft), pour l'onglet Transactions et l'évaluation IA d'un échange.
+export function ownedPicks(teamId, teamIds, pickTrades = {}) {
+  const list = [];
+  for (let r = 1; r <= DRAFT_ROUNDS; r++) {
+    teamIds.forEach((origTeamId) => {
+      const key = pickKey(r, origTeamId);
+      if ((pickTrades[key] || origTeamId) === teamId) list.push({ round: r, origTeamId, key });
+    });
+  }
+  return list.sort((a, b) => a.round - b.round);
+}

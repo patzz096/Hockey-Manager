@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { gmSpread } from "../engine/contracts";
-import { tradeValue } from "../engine/trades";
+import { tradeValue, pickValue } from "../engine/trades";
+import { ownedPicks } from "../engine/draft";
 import { capStatus } from "../engine/cap";
 import { h2Style, btnStyle, inputStyle, scoutQualityColor } from "../ui/theme";
 import { StarRating, PlayerLink, TeamCrest } from "./common";
@@ -25,19 +26,45 @@ function CapBadge({ label, team, seasonYear, opts }) {
   );
 }
 
-export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock, seasonYear, myCapOpts = {}, standings = [] }) {
+export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock, seasonYear, myCapOpts = {}, standings = [], pickTrades = {} }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);
   const [partnerId, setPartnerId] = useState(otherTeams[0]?.id);
   const [myIds, setMyIds] = useState([]);
   const [theirIds, setTheirIds] = useState([]);
+  const [myPickKeys, setMyPickKeys] = useState([]);
+  const [theirPickKeys, setTheirPickKeys] = useState([]);
   const [myFilter, setMyFilter] = useState(null);
   const [theirFilter, setTheirFilter] = useState(null);
   const partner = teams.find((t) => t.id === partnerId) || otherTeams[0];
+  const teamIds = useMemo(() => teams.map((t) => t.id), [teams]);
+  const myOwnedPicks = useMemo(() => ownedPicks(myTeamId, teamIds, pickTrades), [myTeamId, teamIds, pickTrades]);
+  const theirOwnedPicks = useMemo(() => (partner ? ownedPicks(partner.id, teamIds, pickTrades) : []), [partner, teamIds, pickTrades]);
 
   function toggle(setFn, list, id) { setFn(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]); }
-  function changePartner(id) { setPartnerId(id); setMyIds([]); setTheirIds([]); setTheirFilter(null); }
+  function changePartner(id) { setPartnerId(id); setMyIds([]); setTheirIds([]); setMyPickKeys([]); setTheirPickKeys([]); setTheirFilter(null); }
   const [retention, setRetention] = useState({});
-  function confirmTrade() { onTrade(partner.id, myIds, theirIds, retention); setMyIds([]); setTheirIds([]); setRetention({}); }
+  function confirmTrade() {
+    const myPicks = myOwnedPicks.filter((k) => myPickKeys.includes(k.key));
+    const theirPicks = theirOwnedPicks.filter((k) => theirPickKeys.includes(k.key));
+    onTrade(partner.id, myIds, theirIds, retention, myPicks, theirPicks);
+    setMyIds([]); setTheirIds([]); setRetention({}); setMyPickKeys([]); setTheirPickKeys([]);
+  }
+
+  function PickPicker({ picks, selected, onToggle, ownerId, teamsById }) {
+    return (
+      <div style={{ marginTop: 8, border: "1px solid #ffffff1a", borderRadius: 4, maxHeight: 140, overflow: "auto" }}>
+        {picks.length === 0 && <div style={{ padding: 10, fontSize: 12, color: "var(--iceMuted)" }}>Aucun choix de repêchage disponible.</div>}
+        {picks.map((k) => (
+          <label key={k.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", fontSize: 12, borderBottom: "1px solid #ffffff11", cursor: "pointer", background: selected.includes(k.key) ? "#ffffff14" : "transparent" }}>
+            <input type="checkbox" checked={selected.includes(k.key)} onChange={() => onToggle(k.key)} />
+            <span style={{ flex: 1 }}>Ronde {k.round}{k.origTeamId !== ownerId ? ` (choix de ${teamsById[k.origTeamId]?.name || k.origTeamId})` : ""}</span>
+            <span style={{ color: "var(--iceMuted)" }}>{pickValue(k.round).toFixed(0)}</span>
+          </label>
+        ))}
+      </div>
+    );
+  }
+  const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
 
   const benchmark = teamOvrBenchmark(myTeam);
   const rankOf = (teamId) => { const i = standings.findIndex((x) => x.id === teamId); return i >= 0 ? i + 1 : null; };
@@ -82,18 +109,20 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
 
   const onBlock = myTeam.roster.filter((p) => tradeBlockIds.includes(p.id) && !myIds.includes(p.id));
   const evalResult = useMemo(() => {
-    if (myIds.length === 0 && theirIds.length === 0) return null;
+    if (myIds.length === 0 && theirIds.length === 0 && myPickKeys.length === 0 && theirPickKeys.length === 0) return null;
     const sideValue = (team, ids) => team.roster.filter((p) => ids.includes(p.id)).reduce((a, p) => {
       const scoutInfo = team.id === myTeamId ? null : getScoutInfo(p, team.id, myTeamId, staff, scoutKnowledge);
       const shown = perceivedRatings(p, scoutInfo);
       return a + tradeValue(shown.ovr, shown.potential, p.age);
     }, 0);
-    const mine = sideValue(myTeam, myIds), theirs = partner ? sideValue(partner, theirIds) : 0;
+    const picksValue = (keys) => keys.reduce((a, k) => a + pickValue(k.round), 0);
+    const mine = sideValue(myTeam, myIds) + picksValue(myOwnedPicks.filter((k) => myPickKeys.includes(k.key)));
+    const theirs = (partner ? sideValue(partner, theirIds) : 0) + picksValue(theirOwnedPicks.filter((k) => theirPickKeys.includes(k.key)));
     const spread = gmSpread(gmRating);
     const diff = theirs - mine;
     const lean = Math.abs(diff) <= Math.max(mine, theirs, 1) * spread ? "équilibré" : diff > 0 ? "favorable" : "défavorable";
     return { mine, theirs, spread, lean };
-  }, [myIds, theirIds, myTeam, partner, staff, scoutKnowledge, gmRating, myTeamId]);
+  }, [myIds, theirIds, myPickKeys, theirPickKeys, myOwnedPicks, theirOwnedPicks, myTeam, partner, staff, scoutKnowledge, gmRating, myTeamId]);
   const leanColor = evalResult?.lean === "équilibré" ? "var(--gold)" : evalResult?.lean === "favorable" ? "var(--win)" : "var(--loss)";
 
   return (
@@ -129,10 +158,12 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
         <div>
           <div style={{ fontSize: 12, color: myTeam.color, fontWeight: 600, marginBottom: 6 }}>Tu envoies ({myTeam.name})</div>
           <RosterPicker team={myTeam} selected={myIds} onToggle={(id) => toggle(setMyIds, myIds, id)} posFilter={myFilter} onFilter={setMyFilter} />
+          <PickPicker picks={myOwnedPicks} selected={myPickKeys} onToggle={(key) => toggle(setMyPickKeys, myPickKeys, key)} ownerId={myTeamId} teamsById={teamsById} />
         </div>
         <div>
           <div style={{ fontSize: 12, color: partner?.color || "var(--iceMuted)", fontWeight: 600, marginBottom: 6 }}>Tu reçois ({partner?.name})</div>
           {partner && <RosterPicker team={partner} selected={theirIds} onToggle={(id) => toggle(setTheirIds, theirIds, id)} posFilter={theirFilter} onFilter={setTheirFilter} />}
+          {partner && <PickPicker picks={theirOwnedPicks} selected={theirPickKeys} onToggle={(key) => toggle(setTheirPickKeys, theirPickKeys, key)} ownerId={partner.id} teamsById={teamsById} />}
         </div>
       </div>
       {myIds.length > 0 && (
@@ -158,7 +189,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
         </div>
       )}
       {!txWindow.open && <div style={{ fontSize: 13, color: "var(--loss)", marginBottom: 8 }}>{txWindow.reason}</div>}
-      <button onClick={confirmTrade} disabled={!txWindow.open || (myIds.length === 0 && theirIds.length === 0)} style={{ ...btnStyle("var(--red)"), opacity: txWindow.open ? 1 : 0.5 }}>Conclure l'échange</button>
+      <button onClick={confirmTrade} disabled={!txWindow.open || (myIds.length === 0 && theirIds.length === 0 && myPickKeys.length === 0 && theirPickKeys.length === 0)} style={{ ...btnStyle("var(--red)"), opacity: txWindow.open ? 1 : 0.5 }}>Conclure l'échange</button>
     </div>
   );
 }
