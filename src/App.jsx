@@ -1682,7 +1682,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
               <button onClick={openCreatePlayer} style={btnStyle("var(--win)")}>+ Créer un joueur</button>
             </div>
             <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 14 }}>Clique un joueur pour voir ses cotes détaillées, puis "Modifier ce joueur" pour l'éditer.</p>
-            <RosterTable roster={myTeam.roster} lines={myLines} staff={business.staff} myTeamId={myTeamId} teamId={myTeamId} scoutKnowledge={scoutKnowledge} onSelect={(p) => selectPlayer(p, myTeam)} onContextMenu={openPlayerContextMenu} injuries={injuries} day={currentDay} />
+            <RosterTable roster={myTeam.roster} lines={myLines} staff={business.staff} myTeamId={myTeamId} teamId={myTeamId} team={myTeam} standings={standings} scoutKnowledge={scoutKnowledge} onSelect={(p) => selectPlayer(p, myTeam)} onContextMenu={openPlayerContextMenu} injuries={injuries} day={currentDay} />
           </div>
         )}
 

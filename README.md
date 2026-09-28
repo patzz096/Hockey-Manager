@@ -430,6 +430,12 @@ tests/engine.test.js       tests du moteur
   pour l'instant
 
 **Interface**
+- Onglet Alignement (`RosterTable`) en tableau dense façon FHM, une ligne par joueur : drapeau
+  de nationalité, humeur (déduite à la volée des mêmes facteurs que l'intérêt à signer — temps
+  de glace/rôle, équipe gagnante, proximité de chez lui, attachement à l'équipe, puisqu'aucun
+  moral persistant n'est stocké sur le joueur), % d'adéquation à son rôle assigné (`roleFit` +
+  `roleOf`, coloré vert/or/rouge), en plus des cotes en étoiles, de la forme et du contrat
+  désormais scindé en deux colonnes (salaire, durée + type de volet) plutôt qu'un texte long.
 - Joueurs cliquables partout (composant `PlayerLink`) : alignement, trios (double-clic),
   profondeur, statistiques, feuille de match, sommaire des buts (buteur et passeurs),
   échanges, agents libres, contrats, rapport de progression, et liens « Profils » dans les
