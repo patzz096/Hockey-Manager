@@ -108,6 +108,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function markRead(id) {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read: true } : m)));
   }
+  function markAllRead() {
+    setMessages((prev) => prev.map((m) => (m.read ? m : { ...m, read: true })));
+  }
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
   const [schedule, setSchedule] = useState(() => buildSchedule(teams));
   const [linesByTeam, setLinesByTeam] = useState(() => Object.fromEntries(teams.map((t) => [t.id, t.lines])));
@@ -751,10 +754,20 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       const newRejections = rejections + 1;
       const stonewalled = newRejections >= MAX_OFFER_ATTEMPTS;
       setNegotiations((prev) => ({ ...prev, [player.id]: { rejections: newRejections, stonewalled } }));
+      // Raisons du refus, la plus déterminante en premier : montant du salaire (la cause la plus
+      // fréquente, mais absente de `factors`), durée, deux volets, puis les facteurs d'intérêt
+      // (proximité, rôle, etc.) qui pesaient déjà contre toi avant même le montant de l'offre.
+      const reasons = [];
+      if (result.parts.money < -0.35) reasons.push(`le salaire offert (${money(offer.salary)}) est nettement en dessous de ses attentes (autour de ${money(result.ask.salary)})`);
+      else if (result.parts.money < -0.1) reasons.push(`le salaire offert (${money(offer.salary)}) est un peu court par rapport à ses attentes (autour de ${money(result.ask.salary)})`);
+      if (result.parts.term < -0.25) reasons.push(`la durée proposée (${offer.years} an${offer.years > 1 ? "s" : ""}) ne correspond pas à ce qu'il cherche (environ ${result.ask.years} an${result.ask.years > 1 ? "s" : ""})`);
+      if (result.parts.twoWay < -0.3) reasons.push("il refuse un contrat à deux volets : il est un joueur de calibre LNH");
       const why = result.factors.filter((f) => f.value < 0).map((f) => f.label.toLowerCase());
+      if (why.length) reasons.push(`ses réserves : ${why.join(", ")}`);
+      const reasonText = reasons.length ? ` Raison du refus : ${reasons.join(" ; ")}.` : "";
       const frustration = newRejections > 1 && !stonewalled ? " Mon client trouve que tu le fais lanterner — ses attentes ont grimpé." : "";
       const closed = stonewalled ? ` Mon client en a assez de tes offres : il refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
-      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${result.parts.twoWay < -0.3 ? " Mon client refuse un contrat à deux volets : il est un joueur de la LNH." : ""}${why.length ? ` Réserves de mon client : ${why.join(", ")}.` : ""}${frustration}${closed}` });
+      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${reasonText}${frustration}${closed}` });
     }
   }
   function findPlayer(playerId) {
@@ -1039,7 +1052,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       const stonewalled = newRejections >= MAX_STAFF_OFFER_ATTEMPTS;
       setStaffNegotiations((prev) => ({ ...prev, [candidateId]: { rejections: newRejections, stonewalled } }));
       const closed = stonewalled ? ` J'en ai assez de tes offres : je refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
-      addMessage({ from: candidateName, subject: `${candidateName} a refusé l'offre`, category: "transaction", body: `Offre refusée : ${money(offeredSalary)} par saison.\n\nMa contre-proposition : ${money(result.counterSalary)} par saison.${closed}` });
+      const gap = offeredSalary / result.ask - 1;
+      const reason = gap < -0.3 ? "Raison du refus : ton offre est nettement en dessous de ce que je demande." : gap < -0.1 ? "Raison du refus : ton offre est un peu courte par rapport à ce que je demande." : "Raison du refus : proche de mes attentes, mais pas encore suffisant.";
+      addMessage({ from: candidateName, subject: `${candidateName} a refusé l'offre`, category: "transaction", body: `Offre refusée : ${money(offeredSalary)} par saison (je demandais ${money(result.ask)}).\n\n${reason}\n\nMa contre-proposition : ${money(result.counterSalary)} par saison.${closed}` });
     }
   }
   function refreshStaffMarket() {
@@ -1686,7 +1701,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
 
-        {tab === "inbox" && <InboxPanel messages={messages} onMarkRead={markRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
+        {tab === "inbox" && <InboxPanel messages={messages} onMarkRead={markRead} onMarkAllRead={markAllRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 
         {tab === "finances" && <FinancesPanel business={business} teamCapacity={myTeam.capacity} winPct={myStanding && myStanding.gp > 0 ? myStanding.w / myStanding.gp : 0.5} onSetTierPrice={setTierPrice} onSetParkingPrice={setParkingPrice} onSetItemPrice={setItemPrice} onSetMerchPrice={setMerchPrice} onUpgrade={upgradeFacility} />}
 

@@ -299,7 +299,7 @@ tests/engine.test.js       tests du moteur
   module les cotes d'équipe via `conditionFactor`) et cohésion tactique de ton équipe (chute
   quand tu changes de système, remonte à l'entraînement, détermine la part de l'adéquation à
   ta stratégie réellement réalisée en match). Quatre programmes hebdomadaires (équilibré,
-  préparation physique, travail tactique, semaine de repos), délégable comme les finances et
+  préparation physique, travail tactique, repos), délégable comme les finances et
   les opérations hockey. L'entraîneur physique accélère la récupération de la condition,
   contribue au développement des joueurs et à la progression de la cohésion. En sim en
   direct, l'énergie de chaque joueur (initialisée à sa condition) baisse avec son temps de
@@ -387,6 +387,11 @@ tests/engine.test.js       tests du moteur
   - Trop d'offres refusées d'affilée pour un même joueur font monter ses attentes
     (`frustrationMultiplier`) puis, au-delà de 3 refus, il refuse toute négociation pour le
     reste de la saison (`MAX_OFFER_ATTEMPTS`, remis à zéro en début de saison).
+  - Message de refus détaillé : raison la plus déterminante en premier (salaire trop bas par
+    rapport à ses attentes, durée qui ne correspond pas, refus d'un contrat à deux volets pour un
+    joueur de calibre LNH), puis les facteurs d'intérêt encore défavorables (proximité, rôle,
+    etc.) — plutôt qu'un refus sans explication. Même principe pour une offre de salaire refusée
+    par un candidat du personnel (`StaffProfileModal`).
   - Prime à la signature désormais comptée sur le plafond salarial, étalée sur la durée
     d'origine du contrat (`capHit`/`payroll`, `contract.originalYears`).
   - Primes de rendement façon FM24, permises sur n'importe quel contrat (maximum plus élevé
@@ -394,7 +399,8 @@ tests/engine.test.js       tests du moteur
     joués, victoires pour les gardiens (`BONUS_KINDS`), avec des suggestions rapides
     préremplies (ex. 15 buts et plus, 50 points et plus, 40 victoires et plus) ; payées en fin
     de saison régulière selon les statistiques réellement atteintes
-- Messagerie interne recevant tous les rapports (progression, finances, transactions, dépistage)
+- Messagerie interne recevant tous les rapports (progression, finances, transactions, dépistage),
+  avec un bouton « Tout marquer comme lu » quand des messages non lus s'accumulent
 - Petit cadenas sur les onglets hors saison pour ce qu'ils proposent (Séries avant les
   séries, Repêchage hors saison morte, Transactions/Agents libres hors des fenêtres
   ouvertes) : l'onglet reste consultable, le badge prévient juste qu'il n'y a rien à y faire

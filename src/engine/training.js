@@ -47,7 +47,7 @@ export const TRAINING_FOCUSES = {
   balanced: { label: "Équilibré", desc: "Un peu de tout : ni la meilleure récupération, ni la meilleure cohésion.", conditionBoost: 0, cohesionBoost: 0 },
   fitness: { label: "Préparation physique", desc: "Priorité à la forme : la condition récupère nettement plus vite, la cohésion tactique progresse plus lentement.", conditionBoost: 2.8, cohesionBoost: -1.6 },
   tactical: { label: "Travail tactique", desc: "Priorité au système de jeu : la cohésion progresse nettement plus vite, la condition récupère un peu moins.", conditionBoost: -1.2, cohesionBoost: 3.0 },
-  rest: { label: "Semaine de repos", desc: "Charge allégée : la meilleure récupération physique, mais aucun travail tactique cette semaine-là.", conditionBoost: 4.6, cohesionBoost: -2.8 },
+  rest: { label: "Repos", desc: "Charge allégée : la meilleure récupération physique, mais aucun travail tactique cette semaine-là.", conditionBoost: 4.6, cohesionBoost: -2.8 },
 };
 export const DEFAULT_FOCUS = "balanced";
 // Calendrier (onglet Calendrier, vue "mon équipe") : 2 cases par jour (matin/après-midi). Un

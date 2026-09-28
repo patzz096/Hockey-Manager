@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { h2Style } from "../ui/theme";
+import { h2Style, btnStyle } from "../ui/theme";
 import { PlayerLink } from "./common";
 
 export const CATEGORY_COLOR = { scout: "#7A4E9E", finance: "var(--win)", transaction: "var(--red)", general: "var(--steel)" };
 
-export function InboxPanel({ messages, onMarkRead, findPlayer, onOpenPlayer }) {
+export function InboxPanel({ messages, onMarkRead, onMarkAllRead, findPlayer, onOpenPlayer }) {
   const [openId, setOpenId] = useState(null);
   function toggle(m) {
     setOpenId(openId === m.id ? null : m.id);
@@ -14,8 +14,11 @@ export function InboxPanel({ messages, onMarkRead, findPlayer, onOpenPlayer }) {
   const unread = messages.filter((m) => !m.read).length;
   return (
     <div>
-      <h2 style={h2Style}>Messagerie {unread > 0 && <span style={{ fontSize: 13, color: "var(--red)", fontWeight: 400 }}>({unread} non lu{unread > 1 ? "s" : ""})</span>}</h2>
-      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: -8, marginBottom: 14 }}>Rapports des dépisteurs, bilans financiers et confirmations de transactions arrivent ici.</p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <h2 style={{ ...h2Style, marginBottom: 0 }}>Messagerie {unread > 0 && <span style={{ fontSize: 13, color: "var(--red)", fontWeight: 400 }}>({unread} non lu{unread > 1 ? "s" : ""})</span>}</h2>
+        {unread > 0 && <button onClick={onMarkAllRead} style={{ ...btnStyle("var(--steel)"), fontSize: 12, padding: "5px 10px" }}>Tout marquer comme lu</button>}
+      </div>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 4, marginBottom: 14 }}>Rapports des dépisteurs, bilans financiers et confirmations de transactions arrivent ici.</p>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {messages.map((m) => (
           <div key={m.id}>
