@@ -12,13 +12,27 @@ export const DEFENSE_BONUS = [1.1, 1.0, 0.92];
 const SHIFT_ON = { F: FORWARD_BONUS.reduce((a, b) => a + b, 0) - 0.15, D: DEFENSE_BONUS.reduce((a, b) => a + b, 0) - 0.1 };
 const SHIFT_OFF = { F: 0.05, D: 0.05 };
 
-export function buildLines(roster) {
-  const C = roster.filter((p) => p.pos === "C").sort((a, b) => b.ovr - a.ovr);
-  const LW = roster.filter((p) => p.pos === "LW").sort((a, b) => b.ovr - a.ovr);
-  const RW = roster.filter((p) => p.pos === "RW").sort((a, b) => b.ovr - a.ovr);
-  const LD = roster.filter((p) => p.pos === "LD").sort((a, b) => b.ovr - a.ovr);
-  const RD = roster.filter((p) => p.pos === "RD").sort((a, b) => b.ovr - a.ovr);
-  const G = roster.filter((p) => p.pos === "G").sort((a, b) => b.ovr - a.ovr);
+// `coachSkill` (critère Gestion d'équipe de l'entraîneur-chef, 20-99) : quand fourni, l'alignement
+// « automatique » proposé n'est plus nécessairement le meilleur possible — un entraîneur-chef peu
+// doué en gestion d'équipe peut se tromper sur qui mérite sa place. Laissé à `null` (par défaut),
+// aucun bruit n'est appliqué : les 31 équipes adverses et les remises à zéro de saison gardent un
+// alignement toujours optimal, seul le bouton « alignement automatique » de ton équipe en tient
+// compte.
+function coachSpread(coachSkill) { return coachSkill == null ? 0 : Math.max(0.03, Math.min(0.4, 0.42 - (Math.max(20, Math.min(99, coachSkill)) - 20) / 79 * 0.37)); }
+function withCoachNoise(sorted, spread) {
+  if (!spread) return sorted;
+  const arr = [...sorted];
+  for (let i = 0; i < arr.length - 1; i++) { if (Math.random() < spread * 0.6) [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]; }
+  return arr;
+}
+export function buildLines(roster, coachSkill = null) {
+  const spread = coachSpread(coachSkill);
+  const C = withCoachNoise(roster.filter((p) => p.pos === "C").sort((a, b) => b.ovr - a.ovr), spread);
+  const LW = withCoachNoise(roster.filter((p) => p.pos === "LW").sort((a, b) => b.ovr - a.ovr), spread);
+  const RW = withCoachNoise(roster.filter((p) => p.pos === "RW").sort((a, b) => b.ovr - a.ovr), spread);
+  const LD = withCoachNoise(roster.filter((p) => p.pos === "LD").sort((a, b) => b.ovr - a.ovr), spread);
+  const RD = withCoachNoise(roster.filter((p) => p.pos === "RD").sort((a, b) => b.ovr - a.ovr), spread);
+  const G = withCoachNoise(roster.filter((p) => p.pos === "G").sort((a, b) => b.ovr - a.ovr), spread);
   const forwards = [0, 1, 2, 3].map((i) => ({ LW: LW[i]?.id, C: C[i]?.id, RW: RW[i]?.id }));
   const defense = [0, 1, 2].map((i) => ({ LD: LD[i]?.id, RD: RD[i]?.id }));
   const goalies = { starter: G[0]?.id, backup: G[1]?.id };

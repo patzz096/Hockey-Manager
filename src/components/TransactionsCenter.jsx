@@ -113,7 +113,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
     const sideValue = (team, ids) => team.roster.filter((p) => ids.includes(p.id)).reduce((a, p) => {
       const scoutInfo = team.id === myTeamId ? null : getScoutInfo(p, team.id, myTeamId, staff, scoutKnowledge);
       const shown = perceivedRatings(p, scoutInfo);
-      return a + tradeValue(shown.ovr, shown.potential, p.age);
+      return a + tradeValue(shown.ovr, shown.potential, p.age, p.pos, p.contract);
     }, 0);
     const picksValue = (keys) => keys.reduce((a, k) => a + pickValue(k.round), 0);
     const mine = sideValue(myTeam, myIds) + picksValue(myOwnedPicks.filter((k) => myPickKeys.includes(k.key)));

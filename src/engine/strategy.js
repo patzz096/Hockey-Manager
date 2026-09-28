@@ -260,14 +260,21 @@ export function optionValue(e) {
 }
 
 // Meilleure stratégie pour un effectif : les phases se multiplient, on choisit donc la meilleure
-// option de chaque phase indépendamment.
-export function bestStrategy(team, lines) {
+// option de chaque phase indépendamment. `coachSkill` (critère Gestion d'équipe de l'entraîneur-
+// chef, 20-99, ou `null`) : un entraîneur-chef peu doué en gestion d'équipe ne propose pas
+// nécessairement la vraie meilleure option — chance croissante de proposer une option moins bonne
+// à mesure que sa gestion d'équipe est faible (ou qu'aucun entraîneur-chef n'est en poste).
+export function bestStrategy(team, lines, coachSkill = null) {
   const fits = computeStrategyFits(team, lines);
+  const errorChance = coachSkill == null ? 0.35 : Math.max(0.03, Math.min(0.4, 0.42 - (Math.max(20, Math.min(99, coachSkill)) - 20) / 79 * 0.37));
   const out = {};
   STRATEGY_PHASES.forEach((ph) => {
-    let best = ph.options[0].id, bestV = -Infinity;
-    ph.options.forEach((o) => { const v = optionValue(optionEffects(ph.key, o.id, fits[ph.key][o.id])); if (v > bestV) { bestV = v; best = o.id; } });
-    out[ph.key] = best;
+    const ranked = ph.options.map((o) => ({ id: o.id, v: optionValue(optionEffects(ph.key, o.id, fits[ph.key][o.id])) })).sort((a, b) => b.v - a.v);
+    if (ranked.length > 1 && Math.random() < errorChance) {
+      out[ph.key] = ranked[1 + Math.floor(Math.random() * (ranked.length - 1))].id;
+    } else {
+      out[ph.key] = ranked[0].id;
+    }
   });
   return out;
 }

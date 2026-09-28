@@ -36,19 +36,25 @@ export const STAFF_ATTRS = {
   assistantOff: [["Entraînement", "coachOff"], ["Entraînement", "devYoung"], ["Gestion", "teamManagement"]],
   assistantDef: [["Entraînement", "coachDef"], ["Entraînement", "devYoung"], ["Gestion", "teamManagement"]],
   fitnessCoach: [["Entraînement", "physio"], ["Entraînement", "devYoung"]],
-  scoutAmateur: [["Dépistage", "scoutSkill"], ["Dépistage", "scoutPotential"], ["Gestion", "negotiation"]],
+  scoutAmateur: [["Dépistage", "scoutPotential"], ["Dépistage", "scoutSkill"], ["Gestion", "negotiation"]],
   scoutPro: [["Dépistage", "scoutSkill"], ["Dépistage", "scoutPotential"]],
   gm: [["Gestion", "negotiation"], ["Gestion", "teamManagement"], ["Gestion", "motivation"], ["Gestion", "finance"]],
   financeDirector: [["Gestion", "finance"], ["Gestion", "negotiation"]],
   hockeyOpsDirector: [["Gestion", "teamManagement"], ["Gestion", "negotiation"], ["Gestion", "finance"]],
 };
 const STAFF_ATTR_KEYS = Object.keys(STAFF_ATTR_LABELS);
+// Spécialité principale d'un poste de dépisteur : le pro juge des joueurs déjà actifs (aptitude
+// présente), l'amateur des espoirs (potentiel) — les deux évaluent un peu l'autre dimension, mais
+// nettement moins bien que leur spécialité.
+const PRIMARY_KEY = { scoutPro: "scoutSkill", scoutAmateur: "scoutPotential" };
 
 // Un candidat porte toujours les 11 critères communs (`attrs`), même pour un poste qui n'en
 // utilise qu'une partie — un même profil pourrait ainsi convenir à plusieurs postes. Mais il
-// reste spécialisé dans le poste qu'il vise : les critères pertinents pour ce poste (STAFF_ATTRS)
-// sont tirés dans une plage normale, les autres (hors de son domaine) dans une plage nettement
-// plus faible — un entraîneur-chef doté d'un talent de financier n'a aucune raison d'être fréquent.
+// reste spécialisé dans le poste qu'il vise : le critère principal du poste (PRIMARY_KEY, quand
+// il y en a un) est tiré dans une plage élevée, les autres critères pertinents (STAFF_ATTRS) dans
+// une plage normale, et ceux hors de son domaine dans une plage nettement plus faible — un
+// entraîneur-chef doté d'un talent de financier n'a aucune raison d'être fréquent, et un dépisteur
+// pro n'est pas censé aussi bien juger le potentiel d'un espoir qu'un dépisteur amateur.
 // `rating` (cote générale, utilisée telle quelle par tous les effets de jeu existants : délai/
 // qualité de dépistage, primes de performance, etc.) est la moyenne des critères pertinents pour
 // le poste visé ; pour un poste hors de ces 11 critères (directeur des communications, relations
@@ -58,9 +64,12 @@ function generateStaffCandidate(rng, id, role) {
   const ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
   const spec = STAFF_ATTRS[role];
   const relevantKeys = spec ? spec.map(([, key]) => key) : [];
+  const primaryKey = PRIMARY_KEY[role];
   const attrs = {};
   STAFF_ATTR_KEYS.forEach((key) => {
-    attrs[key] = relevantKeys.includes(key) ? Math.round(40 + rng() * 55) : Math.round(15 + rng() * 35);
+    attrs[key] = key === primaryKey ? Math.round(45 + rng() * 54)
+      : relevantKeys.includes(key) ? Math.round(primaryKey ? 25 + rng() * 45 : 40 + rng() * 55)
+      : Math.round(15 + rng() * 35);
   });
   const rating = spec ? Math.round(relevantKeys.reduce((a, key) => a + attrs[key], 0) / relevantKeys.length) : Math.round(40 + rng() * 55);
   const salary = Math.round(STAFF_BASE_SALARY[role] * Math.pow(rating / 70, 1.6) * (0.85 + rng() * 0.3));

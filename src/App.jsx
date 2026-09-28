@@ -592,7 +592,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], mentality: { ...prev[myTeamId].mentality, [field]: value } } }));
   }
   function autoOptimizeLines() {
-    const fresh = buildLines(myTeamView.roster);
+    const fresh = buildLines(myTeamView.roster, business.staff.headCoach?.attrs?.teamManagement ?? null);
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: { ...prev[myTeamId], forwards: fresh.forwards, defense: fresh.defense, goalies: fresh.goalies } }));
   }
   // Unités spéciales : système choisi (AN / DN), meilleures unités pour ce système, ou meilleur des deux.
@@ -608,7 +608,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
   // Meilleur système pour chaque phase, selon l'effectif tel que ton personnel le perçoit.
   function autoOptimizeStrategy() {
-    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: applyStrategy(prev[myTeamId], bestStrategy(myTeamView, prev[myTeamId])) }));
+    setLinesByTeam((prev) => ({ ...prev, [myTeamId]: applyStrategy(prev[myTeamId], bestStrategy(myTeamView, prev[myTeamId], business.staff.headCoach?.attrs?.teamManagement ?? null)) }));
   }
   function setTrainingFocus(focus) { setBusiness((prev) => ({ ...prev, trainingFocus: focus })); }
 
@@ -642,7 +642,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     // toujours sur les vraies valeurs (une équipe connaît son propre effectif et celui qu'on lui
     // propose, sans le flou du dépistage qui s'applique à toi).
     const pickLabel = (k) => `Choix de ronde ${k.round} (${teamsById[k.origTeamId]?.name || k.origTeamId})`;
-    const cpuEval = evaluateTradeForCpu(theirT.roster.filter((p) => theirIds.includes(p.id)), myT.roster.filter((p) => myIds.includes(p.id)), Math.random, theirPicks, myPicks);
+    const cpuEval = evaluateTradeForCpu(theirT.roster.filter((p) => theirIds.includes(p.id)), myT.roster.filter((p) => myIds.includes(p.id)), Math.random, theirPicks, myPicks, gmNegotiationRating);
     const theirTeamName = teamsById[otherTeamId]?.name || "l'autre équipe";
     if (!cpuEval.accept) {
       const myOutRejected = [...myT.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name), ...myPicks.map(pickLabel)];
@@ -1585,7 +1585,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
       {comparePlayers && <ComparePlayersModal players={comparePlayers} team={myTeam} onClose={() => setComparePlayers(null)} />}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
-      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={gmNegotiationRating} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
+      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={gmNegotiationRating} financeRating={business.staff.financeDirector?.attrs?.finance ?? business.staff.gm?.attrs?.finance ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 200, background: "var(--navy2)", padding: "20px 12px", display: "flex", flexDirection: "column", gap: 2, borderRight: "1px solid var(--line)" }}>
         <div style={{ padding: "0 8px 16px", display: "flex", alignItems: "center", gap: 10 }}>

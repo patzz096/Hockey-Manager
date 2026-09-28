@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
-import { agentAsk, evaluateOffer, interestFactors, interestLabel, bonusRules, BONUS_KINDS, minSalaryFor, maxSalaryFor, MAX_TERM, homeRegionLabel, gmEstimate, MAX_OFFER_ATTEMPTS } from "../engine/contracts";
+import { agentAsk, evaluateOffer, interestFactors, interestLabel, bonusRules, BONUS_KINDS, minSalaryFor, maxSalaryFor, MAX_TERM, homeRegionLabel, gmEstimate, gmSpread, MAX_OFFER_ATTEMPTS } from "../engine/contracts";
 import { formatMoney } from "../engine/cap";
 import { btnStyle } from "../ui/theme";
 import { StarRating } from "./common";
@@ -17,6 +17,7 @@ const factorColor = (v) => (v >= 0.4 ? "var(--win)" : v >= 0.1 ? "#7FD6A0" : v >
 const label = { display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--iceMuted)", marginBottom: 4 };
 const input = { background: "var(--navy)", color: "var(--ice)", border: "1px solid var(--line)", borderRadius: 5, padding: "4px 6px", fontSize: 12, fontFamily: "inherit" };
 const clampNum = (v, lo, hi) => (Number.isNaN(v) ? lo : Math.max(lo, Math.min(hi, v)));
+function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
 // Suggestions rapides façon FM24 : ajoutent une prime déjà remplie, modifiable ensuite.
 const SKATER_BONUS_PRESETS = [{ kind: "g", target: 15, amount: 300 }, { kind: "pts", target: 50, amount: 500 }, { kind: "a", target: 25, amount: 300 }];
 const GOALIE_BONUS_PRESETS = [{ kind: "w", target: 25, amount: 100 }, { kind: "w", target: 40, amount: 200 }, { kind: "gp", target: 50, amount: 150 }];
@@ -37,7 +38,7 @@ function FactorBar({ f }) {
   );
 }
 
-export function ContractOfferModal({ player, realPlayer, isRenewal, team, context, stats, capSpace = null, gmRating = null, rejections = 0, onClose, onSubmit }) {
+export function ContractOfferModal({ player, realPlayer, isRenewal, team, context, stats, capSpace = null, gmRating = null, financeRating = null, rejections = 0, onClose, onSubmit }) {
   const real = realPlayer || player;
   const { ctx, year, perf } = context;
   const ask = agentAsk(real, ctx, year, perf, rejections);
@@ -63,10 +64,21 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
   const bonusSum = activeBonuses.reduce((a, b) => a + (b.amount || 0), 0);
   const ntcAllowed = real.age >= 27;
   const offer = { salary, years, type, ahlSalary, signingBonus, noTrade: ntcAllowed && noTrade, bonuses: activeBonuses };
-  // Chance d'acceptation : même calcul que l'envoi, sans tirage.
+  // Chance d'acceptation réelle (même calcul que l'envoi, sans tirage) : détermine la vraie
+  // décision. Le pourcentage AFFICHÉ, lui, est brouillé selon le critère Négociation du DG — un
+  // bon négociateur lit la situation avec précision, un DG faible (ou aucun DG) se trompe d'une
+  // marge stable pour ce joueur, façon estimation de salaire (gmEstimate) plutôt qu'un vrai calcul.
   const ev = evaluateOffer(real, offer, ctx, year, perf, () => 1, rejections);
   const pct = Math.round(ev.probability * 100);
+  const pctSpread = gmSpread(gmRating);
+  const pctNoise = ((hash(real.id + "gmpct") % 1000) / 1000 - 0.5) * 2 * pctSpread * 40;
+  const displayedPct = Math.max(2, Math.min(98, Math.round(pct + pctNoise)));
   const hit = salary + bonusSum + Math.round((signingBonus || 0) / Math.max(1, years));
+  // Suggestion du volet finance (salaire LAH d'un contrat à deux volets) : base selon la cote du
+  // joueur, resserrée autour de cette base selon la maîtrise du critère Finance (financeRating).
+  const ahlBase = Math.max(80, Math.min(700, Math.round((80 + (real.ovr - 50) * 8) / 25) * 25));
+  const ahlSpread = gmSpread(financeRating);
+  const ahlSuggestion = { low: ahlBase * (1 - ahlSpread), high: ahlBase * (1 + ahlSpread) };
   const isGoalie = real.pos === "G";
   const bench = teamOvrBenchmark(team);
 
@@ -130,6 +142,10 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
             <div style={{ marginTop: 8 }}>
               <div style={label}><span>Salaire dans la LAH</span><span style={{ color: "var(--ice)" }}>{k$(ahlSalary)}</span></div>
               <input aria-label="Salaire LAH" type="range" min={75} max={800} step={25} value={ahlSalary} onChange={(e) => setAhlSalary(Number(e.target.value))} style={{ width: "100%" }} />
+              <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 3 }}>
+                Suggestion du directeur des finances : <strong style={{ color: "var(--gold)" }}>{k$(Math.round(ahlSuggestion.low / 25) * 25)} – {k$(Math.round(ahlSuggestion.high / 25) * 25)}</strong>
+                <span> · {financeRating == null ? "aucun directeur des finances en poste : estimation à l'aveugle" : ahlSpread <= 0.12 ? "bonne maîtrise du volet finance" : ahlSpread <= 0.25 ? "estimation approximative" : "finance peu maîtrisée : estimation très large"}</span>
+              </div>
               {real.ovr >= 60 && <div style={{ fontSize: 11, color: "#F59A4A" }}>Un joueur de calibre LNH accepte mal un contrat à deux volets.</div>}
             </div>
           )}
@@ -179,7 +195,7 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
 
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", background: "var(--navy)", borderRadius: 8, padding: "10px 12px", marginBottom: 12, fontSize: 12 }}>
           <span>Plafond : <strong style={{ color: capSpace != null && hit > capSpace ? "var(--loss)" : "var(--ice)" }}>{formatMoney(hit)}</strong>{capSpace != null && <span style={{ color: "var(--iceMuted)" }}> sur {formatMoney(capSpace)} d'espace</span>}</span>
-          <span style={{ marginLeft: "auto" }}>Chance d'acceptation : <strong style={{ color: pct >= 65 ? "var(--win)" : pct >= 40 ? "var(--gold)" : "var(--loss)" }}>{pct} %</strong></span>
+          <span style={{ marginLeft: "auto" }} title={gmRating == null ? "Aucun DG en poste : estimation à l'aveugle" : "Selon le critère Négociation de ton DG"}>Chance d'acceptation ({gmRating == null ? "estimée, aucun DG" : "estimée"}) : <strong style={{ color: displayedPct >= 65 ? "var(--win)" : displayedPct >= 40 ? "var(--gold)" : "var(--loss)" }}>{displayedPct} %</strong></span>
         </div>
 
         <button disabled={bonusSum > rules.max} onClick={() => onSubmit(player, offer, isRenewal)} style={{ ...btnStyle("var(--win)"), width: "100%", justifyContent: "center", opacity: bonusSum > rules.max ? 0.5 : 1 }}>Envoyer l'offre</button>

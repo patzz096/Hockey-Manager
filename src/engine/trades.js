@@ -1,11 +1,22 @@
+import { marketValue, CURRENT_YEAR } from "./contracts";
+
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
 // Valeur d'échange approximative d'un joueur : cote actuelle, avec un supplément pour le
-// potentiel des jeunes joueurs (un espoir vaut plus que sa seule cote actuelle). Même formule
-// utilisée pour l'aperçu affiché au joueur (TransactionsCenter, sur les valeurs perçues/dépistées)
-// et pour la décision de l'IA ci-dessous (toujours sur les vraies valeurs : une équipe connaît
-// son propre effectif et celui qu'on lui propose).
-export function tradeValue(ovr, potential, age) {
+// potentiel des jeunes joueurs (un espoir vaut plus que sa seule cote actuelle), et un ajustement
+// selon son contrat par rapport à sa valeur marchande (`contract`, optionnel) : un joueur payé
+// nettement sous le marché vaut plus dans un échange (l'acquéreur profite du rabais), un joueur
+// payé au-dessus vaut moins (contrat difficile à assumer) — jusqu'à ± 15 % de la valeur de base.
+// Même formule utilisée pour l'aperçu affiché au joueur (TransactionsCenter, sur les valeurs
+// perçues/dépistées) et pour la décision de l'IA ci-dessous (toujours sur les vraies valeurs :
+// une équipe connaît son propre effectif et celui qu'on lui propose).
+export function tradeValue(ovr, potential, age, pos = null, contract = null, year = CURRENT_YEAR) {
   const upside = age <= 24 ? Math.max(0, (potential ?? ovr) - ovr) * 0.4 : 0;
-  return ovr + upside;
+  const base = ovr + upside;
+  if (!contract?.salary) return base;
+  const fairValue = marketValue({ ovr, potential: potential ?? ovr, age, pos: pos || "C" }, year);
+  const surplusRatio = clamp((fairValue - contract.salary) / Math.max(fairValue, 1), -0.5, 0.5);
+  return base * (1 + surplusRatio * 0.3);
 }
 
 // Valeur approximative d'un choix au repêchage selon la ronde, sur la même échelle que
@@ -27,14 +38,19 @@ const STAR_PROTECTION_RATIO = 1.15;
 // l'ordinateur enverrait / recevrait. Refuse si la valeur reçue est trop en deçà de la valeur
 // envoyée, ou si elle cède un joueur bien plus valable que tout ce qu'elle reçoit — façon DG
 // réaliste plutôt qu'un simple garde-fou de plafond salarial.
-export function evaluateTradeForCpu(sentByCpu, receivedByCpu, rng = Math.random, sentPicks = [], receivedPicks = []) {
-  const values = (list) => list.map((p) => tradeValue(p.ovr, p.potential, p.age));
+// `humanGmNegotiation` : critère Négociation du DG de l'équipe humaine qui propose l'échange (null
+// si aucun DG en poste, ou échange entre deux équipes de l'ordinateur). Un bon négociateur obtient
+// un rabais (l'ordinateur accepte de recevoir un peu moins de valeur que ce qu'il envoie), un
+// mauvais négociateur doit au contraire surpayer — jusqu'à ± 15 % du seuil de valeur exigé.
+export function evaluateTradeForCpu(sentByCpu, receivedByCpu, rng = Math.random, sentPicks = [], receivedPicks = [], humanGmNegotiation = null) {
+  const values = (list) => list.map((p) => tradeValue(p.ovr, p.potential, p.age, p.pos, p.contract));
   const outValues = values(sentByCpu), inValues = values(receivedByCpu);
   const pickValues = (list) => list.reduce((a, k) => a + pickValue(k.round), 0);
   const valueOut = outValues.reduce((a, v) => a + v, 0) + pickValues(sentPicks);
   const valueIn = inValues.reduce((a, v) => a + v, 0) + pickValues(receivedPicks);
   const noise = 1 + (rng() - 0.5) * 0.06; // ± 3 %
-  const overallOk = valueIn >= valueOut * (1 - CPU_TRADE_TOLERANCE) * noise;
+  const negotiationEdge = humanGmNegotiation == null ? 0 : clamp((humanGmNegotiation - 60) / 200, -0.15, 0.15);
+  const overallOk = valueIn >= valueOut * (1 - CPU_TRADE_TOLERANCE - negotiationEdge) * noise;
   const bestOut = outValues.length ? Math.max(...outValues) : 0;
   const bestIn = inValues.length ? Math.max(...inValues) : 0;
   const starProtected = bestOut === 0 || bestOut <= bestIn * STAR_PROTECTION_RATIO;

@@ -274,6 +274,19 @@ tests/engine.test.js       tests du moteur
     rapidité des rapports de dépistage, et les primes de performance mensuelles (finances selon
     le profit, entraîneurs selon les victoires, dépisteur pro selon le développement des jeunes)
     utilisent directement cette cote générale
+  - Dépisteurs asymétriques (`PRIMARY_KEY`) : le dépisteur professionnel est spécialisé en
+    évaluation de l'**aptitude** (il juge des joueurs déjà actifs), l'amateur en évaluation du
+    **potentiel** (il juge des espoirs) — chacun reste correct, mais nettement moins bon, sur
+    l'autre dimension.
+  - L'entraîneur-chef influence directement le jeu : ses critères coaching attaquant/défenseur/
+    gardien et développement des jeunes alimentent la progression des joueurs (comme avant), et
+    son critère **Gestion d'équipe** conditionne la fiabilité des propositions automatiques
+    (« Alignement automatique », « Meilleures unités », « Meilleur système pour mon effectif ») :
+    avec une gestion d'équipe faible (ou aucun entraîneur-chef en poste), ces boutons peuvent
+    proposer un alignement ou une stratégie qui n'est pas réellement le meilleur choix, façon
+    « ce n'est pas parce qu'un système est marqué meilleur choix qu'un entraîneur médiocre va le
+    retenir » (`engine/lines.js` buildLines, `engine/strategy.js` bestStrategy, uniquement pour
+    ton équipe : les 31 autres gardent un alignement toujours optimal)
   - Embauche manuelle façon négociation de contrat de joueur (`engine/staff.js`
     evaluateStaffOffer) : une offre de salaire n'est pas acceptée sur-le-champ, le candidat
     répond après un délai de 1 à 3 jours, avec une probabilité d'acceptation qui dépend de
@@ -341,15 +354,26 @@ tests/engine.test.js       tests du moteur
     d'équipe/motivation) — sans DG en poste, estimation à l'aveugle (plage maximale). Même
     principe pour évaluer un échange (`TransactionsCenter`, valeur envoyée/reçue et verdict favorable/équilibré/
     défavorable selon le critère Négociation du DG).
+  - La **chance d'acceptation affichée en direct** dans l'offre de contrat n'est plus le vrai
+    calcul exact : elle est brouillée selon le critère Négociation du DG (même principe que
+    l'estimation ci-dessus, écart stable pour un joueur donné) — un DG doué lit la situation avec
+    précision, un DG faible ou l'absence de DG peut te faire croire une offre plus ou moins
+    solide qu'elle ne l'est vraiment (la vraie décision, elle, reste toujours calculée sur les
+    valeurs exactes). Le volet deux volets affiche aussi une suggestion de salaire LAH du
+    directeur des finances, resserrée selon son critère **Finance**.
   - L'équipe adverse refuse une proposition trop favorable pour toi (`engine/trades.js`
     evaluateTradeForCpu) : elle évalue toujours sur les vraies valeurs de son effectif et du
     tien (sans le flou du dépistage qui s'applique à toi), avec la même échelle de valeur (cote
-    actuelle + supplément de potentiel pour les jeunes) que l'aperçu affiché avant de proposer
+    actuelle + supplément de potentiel pour les jeunes + surplus/déficit de contrat par rapport à
+    la valeur marchande du joueur, voir `tradeValue`) que l'aperçu affiché avant de proposer
     l'échange. Refus dès qu'elle y perdrait de la valeur nette (± 3 % de variation aléatoire,
-    pour ne pas être un seuil parfaitement net — elle n'accepte jamais un rabais), et refus
-    aussi si elle cède un joueur nettement plus valable (plus de 15 %) que le meilleur qu'elle
-    recevrait, même quand la somme totale des deux côtés semble correcte : un paquet de joueurs
-    de profondeur ne fait pas le poids contre une vedette. Réponse « typique » variée (façon DG
+    pour ne pas être un seuil parfaitement net), ajusté selon le critère **Négociation** de ton
+    DG : un bon négociateur obtient un rabais (l'ordinateur accepte de recevoir un peu moins de
+    valeur que ce qu'il envoie), un DG faible doit au contraire surpayer pour faire accepter le
+    même échange. Refus aussi si elle cède un joueur nettement plus valable (plus de 15 %) que le
+    meilleur qu'elle recevrait, même quand la somme totale des deux côtés semble correcte : un
+    paquet de joueurs de profondeur ne fait pas le poids contre une vedette. Réponse « typique »
+    variée (façon DG
     réel) à l'acceptation comme au refus (`engine/trades.js` tradeResponseLine), annoncée par
     message du DG de l'équipe adverse ; un refus explique aussi la raison (valeur insuffisante
     ou joueur trop précieux cédé)
