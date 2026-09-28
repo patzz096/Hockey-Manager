@@ -20,6 +20,27 @@ export function scoutingDelay(rating) {
   return Math.max(2, Math.min(14, Math.round(14 - (rating / 99) * 12)));
 }
 
+// Tous les dépisteurs qui pourraient s'occuper d'un joueur donné (les deux dépisteurs en chef,
+// plus les dépisteurs en renfort engagés — voir engine/scoutingZones.js), pour laisser le joueur
+// choisir lui-même plutôt que l'assignation automatique par âge (`assignScout`). Un dépisteur
+// hors de sa spécialité (amateur assigné à un vétéran, ou l'inverse) reste utilisable mais à -15 %
+// de cote, comme pour l'assignation automatique. Triés du meilleur au moins bon pour ce joueur.
+export function scoutOptions(player, staff, extraScouts = []) {
+  const amateur = player.age <= 20;
+  const candidates = [];
+  if (staff?.scoutAmateur) candidates.push({ id: staff.scoutAmateur.id, name: staff.scoutAmateur.name, baseRating: staff.scoutAmateur.rating, specialty: "junior", kind: "chief" });
+  if (staff?.scoutPro) candidates.push({ id: staff.scoutPro.id, name: staff.scoutPro.name, baseRating: staff.scoutPro.rating, specialty: "pro", kind: "chief" });
+  extraScouts.forEach((s) => candidates.push({ id: s.id, name: s.name, baseRating: s.rating, specialty: s.specialty, kind: "extra" }));
+  if (candidates.length === 0) return [{ id: "internal", name: "Personnel interne (aucun dépisteur dédié)", rating: INTERNAL_SCOUT_RATING, offSpecialty: false, kind: "internal", etaDays: scoutingDelay(INTERNAL_SCOUT_RATING) }];
+  return candidates
+    .map((c) => {
+      const offSpecialty = (amateur && c.specialty === "pro") || (!amateur && c.specialty === "junior");
+      const rating = offSpecialty ? Math.round(c.baseRating * 0.85) : c.baseRating;
+      return { id: c.id, name: c.name, rating, offSpecialty, kind: c.kind, etaDays: scoutingDelay(rating) };
+    })
+    .sort((a, b) => b.rating - a.rating);
+}
+
 export function reliabilityLabel(rating) {
   const r20 = attr20(rating);
   return r20 >= 16 ? "Très fiable" : r20 >= 12 ? "Fiable" : r20 >= 8 ? "Approximative" : "Peu fiable";

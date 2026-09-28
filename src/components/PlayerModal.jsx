@@ -5,7 +5,7 @@ import { SKATER_CATEGORIES, GOALIE_CATEGORIES, ATTR_LABELS, attr20, teamOvrBench
 import { lineLabel } from "../engine/lines";
 import { formatDay } from "../engine/calendar";
 import { ROLES, naturalRole, roleFit, roleOf } from "../engine/roles";
-import { getScoutInfo, perceivedRatings, assignScout, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
+import { getScoutInfo, perceivedRatings, scoutOptions, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
 import { contractLabel, draftLabel } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
 import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge, ConfirmButton } from "./common";
@@ -65,12 +65,15 @@ function ReportRow({ label, hint, value, size = 14, color }) {
   );
 }
 
-function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, isMine, onRequestScout, onCancelScout }) {
-  const scout = pending ? pending.scout : assignScout(player, staff);
+function ScoutingTab({ player, report, pending, currentDay, staff, extraScouts = [], benchmark, isMine, onRequestScout, onCancelScout }) {
+  const options = scoutOptions(player, staff, extraScouts);
+  const [chosenId, setChosenId] = useState(null);
+  const chosen = options.find((o) => o.id === chosenId) || options[0];
+  const scout = pending ? pending.scout : chosen;
   const delay = scoutingDelay(scout.rating);
   const hasReport = report?.estOvr != null;
   function toggle(e) {
-    if (e.target.checked) onRequestScout(player);
+    if (e.target.checked) onRequestScout(player, chosen.id);
     else onCancelScout(player.id);
   }
   return (
@@ -79,10 +82,21 @@ function ScoutingTab({ player, report, pending, currentDay, staff, benchmark, is
         <input type="checkbox" checked={!!pending} onChange={toggle} style={{ marginTop: 3 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>{hasReport ? "Demander un nouveau rapport" : "Demander un dépistage"}</div>
-          <div style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            Dépisteur: <span style={{ color: "var(--ice)" }}>{scout.name}</span> <Grade20 value={scout.rating} />
-            {scout.offSpecialty && <span>· hors spécialité</span>}
-          </div>
+          {pending || options.length <= 1 ? (
+            <div style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              Dépisteur: <span style={{ color: "var(--ice)" }}>{scout.name}</span> <Grade20 value={scout.rating} />
+              {scout.offSpecialty && <span>· hors spécialité</span>}
+            </div>
+          ) : (
+            <div style={{ marginTop: 6 }} onClick={(e) => e.preventDefault()}>
+              <label style={{ fontSize: 11, color: "var(--iceMuted)", display: "block", marginBottom: 3 }}>Choisir le dépisteur assigné :</label>
+              <select value={chosen.id} onChange={(e) => setChosenId(e.target.value)} style={{ background: "var(--navy2)", color: "var(--ice)", border: "1px solid #ffffff33", borderRadius: 3, padding: "4px 6px", fontSize: 12, width: "100%" }}>
+                {options.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name} — {attr20(o.rating)}/20{o.offSpecialty ? " (hors spécialité)" : ""} — {o.etaDays}j</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div style={{ fontSize: 12, marginTop: 4, color: pending ? "var(--gold)" : "var(--iceMuted)" }}>
             {pending
               ? `Mission en cours — rapport attendu le ${formatDay(pending.dueDay)} (dans ${Math.max(0, pending.dueDay - currentDay)} jour${pending.dueDay - currentDay > 1 ? "s" : ""}). Décoche pour annuler.`
@@ -145,7 +159,7 @@ function ActionsPanel({ actions, known, onClose }) {
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [], minorLine = null }) {
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, extraScouts = [], myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [], minorLine = null }) {
   const [tab, setTab] = useState("profile");
   // Échap ferme le profil.
   useEffect(() => {
@@ -191,7 +205,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
         </div>
         <div style={{ padding: 16 }}>
           {tab === "scouting" ? (
-            <ScoutingTab player={player} report={scoutInfo} pending={pending} currentDay={currentDay} staff={staff} benchmark={benchmark} isMine={isMine} onRequestScout={onRequestScout} onCancelScout={onCancelScout} />
+            <ScoutingTab player={player} report={scoutInfo} pending={pending} currentDay={currentDay} staff={staff} extraScouts={extraScouts} benchmark={benchmark} isMine={isMine} onRequestScout={onRequestScout} onCancelScout={onCancelScout} />
           ) : (<>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
             <InfoCard label="CÔTE ACTUELLE / POTENTIELLE" accent={known ? "var(--gold)" : "var(--steel)"}>

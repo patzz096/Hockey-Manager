@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
+import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
@@ -22,7 +22,7 @@ import { buildLines } from "./engine/lines";
 import { seededRandom } from "./engine/random";
 import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT, evaluateStaffOffer, MAX_STAFF_OFFER_ATTEMPTS } from "./engine/staff";
-import { assignScout, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
+import { scoutOptions, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
 import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
@@ -44,6 +44,7 @@ import { RosterTable } from "./components/RosterTable";
 import { StaffCenter } from "./components/StaffCenter";
 import { TrainingCenter } from "./components/TrainingCenter";
 import { StandingsTable } from "./components/StandingsTable";
+import { HomeDashboard } from "./components/HomeDashboard";
 import { StatsTables } from "./components/StatsTables";
 import { StrategyEditor } from "./components/StrategyEditor";
 import { TransactionsCenter } from "./components/TransactionsCenter";
@@ -93,7 +94,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // et ta liste de repêchage (ordre de préférence, pour la cuvée `year`).
   // missions : { idDuDépisteur: { region, league, focus, focusValue, target, weeks, weeksDone } }.
   const [scoutMissions, setScoutMissions] = useState(DEFAULT_MISSIONS);
-  const [scoutMarket, setScoutMarket] = useState(() => buildScoutMarket(seededRandom(4242), 14));
+  const [scoutMarket, setScoutMarket] = useState(() => buildScoutMarket(seededRandom(4242), 20));
   const [scoutingSpend, setScoutingSpend] = useState(0); // frais de mission de la saison ($)
   const [scoutCoverage, setScoutCoverage] = useState(DEFAULT_COVERAGE);
   const [scoutSuggestions, setScoutSuggestions] = useState([]);
@@ -124,7 +125,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       return { ...t, city: base.city, name: base.name, color: base.color, ...(teamInfo[t.id] || {}) };
     }));
   }, [teamInfo, initial]);
-  const [tab, setTab] = useState("roster");
+  const [tab, setTab] = useState("home");
   const [rngSeed, setRngSeed] = useState(1000);
   const [expandedGameId, setExpandedGameId] = useState(null);
   const [liveMatch, setLiveMatch] = useState(null);
@@ -805,7 +806,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function setScoutMission(scoutId, mission) {
     setScoutMissions((prev) => ({ ...prev, [scoutId]: mission ? { ...mission, weeksDone: 0, startDay: currentDay } : null }));
   }
-  function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 14)); }
+  function refreshScoutMarket() { setScoutMarket(buildScoutMarket(seededRandom((currentDay * 131 + 7) % 233280), 20)); }
   // Semaines d'entraînement (voir engine/training.js) : condition physique pour toutes les
   // équipes (selon les matchs joués et l'endurance de chacun) ; cohésion tactique seulement pour
   // la tienne (les 31 autres restent pleinement rodées, voir buildLines). Jusqu'à SLOTS_PER_DAY
@@ -940,9 +941,14 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
   // Une demande de dépistage part en mission : le rapport arrive après un délai qui dépend de
   // la cote du dépisteur (voir scoutingDelay), en jours de calendrier.
-  function requestScouting(player) {
+  // `scoutId` : dépisteur choisi par le joueur (voir engine/scouting.js scoutOptions, qui inclut
+  // aussi les dépisteurs en renfort, pas seulement les deux dépisteurs en chef) ; laissé vide, le
+  // meilleur dépisteur disponible pour ce joueur est utilisé automatiquement (action rapide).
+  function requestScouting(player, scoutId = null) {
     if (pendingScouts.some((m) => m.playerId === player.id)) return;
-    const scout = assignScout(player, business.staff);
+    const options = scoutOptions(player, business.staff, business.scoutTeam || []);
+    const chosen = (scoutId && options.find((o) => o.id === scoutId)) || options[0];
+    const scout = { id: chosen.id, name: chosen.name, rating: chosen.rating, offSpecialty: chosen.offSpecialty };
     const delay = scoutingDelay(scout.rating);
     setPendingScouts((prev) => [...prev, { playerId: player.id, playerName: player.name, scout, requestedDay: currentDay, dueDay: currentDay + delay }]);
     addMessage({ from: scout.name, subject: `Mission de dépistage: ${player.name}`, category: "scout", playerIds: [player.id], body: `Dépisteur assigné: ${scout.name} (${attr20(scout.rating)}/20${scout.offSpecialty ? ", hors de sa spécialité" : ""}).\nRapport attendu dans ${delay} jours (vers le ${formatDay(currentDay + delay)}).` });
@@ -1573,6 +1579,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     freeagents: !txWindow.open ? txWindow.reason : null,
   };
   const navItems = [
+    { key: "home", label: "Accueil", icon: Home },
     { key: "roster", label: "Alignement", icon: Users },
     { key: "lines", label: "Trios", icon: Layers },
     { key: "roles", label: "Rôles", icon: UserCog },
@@ -1596,7 +1603,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   return (
     <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} extraScouts={business.scoutTeam || []} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
       {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
       {comparePlayers && <ComparePlayersModal players={comparePlayers} team={myTeam} onClose={() => setComparePlayers(null)} />}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
@@ -1659,6 +1666,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             {nextMyGame && !liveMatch && <button onClick={() => startLiveMatch(nextMyGame)} style={btnStyle("var(--win)")}>Sim en direct (mon prochain match)</button>}
           </div>
         </div>
+
+        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} onSelectPlayer={selectPlayer} onGoTo={setTab} />}
 
         {tab === "roster" && (
           <div>

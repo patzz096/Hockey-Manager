@@ -61,6 +61,12 @@ tests/engine.test.js       tests du moteur
   projetés à partir de vraies stats/contrats trouvés par recherche web. **16 équipes restantes
   (Centrale + Pacifique) sont encore en joueurs générés procéduralement.**
 - Calendrier aller-retour complet (chaque équipe affronte toutes les autres, domicile/visiteur)
+- Onglet **Accueil** (`components/HomeDashboard.jsx`), premier onglet et page d'atterrissage par
+  défaut : dossier et rang de ton équipe, classement de sa division (avec raccourci vers le
+  classement complet), résultats récents (mis à jour au fil de la simulation, victoire/défaite/
+  défaite en prolongation ou tirs de barrage, adversaire, date, pointage) et meneurs au pointage
+  de la ligue (avec raccourci vers les statistiques complètes) — un coup d'œil sans naviguer
+  entre plusieurs onglets.
 
 **Joueurs**
 - Attributs sur échelle /20 (façon FM), répartis en 4 catégories pour les patineurs
@@ -249,9 +255,16 @@ tests/engine.test.js       tests du moteur
     candidats est large (24 à l'ouverture, 14 au rafraîchissement) pour varier les profils
     plutôt que retomber toujours sur les mêmes têtes
   - Dépisteurs en renfort (onglet Dépistage, `engine/scoutingZones.js` scoutRoster) : en plus
-    des deux dépisteurs en chef (personnel), jusqu'à 6 dépisteurs supplémentaires peuvent être
-    engagés en même temps, chacun avec sa propre mission (zone, recherche, cible, durée) — le
-    marché de ces dépisteurs a aussi une nationalité/âge et un bassin élargi (14 candidats)
+    des deux dépisteurs en chef (personnel), jusqu'à 12 dépisteurs supplémentaires peuvent être
+    engagés en même temps (`MAX_EXTRA_SCOUTS`), chacun avec sa propre mission (zone, recherche,
+    cible, durée) — le marché de ces dépisteurs a aussi une nationalité/âge et un bassin élargi
+    (20 candidats à l'ouverture et au rafraîchissement)
+  - Choisir qui dépiste un joueur précis (onglet « Dépistage » du profil joueur,
+    `engine/scouting.js` scoutOptions) : la demande de dépistage propose désormais tous les
+    dépisteurs disponibles (les deux en chef, plus tous ceux en renfort), pas seulement le
+    dépisteur en chef assigné automatiquement selon l'âge du joueur — chacun affiché avec sa
+    cote pour ce joueur (avec la pénalité de -15 % hors spécialité), et le délai de mission qui en
+    découle. Avec un seul dépisteur disponible, l'assignation reste automatique (rien à choisir).
   - 11 critères de valeur communs à **tout** le personnel (`engine/staff.js`
     STAFF_ATTR_LABELS, échelle interne 20-99 affichée sur /20 comme les joueurs) : coaching
     gardien, coaching attaquant, coaching défenseur, évaluation de l'aptitude, évaluation du

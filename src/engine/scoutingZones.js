@@ -19,7 +19,7 @@ import { pickNationality } from "./players";
 // Les joueurs intéressants deviennent des suggestions notées A, B ou C.
 // ---------------------------------------------------------------------------------------
 
-export const MAX_EXTRA_SCOUTS = 6;
+export const MAX_EXTRA_SCOUTS = 12;
 export const NORTH_AMERICA = ["quebec", "ontario", "west", "usa", "pro"];
 export const GRADES = {
   A: { label: "Recommandé fortement", color: "#2DBE74" },
