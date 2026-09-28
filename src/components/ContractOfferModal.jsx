@@ -103,7 +103,8 @@ export function ContractOfferModal({ player, realPlayer, isRenewal, team, contex
           <div style={label}><span>Salaire annuel (impact sur le plafond)</span><span style={{ color: "var(--ice)", fontWeight: 700 }}>{k$(salary)}</span></div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input aria-label="Salaire" type="range" min={min} max={max} step={25} value={salary} onChange={(e) => setSalary(Number(e.target.value))} style={{ flex: 1 }} />
-            <input aria-label="Salaire (milliers de $, exact)" type="number" min={min} max={max} step={25} value={salary} onChange={(e) => setSalary(clampNum(Number(e.target.value), min, max))} style={{ ...input, width: 84 }} />
+            <input aria-label="Salaire en dollars, montant exact" type="number" min={min * 1000} max={max * 1000} step={25000} value={salary * 1000} onChange={(e) => setSalary(clampNum(Math.round(Number(e.target.value) / 1000), min, max))} style={{ ...input, width: 108 }} />
+            <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>$</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--iceMuted)" }}><span>Minimum LNH {k$(min)}</span><span>Maximum (20 % du plafond) {k$(max)}</span></div>
         </div>

@@ -72,7 +72,8 @@ export function StaffProfileModal({ staff, role, isHired, benchmark, team, pendi
               <>
                 <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>Comme pour un joueur, l'offre n'est pas acceptée sur-le-champ : réponse après 1 à 3 jours, avec un risque de refus si l'offre est trop basse par rapport au salaire demandé.</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <input type="number" min={0} step={25} value={offered} onChange={(e) => setOffered(Number(e.target.value))} style={{ width: 110, background: "var(--navy)", border: "1px solid #ffffff33", borderRadius: 3, color: "var(--ice)", padding: "6px 8px", fontSize: 13 }} />
+                  <input aria-label="Offre en dollars, montant exact" type="number" min={0} step={25000} value={offered * 1000} onChange={(e) => setOffered(Math.max(0, Math.round(Number(e.target.value) / 1000)))} style={{ width: 140, background: "var(--navy)", border: "1px solid #ffffff33", borderRadius: 3, color: "var(--ice)", padding: "6px 8px", fontSize: 13 }} />
+                  <span style={{ fontSize: 12, color: "var(--iceMuted)" }}>$ par saison · {money(offered)}</span>
                   <button onClick={() => { onOffer(staff, offered); onClose(); }} style={btnStyle("var(--win)")}>Offrir</button>
                 </div>
               </>

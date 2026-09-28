@@ -257,7 +257,14 @@ tests/engine.test.js       tests du moteur
     gardien, coaching attaquant, coaching défenseur, évaluation de l'aptitude, évaluation du
     potentiel, physiothérapie, développement des jeunes joueurs, motivation, gestion d'équipe,
     négociation, finance. Chaque candidat porte les 11 critères dès sa génération, quel que soit
-    le poste visé — un même profil pourrait donc convenir à plus d'un poste. La **cote générale**
+    le poste visé — un même profil pourrait donc convenir à plus d'un poste — mais reste
+    spécialisé dans le poste visé : les critères pertinents pour ce poste sont tirés dans une
+    plage normale (40-95/99), les autres nettement plus bas (15-50/99), pour éviter un
+    entraîneur-chef aussi doué en finance qu'en coaching. Les salaires de base par poste
+    (STAFF_BASE_SALARY) sont calés sur la réalité de la LNH plutôt que sur l'échelle des joueurs :
+    DG et entraîneur-chef bien payés (jusqu'à quelques millions pour les meilleurs), personnel de
+    soutien (adjoints, dépisteurs, entraîneur physique, communications) nettement moins, de la
+    centaine de milliers à quelques centaines de milliers par saison. La **cote générale**
     d'un candidat (celle affichée en étoiles) est la moyenne des critères pertinents pour le
     poste visé (STAFF_ATTRS : ex. l'entraîneur-chef sur coaching ×3 + développement des jeunes +
     motivation + gestion d'équipe, un dépisteur sur évaluation aptitude/potentiel, le directeur
@@ -324,12 +331,16 @@ tests/engine.test.js       tests du moteur
   - Offre envoyée à l'agent, réponse après un délai de 1 à 3 jours (`business` pending
     offers, résolue dans `advanceDays`) plutôt qu'instantanée — un message confirme l'envoi,
     un second la décision une fois le délai écoulé.
-  - Montant et durée ajustables au curseur ou saisis directement au clavier (`ContractOfferModal`).
+  - Montant et durée ajustables au curseur ou saisis directement au clavier (`ContractOfferModal`) :
+    le champ chiffré affiche et accepte le montant complet en dollars (ex. `2850000`), avec
+    l'équivalent formaté juste à côté, plutôt qu'un montant en milliers peu lisible. Même
+    principe pour l'offre de salaire à un candidat du personnel (`StaffProfileModal`).
   - Attentes du joueur estimées par ton directeur général plutôt que révélées telles quelles :
-    plage floue autour de la vraie demande, resserrée selon la cote du DG (`gmEstimate`) —
-    sans DG en poste, estimation à l'aveugle (plage maximale). Même principe pour évaluer un
-    échange (`TransactionsCenter`, valeur envoyée/reçue et verdict favorable/équilibré/
-    défavorable selon la cote du DG).
+    plage floue autour de la vraie demande, resserrée selon le critère **Négociation** du DG
+    (`gmEstimate`, plus pertinent ici que sa cote générale qui mélange aussi finance/gestion
+    d'équipe/motivation) — sans DG en poste, estimation à l'aveugle (plage maximale). Même
+    principe pour évaluer un échange (`TransactionsCenter`, valeur envoyée/reçue et verdict favorable/équilibré/
+    défavorable selon le critère Négociation du DG).
   - L'équipe adverse refuse une proposition trop favorable pour toi (`engine/trades.js`
     evaluateTradeForCpu) : elle évalue toujours sur les vraies valeurs de son effectif et du
     tien (sans le flou du dépistage qui s'applique à toi), avec la même échelle de valeur (cote

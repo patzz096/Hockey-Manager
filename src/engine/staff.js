@@ -10,7 +10,12 @@ import { pickNationality } from "./players";
 // attire un peu plus de spectateurs (marketing).
 export const STAFF_ROLES = { hockeyOpsDirector: "Directeur des opérations hockey", gm: "Directeur général", financeDirector: "Directeur des finances", headCoach: "Entraîneur-chef", assistantOff: "Adjoint offensif", assistantDef: "Adjoint défensif", fitnessCoach: "Entraîneur physique", scoutAmateur: "Dépisteur amateur", scoutPro: "Dépisteur professionnel", broadcastDirector: "Directeur des communications" };
 
-export const STAFF_BASE_SALARY = { hockeyOpsDirector: 2200, gm: 2100, financeDirector: 1800, headCoach: 1800, assistantOff: 900, assistantDef: 900, fitnessCoach: 950, scoutAmateur: 700, scoutPro: 900, broadcastDirector: 1300 };
+// Salaires de base (en milliers de $, avant l'effet de la cote et du hasard) calés sur la
+// réalité de la LNH plutôt que sur l'échelle des joueurs : le DG et l'entraîneur-chef sont les
+// mieux payés (jusqu'à quelques millions pour les meilleurs), le personnel de soutien (adjoints,
+// dépisteurs, entraîneur physique, communications) gagne nettement moins, de l'ordre de la
+// centaine de milliers à quelques centaines de milliers par saison.
+export const STAFF_BASE_SALARY = { hockeyOpsDirector: 1300, gm: 2400, financeDirector: 850, headCoach: 2200, assistantOff: 400, assistantDef: 400, fitnessCoach: 200, scoutAmateur: 140, scoutPro: 200, broadcastDirector: 320 };
 
 // Libellés des critères de valeur communs à tout le personnel (échelle interne 20-99, affichée
 // sur /20) — les mêmes 11 critères existent chez chaque candidat, quel que soit le poste visé ;
@@ -40,22 +45,26 @@ export const STAFF_ATTRS = {
 const STAFF_ATTR_KEYS = Object.keys(STAFF_ATTR_LABELS);
 
 // Un candidat porte toujours les 11 critères communs (`attrs`), même pour un poste qui n'en
-// utilise qu'une partie — un même profil pourrait ainsi convenir à plusieurs postes. `rating`
-// (cote générale, utilisée telle quelle par tous les effets de jeu existants : délai/qualité de
-// dépistage, primes de performance, etc.) est la moyenne des critères pertinents pour le poste
-// visé (STAFF_ATTRS), ou de l'ensemble des 11 critères pour un poste hors de cette liste
-// (directeur des communications). `devSkill` (vitesse de progression des joueurs, voir App.jsx
-// monthlyTick) reprend directement le critère "Développement des jeunes joueurs".
+// utilise qu'une partie — un même profil pourrait ainsi convenir à plusieurs postes. Mais il
+// reste spécialisé dans le poste qu'il vise : les critères pertinents pour ce poste (STAFF_ATTRS)
+// sont tirés dans une plage normale, les autres (hors de son domaine) dans une plage nettement
+// plus faible — un entraîneur-chef doté d'un talent de financier n'a aucune raison d'être fréquent.
+// `rating` (cote générale, utilisée telle quelle par tous les effets de jeu existants : délai/
+// qualité de dépistage, primes de performance, etc.) est la moyenne des critères pertinents pour
+// le poste visé ; pour un poste hors de ces 11 critères (directeur des communications, relations
+// médias sans équivalent ici), une cote générale indépendante est tirée séparément.
 function generateStaffCandidate(rng, id, role) {
   const fn = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)];
   const ln = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
-  const attrs = {};
-  STAFF_ATTR_KEYS.forEach((key) => { attrs[key] = Math.round(40 + rng() * 55); });
   const spec = STAFF_ATTRS[role];
-  const relevantKeys = spec ? spec.map(([, key]) => key) : STAFF_ATTR_KEYS;
-  const rating = Math.round(relevantKeys.reduce((a, key) => a + attrs[key], 0) / relevantKeys.length);
+  const relevantKeys = spec ? spec.map(([, key]) => key) : [];
+  const attrs = {};
+  STAFF_ATTR_KEYS.forEach((key) => {
+    attrs[key] = relevantKeys.includes(key) ? Math.round(40 + rng() * 55) : Math.round(15 + rng() * 35);
+  });
+  const rating = spec ? Math.round(relevantKeys.reduce((a, key) => a + attrs[key], 0) / relevantKeys.length) : Math.round(40 + rng() * 55);
   const salary = Math.round(STAFF_BASE_SALARY[role] * Math.pow(rating / 70, 1.6) * (0.85 + rng() * 0.3));
-  const devSkill = attrs.devYoung;
+  const devSkill = relevantKeys.includes("devYoung") ? attrs.devYoung : undefined;
   // Âge et nationalité (façon FM/EHM) : la plupart des membres du personnel sont d'anciens
   // joueurs ou des carriéristes de longue date, donc plus âgés qu'un joueur moyen.
   const age = 32 + Math.floor(rng() * 45);

@@ -177,6 +177,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     return upcomingDraftClass(classYear).filter((p) => !taken.has(p.id));
   }, [classYear, draft]);
   const myDraftIds = draftList.year === classYear ? draftList.ids : [];
+  // Précision des estimations du DG (contrats, échanges) : le critère "Négociation" est plus
+  // pertinent que sa cote générale (qui mélange aussi finance, gestion d'équipe et motivation).
+  const gmNegotiationRating = business.staff.gm?.attrs?.negotiation ?? business.staff.gm?.rating ?? null;
   // Plafond de ton équipe : cap mort (rachats, rétentions) et allègement LTIR.
   const myCapOpts = useMemo(() => {
     const ltirIds = Object.values(injuries).filter((i) => i.ltir && i.teamId === myTeamId && i.until > currentDay).map((i) => i.playerId);
@@ -1582,7 +1585,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
       {comparePlayers && <ComparePlayersModal players={comparePlayers} team={myTeam} onClose={() => setComparePlayers(null)} />}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
-      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={business.staff.gm?.rating ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
+      {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={gmNegotiationRating} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
       {editingPlayer && <PlayerEditorModal initial={editingPlayer.initial} isNew={editingPlayer.isNew} team={teamsById[myTeamId]} onSave={savePlayer} onClose={() => setEditingPlayer(null)} />}
       <div style={{ width: 200, background: "var(--navy2)", padding: "20px 12px", display: "flex", flexDirection: "column", gap: 2, borderRight: "1px solid var(--line)" }}>
         <div style={{ padding: "0 8px 16px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -1661,7 +1664,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={business.staff.gm?.rating ?? null} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={gmNegotiationRating} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 
