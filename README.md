@@ -182,6 +182,11 @@ tests/engine.test.js       tests du moteur
   « Simuler la présaison » (le bouton habituel « Simuler la saison », relabellé) ne simule que le
   groupe en cours (présaison ou saison régulière), pour ne pas enchaîner les deux d'un coup et
   garder la fenêtre de préparation utile.
+- La même cote sur 10 (offensif/défensif/général, `engine/stats.js` skaterRating/
+  goalieRatingFromSavePct) est aussi affichée **par match** dans le sommaire d'un match joué
+  (onglet Calendrier, ligne dépliée) : trois colonnes dans le tableau des statistiques
+  individuelles de chaque équipe, et une cote de gardien basée sur son vrai % d'arrêts du match
+  (plus précis que la victoire/défaite seule).
 - Échanges et signatures d'agents libres gelés de la date limite jusqu'au 1er juillet
   (prolongations de contrat toujours permises)
 - Classement LNH (`engine/standings.js`) : V 2 pts, DP (défaite en prolongation ou tirs de
@@ -243,13 +248,14 @@ tests/engine.test.js       tests du moteur
 **Gestion**
 - Trios/paires/gardiens éditables par glisser-déposer ou clic-clic (échange), sur un schéma
   de patinoire façon FM24, avec liste de joueurs par position à droite
-- Clic droit sur un joueur de l'alignement (façon FM) : menu contextuel avec voir le profil,
-  comparer avec un autre joueur (attribut par attribut, deux patineurs ou deux gardiens entre
-  eux), les actions déjà offertes par son profil (rappel/renvoi, ballottage, LTIR, contrat,
-  rachat, réclamation, repêchage — celles à confirmation ouvrent le profil plutôt que d'agir
-  sans confirmer), nommer capitaine/adjoint (badge C/A, purement honorifique) et mettre/retirer
-  du marché des échanges (liste visible en tête de l'onglet Transactions, organisationnel —
-  n'affecte pas les décisions de l'IA)
+- Clic droit sur un joueur (façon FM) : menu contextuel avec voir le profil, comparer avec un
+  autre joueur (attribut par attribut, deux patineurs ou deux gardiens entre eux), les actions
+  déjà offertes par son profil (rappel/renvoi, ballottage, LTIR, contrat, rachat, réclamation,
+  repêchage — celles à confirmation ouvrent le profil plutôt que d'agir sans confirmer), nommer
+  capitaine/adjoint (badge C/A, purement honorifique) et mettre/retirer du marché des échanges
+  (liste visible en tête de l'onglet Transactions, organisationnel — n'affecte pas les décisions
+  de l'IA). Disponible partout où un nom de joueur est cliquable via `PlayerLink` : alignement,
+  sommaire de match (onglet Calendrier), Contrats, Rôles et Stratégie.
 - Personnel : directeur général (négociation de contrat, échanges, cohésion, développement),
   entraîneur-chef, adjoints, entraîneur physique, dépisteurs amateur/pro, directeur des
   finances, directeur des opérations hockey — chacun avec une cote en étoiles (pas de note

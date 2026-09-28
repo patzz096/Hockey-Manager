@@ -61,7 +61,7 @@ function Effects({ e, compact = false }) {
   );
 }
 
-function PhaseCard({ phase, selected, fits, team, onPick, onSelectPlayer }) {
+function PhaseCard({ phase, selected, fits, team, onPick, onSelectPlayer, onContextMenu }) {
   const option = phase.options.find((o) => o.id === selected);
   const fit = fits[phase.key][selected];
   const people = playersForOption(team, option, 3);
@@ -110,7 +110,7 @@ function PhaseCard({ phase, selected, fits, team, onPick, onSelectPlayer }) {
                 <div style={{ color, fontWeight: 600, marginBottom: 4 }}>{title}</div>
                 {list.map(({ p, v }) => (
                   <div key={p.id} style={{ display: "flex", justifyContent: "space-between", gap: 6, padding: "2px 0" }}>
-                    <PlayerLink player={p} team={team} onSelect={onSelectPlayer}>{p.name.split(" ").slice(-1)[0]}</PlayerLink>
+                    <PlayerLink player={p} team={team} onSelect={onSelectPlayer} onContextMenu={onContextMenu}>{p.name.split(" ").slice(-1)[0]}</PlayerLink>
                     <span style={{ color: "var(--iceMuted)", fontVariantNumeric: "tabular-nums" }}>{p.pos} · {Math.round(v)}</span>
                   </div>
                 ))}
@@ -123,7 +123,7 @@ function PhaseCard({ phase, selected, fits, team, onPick, onSelectPlayer }) {
   );
 }
 
-export function StrategyEditor({ team, lines, onChangeStrategy, onChangeMentality, onAutoStrategy, onSelectPlayer }) {
+export function StrategyEditor({ team, lines, onChangeStrategy, onChangeMentality, onAutoStrategy, onSelectPlayer, onContextMenu }) {
   const strategy = normalizeStrategy(lines.strategy);
   const fits = computeStrategyFits(team, lines);
   const total = getStrategyMultipliers(strategy, fits, lines.mentality);
@@ -142,7 +142,7 @@ export function StrategyEditor({ team, lines, onChangeStrategy, onChangeMentalit
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 28 }}>
         {STRATEGY_PHASES.map((ph) => (
-          <PhaseCard key={ph.key} phase={ph} selected={strategy[ph.key]} fits={fits} team={team} onPick={onChangeStrategy} onSelectPlayer={onSelectPlayer} />
+          <PhaseCard key={ph.key} phase={ph} selected={strategy[ph.key]} fits={fits} team={team} onPick={onChangeStrategy} onSelectPlayer={onSelectPlayer} onContextMenu={onContextMenu} />
         ))}
       </div>
 

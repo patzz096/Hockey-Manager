@@ -1,21 +1,30 @@
 import { formatTOI } from "../../ui/format";
+import { skaterRating, goalieRatingFromSavePct } from "../../engine/stats";
 import { GoalSummary } from "./GoalSummary";
 
-export function StatLines({ title, box, team, lines, onSelectPlayer }) {
+const ratingColor = (v) => (v == null ? "var(--iceMuted)" : v >= 7 ? "var(--win)" : v >= 5.5 ? "var(--gold)" : v >= 4 ? "var(--iceMuted)" : "var(--loss)");
+const fmtRating = (v) => (v == null ? "—" : v.toFixed(1));
+
+export function StatLines({ title, box, team, lines, onSelectPlayer, onContextMenu }) {
   const ids = new Set([...Object.keys(box.goalsBy), ...Object.keys(box.assistsBy), ...Object.keys(box.hitsBy), ...Object.keys(box.pimBy || {}), ...Object.keys(box.shotsBy || {}), ...Object.keys(box.toiBy || {})]);
-  const rows = [...ids].map((id) => { const player = team.roster.find((p) => p.id === id); return { player, g: box.goalsBy[id] || 0, a: box.assistsBy[id] || 0, h: box.hitsBy[id] || 0, pim: (box.pimBy || {})[id] || 0, s: (box.shotsBy || {})[id] || 0, pm: (box.plusMinusBy || {})[id] || 0, toi: (box.toiBy || {})[id] }; }).filter((r) => r.player && r.player.pos !== "G").sort((x, y) => (box.toiBy?.[y.player.id] || 0) - (box.toiBy?.[x.player.id] || 0));
+  const rows = [...ids].map((id) => { const player = team.roster.find((p) => p.id === id); return { player, g: box.goalsBy[id] || 0, a: box.assistsBy[id] || 0, h: box.hitsBy[id] || 0, bl: (box.blocksBy || {})[id] || 0, pim: (box.pimBy || {})[id] || 0, s: (box.shotsBy || {})[id] || 0, pm: (box.plusMinusBy || {})[id] || 0, toi: (box.toiBy || {})[id] }; }).filter((r) => r.player && r.player.pos !== "G").sort((x, y) => (box.toiBy?.[y.player.id] || 0) - (box.toiBy?.[x.player.id] || 0));
   return (
     <div style={{ flex: 1, minWidth: 280 }}>
       <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, color: team.color, marginBottom: 8 }}>{title}</div>
       {rows.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucune statistique notable.</div>}
       <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
-        <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}><th style={{ textAlign: "left", padding: "3px 6px" }}>Joueur</th><th style={{ padding: "3px 6px" }}>TMG</th><th style={{ padding: "3px 6px" }}>B</th><th style={{ padding: "3px 6px" }}>A</th><th style={{ padding: "3px 6px" }}>T</th><th style={{ padding: "3px 6px" }}>+/-</th><th style={{ padding: "3px 6px" }}>MEC</th><th style={{ padding: "3px 6px" }}>PUN</th></tr></thead>
+        <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}><th style={{ textAlign: "left", padding: "3px 6px" }}>Joueur</th><th style={{ padding: "3px 6px" }}>TMG</th><th style={{ padding: "3px 6px" }}>B</th><th style={{ padding: "3px 6px" }}>A</th><th style={{ padding: "3px 6px" }}>T</th><th style={{ padding: "3px 6px" }}>+/-</th><th style={{ padding: "3px 6px" }}>MEC</th><th style={{ padding: "3px 6px" }}>PUN</th><th style={{ padding: "3px 6px" }} title="Cote offensive du match">Off.</th><th style={{ padding: "3px 6px" }} title="Cote défensive du match">Déf.</th><th style={{ padding: "3px 6px" }} title="Cote générale du match">Gén.</th></tr></thead>
         <tbody>
-          {rows.map(({ player, g, a, h, pim, s, pm, toi }) => player && (
-            <tr key={player.id} onClick={() => onSelectPlayer(player, team)} style={{ cursor: "pointer" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+          {rows.map(({ player, g, a, h, bl, pim, s, pm, toi }) => {
+            if (!player) return null;
+            const r = skaterRating({ g, a, shots: s, plusMinus: pm, hits: h, blocks: bl, pim });
+            return (
+            <tr key={player.id} onClick={() => onSelectPlayer(player, team)} onContextMenu={onContextMenu ? (e) => { e.preventDefault(); onContextMenu(e, player); } : undefined} style={{ cursor: "pointer" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
               <td style={{ padding: "3px 6px" }}>{player.name}</td><td style={{ padding: "3px 6px", textAlign: "center", color: "var(--iceMuted)" }}>{formatTOI(toi)}</td><td style={{ padding: "3px 6px", textAlign: "center" }}>{g}</td><td style={{ padding: "3px 6px", textAlign: "center" }}>{a}</td><td style={{ padding: "3px 6px", textAlign: "center" }}>{s}</td><td style={{ padding: "3px 6px", textAlign: "center", color: pm > 0 ? "var(--win)" : pm < 0 ? "var(--loss)" : "var(--iceMuted)" }}>{pm > 0 ? "+" : ""}{pm}</td><td style={{ padding: "3px 6px", textAlign: "center" }}>{h}</td><td style={{ padding: "3px 6px", textAlign: "center" }}>{pim}</td>
+              <td style={{ padding: "3px 6px", textAlign: "center", color: ratingColor(r.off), fontWeight: 600 }}>{fmtRating(r.off)}</td><td style={{ padding: "3px 6px", textAlign: "center", color: ratingColor(r.def), fontWeight: 600 }}>{fmtRating(r.def)}</td><td style={{ padding: "3px 6px", textAlign: "center", color: ratingColor(r.overall), fontWeight: 700 }}>{fmtRating(r.overall)}</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -70,7 +79,13 @@ export function MatchCompare({ game, home, away }) {
   );
 }
 
-export function BoxscoreView({ game, teamsById, linesByTeam, onSelectPlayer, schedule, seasonYear }) {
+function GoalieLine({ label, goalie }) {
+  const savePct = goalie.shotsAgainst > 0 ? goalie.saves / goalie.shotsAgainst : null;
+  const r = goalieRatingFromSavePct(savePct ?? 0.9);
+  return <span>{label}: {goalie.saves}/{goalie.shotsAgainst} arrêts{savePct != null && ` (${(savePct * 100).toFixed(1)} %)`} · cote <strong style={{ color: ratingColor(r.overall) }}>{fmtRating(r.overall)}</strong></span>;
+}
+
+export function BoxscoreView({ game, teamsById, linesByTeam, onSelectPlayer, onContextMenu, schedule, seasonYear }) {
   const home = teamsById[game.home], away = teamsById[game.away];
   const { box } = game;
   return (
@@ -78,12 +93,12 @@ export function BoxscoreView({ game, teamsById, linesByTeam, onSelectPlayer, sch
       <MatchCompare game={game} home={home} away={away} />
       <GoalSummary game={game} home={home} away={away} onSelectPlayer={onSelectPlayer} schedule={schedule} seasonYear={seasonYear} />
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 14 }}>
-        <StatLines title={`${home.name} (dom.)`} box={box.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} />
-        <StatLines title={`${away.name} (visit.)`} box={box.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} />
+        <StatLines title={`${home.name} (dom.)`} box={box.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} onContextMenu={onContextMenu} />
+        <StatLines title={`${away.name} (visit.)`} box={box.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} onContextMenu={onContextMenu} />
       </div>
       <div style={{ display: "flex", gap: 24, fontSize: 12, color: "var(--iceMuted)", borderTop: "1px solid #ffffff1a", paddingTop: 10, flexWrap: "wrap" }}>
-        <span>Gardien {home.name}: {box.homeGoalie.saves}/{box.homeGoalie.shotsAgainst} arrêts</span>
-        <span>Gardien {away.name}: {box.awayGoalie.saves}/{box.awayGoalie.shotsAgainst} arrêts</span>
+        <GoalieLine label={`Gardien ${home.name}`} goalie={box.homeGoalie} />
+        <GoalieLine label={`Gardien ${away.name}`} goalie={box.awayGoalie} />
       </div>
     </div>
   );

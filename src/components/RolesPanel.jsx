@@ -57,7 +57,7 @@ function RoleGuide({ player, roleId }) {
   );
 }
 
-function PlayerRoleRow({ player, lines, team, selected, onPick, onFocus, focused, onSelectPlayer }) {
+function PlayerRoleRow({ player, lines, team, selected, onPick, onFocus, focused, onSelectPlayer, onContextMenu }) {
   const group = roleGroupOf(player);
   const natural = naturalRole(player);
   const info = lineInfo(player.id, lines);
@@ -65,7 +65,7 @@ function PlayerRoleRow({ player, lines, team, selected, onPick, onFocus, focused
   return (
     <div style={{ background: focused ? "rgba(92,200,255,0.06)" : "var(--navy)", border: `1px solid ${focused ? "var(--accent)" : "var(--line)"}`, borderRadius: 8, padding: "10px 12px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-        <strong style={{ fontSize: 14 }}><PlayerLink player={player} team={team} onSelect={onSelectPlayer} /></strong>
+        <strong style={{ fontSize: 14 }}><PlayerLink player={player} team={team} onSelect={onSelectPlayer} onContextMenu={onContextMenu} /></strong>
         <span style={{ fontSize: 12, color: "var(--iceMuted)" }}>{player.pos} · {player.age} ans</span>
         <span style={{ fontSize: 11, color: "var(--iceMuted)", marginLeft: "auto" }}>Naturel : <span style={{ color: "var(--gold)" }}>{ROLES[natural].label}</span></span>
       </div>
@@ -101,7 +101,7 @@ function unitHints(kind, ids, roleOfId) {
   return hints;
 }
 
-export function RolesPanel({ team, lines, onChangeRole, onNaturalRoles, onSelectPlayer }) {
+export function RolesPanel({ team, lines, onChangeRole, onNaturalRoles, onSelectPlayer, onContextMenu }) {
   const byId = (id) => team.roster.find((p) => p.id === id);
   const firstId = lines.forwards[0]?.C || lines.forwards[0]?.LW;
   const [focus, setFocus] = useState(() => ({ playerId: firstId, roleId: firstId ? roleOf(lines, byId(firstId)) : "playmaker" }));
@@ -112,7 +112,7 @@ export function RolesPanel({ team, lines, onChangeRole, onNaturalRoles, onSelect
   const row = (id) => {
     const p = byId(id);
     if (!p) return null;
-    return <PlayerRoleRow key={id} player={p} lines={lines} team={team} selected={roleOf(lines, p)} onPick={onChangeRole} onFocus={setF} focused={focus.playerId === id} onSelectPlayer={onSelectPlayer} />;
+    return <PlayerRoleRow key={id} player={p} lines={lines} team={team} selected={roleOf(lines, p)} onPick={onChangeRole} onFocus={setF} focused={focus.playerId === id} onSelectPlayer={onSelectPlayer} onContextMenu={onContextMenu} />;
   };
   const goalie = byId(lines.goalies.starter);
   return (
@@ -152,7 +152,7 @@ export function RolesPanel({ team, lines, onChangeRole, onNaturalRoles, onSelect
             <section>
               <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Gardien partant</div>
               <div style={{ background: "var(--navy)", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", fontSize: 13 }}>
-                <PlayerLink player={goalie} team={team} onSelect={onSelectPlayer} /> — style {ROLES.butterfly.label} : adéquation <strong style={{ color: fitInfo(roleFit(goalie, "butterfly")).color }}>{fitInfo(roleFit(goalie, "butterfly")).label}</strong>
+                <PlayerLink player={goalie} team={team} onSelect={onSelectPlayer} onContextMenu={onContextMenu} /> — style {ROLES.butterfly.label} : adéquation <strong style={{ color: fitInfo(roleFit(goalie, "butterfly")).color }}>{fitInfo(roleFit(goalie, "butterfly")).label}</strong>
                 <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 4 }}>Le style papillon est le style moderne de tous les gardiens du jeu ; son adéquation reflète leur technique.</div>
               </div>
             </section>

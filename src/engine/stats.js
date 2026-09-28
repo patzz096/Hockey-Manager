@@ -55,12 +55,28 @@ export function leadersOf(stats) {
 
 const clamp10 = (v) => Math.max(0, Math.min(10, v));
 const round1 = (v) => Math.round(v * 10) / 10;
+// Cote de performance sur 10 (offensive/défensive/générale) d'un patineur, à partir de ses
+// statistiques PAR MATCH (déjà ramenées à un match — une moyenne sur plusieurs matchs, ou les
+// totaux bruts d'un seul). 5/10 = rendement moyen. Réutilisée pour les cotes de présaison
+// (ratingsOf, moyenne sur plusieurs matchs) et le sommaire d'un match précis (BoxscoreView,
+// totaux du match).
+export function skaterRating({ g = 0, a = 0, shots = 0, plusMinus = 0, hits = 0, blocks = 0, pim = 0 } = {}) {
+  const off = clamp10(5 + g * 3 + a * 1.8 + shots * 0.3);
+  const def = clamp10(5 + plusMinus * 1.1 + hits * 0.35 + blocks * 0.4 - pim * 0.25);
+  return { off: round1(off), def: round1(def), overall: round1((off + def) / 2) };
+}
+// Cote d'un gardien à partir de son % d'arrêts (match précis) — bien plus précis que winPct seul,
+// mais demande le détail arrêts/tirs du match (voir BoxscoreView, box.homeGoalie/awayGoalie).
+export function goalieRatingFromSavePct(savePct) {
+  const def = clamp10(5 + (savePct - 0.9) * 50);
+  return { off: null, def: round1(def), overall: round1(def) };
+}
 // Cote de performance sur 10 (offensive/défensive/générale), utile en présaison pour juger les
 // matchs préparatoires avant que la saison régulière ne compte pour vrai (voir App.jsx
 // preseasonRatings) : dérivée des statistiques déjà accumulées (aggregateStats), ramenées par
-// match joué. 5/10 = rendement moyen ; les gardiens (aucun suivi des arrêts par joueur pour
-// l'instant, seulement la victoire créditée au partant) sont notés uniquement sur leur fiche de
-// décisions.
+// match joué. Les gardiens (aucun suivi des arrêts par joueur cumulé pour l'instant, seulement la
+// victoire créditée au partant) sont notés sur leur fiche de décisions plutôt que leur % d'arrêts
+// — voir goalieRatingFromSavePct pour un match précis, plus précis.
 export function ratingsOf(stats) {
   return Object.values(stats).filter((s) => s.gp > 0).map((s) => {
     if (s.player.pos === "G") {
@@ -68,9 +84,8 @@ export function ratingsOf(stats) {
       const def = clamp10(5 + (winPct - 0.5) * 6);
       return { player: s.player, team: s.team, gp: s.gp, off: null, def: round1(def), overall: round1(def) };
     }
-    const off = clamp10(5 + (s.g / s.gp) * 3 + (s.a / s.gp) * 1.8 + (s.shots / s.gp) * 0.3);
-    const def = clamp10(5 + (s.plusMinus / s.gp) * 1.1 + (s.hits / s.gp) * 0.35 + (s.blocks / s.gp) * 0.4 - (s.pim / s.gp) * 0.25);
-    return { player: s.player, team: s.team, gp: s.gp, off: round1(off), def: round1(def), overall: round1((off + def) / 2) };
+    const r = skaterRating({ g: s.g / s.gp, a: s.a / s.gp, shots: s.shots / s.gp, plusMinus: s.plusMinus / s.gp, hits: s.hits / s.gp, blocks: s.blocks / s.gp, pim: s.pim / s.gp });
+    return { player: s.player, team: s.team, gp: s.gp, ...r };
   }).sort((a, b) => b.overall - a.overall);
 }
 

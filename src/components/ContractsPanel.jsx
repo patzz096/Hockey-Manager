@@ -5,7 +5,7 @@ import { SortTh, StarRating, PlayerLink } from "./common";
 import { buyoutTerms, formatMoney, payroll } from "../engine/cap";
 import { money } from "../ui/format";
 
-export function ContractsPanel({ myTeam, onSelectPlayer, seasonYear, buyoutOpen = false, deadCap = [] }) {
+export function ContractsPanel({ myTeam, onSelectPlayer, onContextMenu, seasonYear, buyoutOpen = false, deadCap = [] }) {
   const [ck, cd, cToggle] = useSort("salary");
   const cAcc = (p, key) => {
     if (key === "salary") return p.contract?.salary || 0;
@@ -34,7 +34,7 @@ export function ContractsPanel({ myTeam, onSelectPlayer, seasonYear, buyoutOpen 
         <tbody>
           {sorted.map((p) => (
             <tr key={p.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-              <td style={{ padding: "7px 10px" }}><PlayerLink player={p} team={myTeam} onSelect={onSelectPlayer} /></td>
+              <td style={{ padding: "7px 10px" }}><PlayerLink player={p} team={myTeam} onSelect={onSelectPlayer} onContextMenu={onContextMenu} /></td>
               <td style={{ padding: "7px 10px" }}>{p.pos}</td>
               <td style={{ padding: "7px 10px" }}>{p.age}</td>
               <td style={{ padding: "7px 10px" }}><StarRating value={starsFor(p.ovr, benchmark)} size={12} /></td>

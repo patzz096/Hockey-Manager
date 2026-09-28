@@ -1742,9 +1742,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} injuries={injuries} day={currentDay} cap={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts)} />}
 
-        {tab === "roles" && <RolesPanel team={myTeam} lines={myLines} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onSelectPlayer={selectPlayer} />}
+        {tab === "roles" && <RolesPanel team={myTeam} lines={myLines} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} />}
 
-        {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} />}
+        {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} />}
 
         {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={gmNegotiationRating} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
@@ -1753,7 +1753,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} txWindow={txWindow} />}
 
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
-        {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
+        {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
         {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onOffer={offerStaff} pendingStaffOffers={pendingStaffOffers} staffNegotiations={staffNegotiations} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} onSelectStaff={(staff, role, isHired) => setSelectedStaff({ staff, role, isHired })} />}
 
@@ -1801,7 +1801,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
                           <span style={{ flex: 1, textAlign: "right" }}>{teamsById[g.away].name}</span>
                           {g.played && (expanded ? <ChevronUp size={14} color="var(--iceMuted)" /> : <ChevronDown size={14} color="var(--iceMuted)" />)}
                         </div>
-                        {expanded && g.played && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} schedule={schedule} seasonYear={seasonYear} />}
+                        {expanded && g.played && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} schedule={schedule} seasonYear={seasonYear} />}
                       </div>
                     );
                   })}

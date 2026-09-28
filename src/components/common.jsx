@@ -86,8 +86,10 @@ export function InfoCard({ label, children, accent }) {
   );
 }
 
-// Nom de joueur cliquable : ouvre son profil, où qu'il soit affiché.
-export function PlayerLink({ player, team, onSelect, children, style }) {
+// Nom de joueur cliquable : ouvre son profil, où qu'il soit affiché. `onContextMenu` (optionnel) :
+// clic droit → menu rapide (contrat, ballottage, rappel/renvoi, liste d'échange, etc. — voir
+// App.jsx openPlayerContextMenu), partout où PlayerLink est déjà utilisé.
+export function PlayerLink({ player, team, onSelect, onContextMenu, children, style }) {
   if (!player) return <span style={style}>{children ?? "?"}</span>;
   if (!onSelect) return <span style={style}>{children ?? player.name}</span>;
   return (
@@ -96,6 +98,7 @@ export function PlayerLink({ player, team, onSelect, children, style }) {
       tabIndex={0}
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSelect(player, team); }}
       onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onSelect(player, team); } }}
+      onContextMenu={onContextMenu ? (e) => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, player); } : undefined}
       style={{ cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3, ...style }}
     >
       {children ?? player.name}
