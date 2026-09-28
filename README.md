@@ -252,19 +252,21 @@ tests/engine.test.js       tests du moteur
     des deux dépisteurs en chef (personnel), jusqu'à 6 dépisteurs supplémentaires peuvent être
     engagés en même temps, chacun avec sa propre mission (zone, recherche, cible, durée) — le
     marché de ces dépisteurs a aussi une nationalité/âge et un bassin élargi (14 candidats)
-  - Attributs détaillés par poste (`engine/staff.js` STAFF_ATTRS/STAFF_ATTR_LABELS, échelle
-    interne 20-99 affichée sur /20 comme les joueurs) pour l'entraîneur-chef (entraînements
-    offensif/défensif/gardiens, développement des prospects, motivation, discipline, tactique,
-    tactique en match, gestion des joueurs), les adjoints (entraînement et compétences dans
-    leur spécialité, développement des prospects, tactique), les dépisteurs (évaluation des
-    habiletés/du potentiel, négociation pour l'amateur) et les directeurs des finances/opérations
-    hockey (négociation, prudence financière, discipline, tactique, gestion des joueurs selon le
-    poste). La **cote générale** (celle affichée en étoiles) est la moyenne de ces attributs ;
-    l'entraîneur physique, le DG et le directeur des communications gardent une seule cote
-    générale, sans détail. Le développement des prospects (entraîneur-chef/adjoints), la
-    précision/rapidité des rapports de dépistage, et les primes de performance mensuelles
-    (finances selon le profit, entraîneurs selon les victoires, dépisteur pro selon le
-    développement des prospects) utilisent directement cette cote générale
+  - 11 critères de valeur communs à **tout** le personnel (`engine/staff.js`
+    STAFF_ATTR_LABELS, échelle interne 20-99 affichée sur /20 comme les joueurs) : coaching
+    gardien, coaching attaquant, coaching défenseur, évaluation de l'aptitude, évaluation du
+    potentiel, physiothérapie, développement des jeunes joueurs, motivation, gestion d'équipe,
+    négociation, finance. Chaque candidat porte les 11 critères dès sa génération, quel que soit
+    le poste visé — un même profil pourrait donc convenir à plus d'un poste. La **cote générale**
+    d'un candidat (celle affichée en étoiles) est la moyenne des critères pertinents pour le
+    poste visé (STAFF_ATTRS : ex. l'entraîneur-chef sur coaching ×3 + développement des jeunes +
+    motivation + gestion d'équipe, un dépisteur sur évaluation aptitude/potentiel, le directeur
+    des finances sur finance + négociation) ; seul le directeur des communications, hors de ces
+    11 critères (relations médias, sans équivalent ici), garde une cote générale non détaillée.
+    Le développement des jeunes joueurs (entraîneur-chef/adjoints/physique), la précision/
+    rapidité des rapports de dépistage, et les primes de performance mensuelles (finances selon
+    le profit, entraîneurs selon les victoires, dépisteur pro selon le développement des jeunes)
+    utilisent directement cette cote générale
   - Embauche manuelle façon négociation de contrat de joueur (`engine/staff.js`
     evaluateStaffOffer) : une offre de salaire n'est pas acceptée sur-le-champ, le candidat
     répond après un délai de 1 à 3 jours, avec une probabilité d'acceptation qui dépend de
