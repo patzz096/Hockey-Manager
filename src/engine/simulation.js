@@ -71,10 +71,15 @@ export function teamRatings(team, lines, staff) {
   // pour un joueur fatigué ou en pleine forme. En sim en direct, `team.roster` porte une
   // condition temporaire (l'énergie du match) au lieu de la condition de saison — voir App.jsx.
   const cf = (p) => conditionFactor(p.condition);
-  let attack = weightedAvg(skaters, (p) => avg(p.attrs, OFFENSIVE) * rm(p).attack * cf(p), bonus);
-  let defense = weightedAvg(skaters, (p) => avg(p.attrs, DEFENSIVE) * rm(p).defense * cf(p), (p) => bonus(p) * (isD(p) ? 1.6 : 1));
-  let finish = weightedAvg(skaters, (p) => offenseSkillScore(p) * rm(p).finish * cf(p), bonus);
-  const goalieQ = goalie ? avg(goalie.attrs, GOALIE_TECH) * cf(goalie) : 60;
+  // Effet léger (± 5 % maximum) de l'humeur du joueur sur son rendement en match : un joueur
+  // mécontent joue un peu moins bien, un joueur content un peu mieux. `p.morale` (−1..+1, voir
+  // engine/contracts.js playerHappiness) est absent par défaut — facteur neutre tant que
+  // personne ne l'a explicitement calculé pour ce joueur (voir App.jsx playSlate).
+  const mf = (p) => 1 + (p.morale ?? 0) * 0.05;
+  let attack = weightedAvg(skaters, (p) => avg(p.attrs, OFFENSIVE) * rm(p).attack * cf(p) * mf(p), bonus);
+  let defense = weightedAvg(skaters, (p) => avg(p.attrs, DEFENSIVE) * rm(p).defense * cf(p) * mf(p), (p) => bonus(p) * (isD(p) ? 1.6 : 1));
+  let finish = weightedAvg(skaters, (p) => offenseSkillScore(p) * rm(p).finish * cf(p) * mf(p), bonus);
+  const goalieQ = goalie ? avg(goalie.attrs, GOALIE_TECH) * cf(goalie) * mf(goalie) : 60;
   if (staff) {
     const coach = 1 + (((staff.headCoach?.rating || 50) - 50) / 50) * 0.03;
     attack *= coach * (1 + (((staff.assistantOff?.rating || 50) - 50) / 50) * 0.025);

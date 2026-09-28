@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
-import { evaluateOffer, lineupContext, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
+import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
-import { initLeague, buildSchedule } from "./engine/league";
+import { initLeague, buildSchedule, buildPreseasonSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
 import { FIRST_SEASON, seasonDates, gameDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths } from "./engine/calendar";
 import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, lotteryIneligible, ROUND_NAMES } from "./engine/playoffs";
@@ -13,7 +13,7 @@ import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promote
 import { DEFAULT_MISSIONS, DEFAULT_COVERAGE, MAX_EXTRA_SCOUTS, weeklyScouting, regionLabel, scoutRoster, buildScoutMarket, missionSummary } from "./engine/scoutingZones";
 import { ScoutingCenter } from "./components/ScoutingCenter";
 import { expireContracts, aiFreeAgency, agePlayers, aiSignFreeAgentsInSeason, aiTradesAmongCpu } from "./engine/offseason";
-import { aggregateStats, leadersOf, teamOfTheWeek } from "./engine/stats";
+import { aggregateStats, leadersOf, ratingsOf, teamOfTheWeek } from "./engine/stats";
 import { TeamOfTheWeek } from "./components/TeamOfTheWeek";
 import { capStatus, fitsUnderCap, ROSTER_MAX, formatMoney, deadCapFor, buyoutTerms, retentionEntry, MAX_RETAINED_CONTRACTS } from "./engine/cap";
 import { injuriesFromGame, dressTeam, isInjured, ltirEligible, injuryLabel } from "./engine/injuries";
@@ -46,6 +46,7 @@ import { TrainingCenter } from "./components/TrainingCenter";
 import { StandingsTable } from "./components/StandingsTable";
 import { HomeDashboard } from "./components/HomeDashboard";
 import { StatsTables } from "./components/StatsTables";
+import { PreseasonRatings } from "./components/PreseasonRatings";
 import { StrategyEditor } from "./components/StrategyEditor";
 import { TransactionsCenter } from "./components/TransactionsCenter";
 import { TeamCrest } from "./components/common";
@@ -60,8 +61,8 @@ import { DraftPanel } from "./components/DraftPanel";
 import { CapSummary } from "./components/CapSummary";
 import { WaiversPanel } from "./components/WaiversPanel";
 
-const PHASE_LABEL = { regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
-const NEXT_STEP = { regular: "", endRegular: "Saison régulière terminée : place aux séries éliminatoires.", playoffs: "Ton équipe est éliminée ou attend son prochain match.", preDraft: "Les séries sont terminées. Prochaine étape : le repêchage.", draft: "Le repêchage est en cours.", preFreeAgency: "Repêchage terminé. Le marché des agents libres ouvre le 1er juillet.", offseason: "Marché des agents libres ouvert. Prépare la prochaine saison." };
+const PHASE_LABEL = { preseason: "Matchs préparatoires", regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
+const NEXT_STEP = { preseason: "", regular: "", endRegular: "Saison régulière terminée : place aux séries éliminatoires.", playoffs: "Ton équipe est éliminée ou attend son prochain match.", preDraft: "Les séries sont terminées. Prochaine étape : le repêchage.", draft: "Le repêchage est en cours.", preFreeAgency: "Repêchage terminé. Le marché des agents libres ouvre le 1er juillet.", offseason: "Marché des agents libres ouvert. Prépare la prochaine saison." };
 
 export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [initial] = useState(() => initLeague(custom));
@@ -73,7 +74,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // Temps : jours depuis le 1er octobre 2026 (voir engine/calendar.js). Un tour du calendrier
   // régulier tous les 3 jours, séries un jour sur deux, repêchage le 24 juin, agents libres le 1er juillet.
   const [seasonYear, setSeasonYear] = useState(FIRST_SEASON);
-  const [currentDay, setCurrentDay] = useState(() => seasonDates(FIRST_SEASON).start - 1);
+  const [currentDay, setCurrentDay] = useState(() => seasonDates(FIRST_SEASON).preseason - 1);
   const [playoffs, setPlayoffs] = useState(null);
   const [draft, setDraft] = useState(null);
   // Choix de repêchage échangés cette saison : { "ronde-équipeOrigine": équipeQuiLePossèdeMaintenant }.
@@ -102,6 +103,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [winsThisMonth, setWinsThisMonth] = useState(0);
   const [profitThisMonth, setProfitThisMonth] = useState(0);
   const [progressionReport, setProgressionReport] = useState([]);
+  // Mécontentement prolongé (engine/contracts.js playerHappiness) : mois consécutifs sous le
+  // seuil de mécontentement par joueur ; une fois le seuil de mois atteint, le joueur demande à
+  // être échangé (un seul message tant qu'il reste mécontent, pour ne pas répéter chaque mois).
+  const [unhappyMonths, setUnhappyMonths] = useState({});
+  const [tradeRequested, setTradeRequested] = useState({});
   const [messages, setMessages] = useState([]);
   function addMessage(msg) {
     setMessages((prev) => [{ id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, read: false, ...msg }, ...prev]);
@@ -113,7 +119,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setMessages((prev) => prev.map((m) => (m.read ? m : { ...m, read: true })));
   }
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
-  const [schedule, setSchedule] = useState(() => buildSchedule(teams));
+  const [schedule, setSchedule] = useState(() => [...buildPreseasonSchedule(teams, FIRST_SEASON), ...buildSchedule(teams)]);
   const [linesByTeam, setLinesByTeam] = useState(() => Object.fromEntries(teams.map((t) => [t.id, t.lines])));
   const [myTeamId, setMyTeamId] = useState(null);
   const [showCustomization, setShowCustomization] = useState(false);
@@ -126,6 +132,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     }));
   }, [teamInfo, initial]);
   const [tab, setTab] = useState("home");
+  // Onglet Alignement : actif (LNH, 23 joueurs) ou organisation complète (LNH + club-école).
+  const [rosterScope, setRosterScope] = useState("active");
   const [rngSeed, setRngSeed] = useState(1000);
   const [expandedGameId, setExpandedGameId] = useState(null);
   const [liveMatch, setLiveMatch] = useState(null);
@@ -133,7 +141,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // direct). { myIsHome, oppShift: {forwardIdx, defenseIdx}, forwardIdx, defenseIdx }.
   const [shiftPicker, setShiftPicker] = useState(null);
   const [scheduleFilter, setScheduleFilter] = useState("all");
-  const [calendarMonth, setCalendarMonth] = useState(() => monthStartDay(seasonDates(FIRST_SEASON).start - 1));
+  const [calendarMonth, setCalendarMonth] = useState(() => monthStartDay(seasonDates(FIRST_SEASON).preseason - 1));
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null); // { staff, role, isHired }
   const [editingPlayer, setEditingPlayer] = useState(null);
@@ -217,7 +225,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     return preview;
   }, [business.delegation.training, business.trainingSchedule, teamsById, myTeamId, linesByTeam, schedule, seasonYear, calendarMonth, currentDay]);
   // Phase de la saison : régulière → séries → repêchage → agents libres → nouvelle saison.
-  const phase = currentGameDay !== null ? "regular" : !playoffs ? "endRegular" : !playoffs.champion ? "playoffs" : !draft ? "preDraft" : !draftDone(draft) ? "draft" : !freeAgencyDone ? "preFreeAgency" : "offseason";
+  const phase = currentGameDay !== null ? (currentDay < dates.start ? "preseason" : "regular") : !playoffs ? "endRegular" : !playoffs.champion ? "playoffs" : !draft ? "preDraft" : !draftDone(draft) ? "draft" : !freeAgencyDone ? "preFreeAgency" : "offseason";
   const mySeries = useMemo(() => (playoffs ? seriesOfTeam(playoffs, myTeamId) : null), [playoffs, myTeamId]);
   const nextMyGame = useMemo(() => {
     if (phase === "playoffs") {
@@ -241,12 +249,15 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     freeAgents.forEach((p) => { if (!out[p.id]) out[p.id] = { player: p, team: null }; });
     return out;
   }, [teams, farmByTeam, freeAgents, teamsById]);
-  const seasonStats = useMemo(() => aggregateStats(schedule, teamsById, everyone, teams), [schedule, teamsById, everyone, teams]);
+  const seasonStats = useMemo(() => aggregateStats(schedule.filter((g) => !g.exhibition), teamsById, everyone, teams), [schedule, teamsById, everyone, teams]);
+  const preseasonGames = useMemo(() => schedule.filter((g) => g.exhibition), [schedule]);
+  const preseasonStats = useMemo(() => aggregateStats(preseasonGames, teamsById, everyone, teams), [preseasonGames, teamsById, everyone, teams]);
   const playoffGames = useMemo(() => (playoffs ? playoffs.rounds.flat().flatMap((x) => x.games) : []), [playoffs]);
   const playoffStats = useMemo(() => aggregateStats(playoffGames, teamsById, everyone), [playoffGames, teamsById, everyone]);
   const [statsMode, setStatsMode] = useState("regular");
 
   const leaders = useMemo(() => leadersOf(seasonStats), [seasonStats]);
+  const preseasonRatings = useMemo(() => ratingsOf(preseasonStats), [preseasonStats]);
   const weeklyTeam = useMemo(() => teamOfTheWeek(schedule, seasonYear, currentDay, teamsById, everyone), [schedule, seasonYear, currentDay, teamsById, everyone]);
   const playoffLeaders = useMemo(() => leadersOf(playoffStats), [playoffStats]);
   const teamHitTotals = useMemo(() => {
@@ -294,11 +305,18 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       return { ...biz, cash, log: [...entries.reverse(), ...biz.log].slice(0, 30) };
     });
   }
+  // Humeur (engine/contracts.js playerHappiness) portée sur le roster simulé : léger effet sur le
+  // rendement en match (engine/simulation.js moraleFactor), uniquement pour ton équipe — les 31
+  // autres n'ont pas ce suivi.
+  function withMorale(team) {
+    if (team.id !== myTeamId) return team;
+    return { ...team, roster: team.roster.map((p) => ({ ...p, morale: playerHappiness(p, team, standings, team.roster) ?? 0 })) };
+  }
   function startLiveMatch(game) {
     setExpandedGameId(null);
     setShiftPicker(null);
-    const dressedHome = dressTeam(teamsById[game.home], linesByTeam[game.home], injuries, currentDay);
-    const dressedAway = dressTeam(teamsById[game.away], linesByTeam[game.away], injuries, currentDay);
+    const dressedHome = dressTeam(withMorale(teamsById[game.home]), linesByTeam[game.home], injuries, currentDay);
+    const dressedAway = dressTeam(withMorale(teamsById[game.away]), linesByTeam[game.away], injuries, currentDay);
     // Énergie de match (engine/training.js) : part de la condition de saison de chacun.
     const energy = Object.fromEntries([...dressedHome.team.roster, ...dressedAway.team.roster].map((p) => [p.id, p.condition ?? BASE_CONDITION]));
     setLiveMatch({ game, home: dressedHome.team, away: dressedAway.team, linesHome: dressedHome.lines, linesAway: dressedAway.lines, minute: 0, homeScore: 0, awayScore: 0, accum: emptyLiveAccum(), lastStop: null, lastShift: null, energy });
@@ -412,7 +430,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function playSlate(games, day, injuriesIn, rngGame, { playoff = false } = {}) {
     const staffByTeam = { [myTeamId]: business.staff };
     const dressedTeams = {}, dressedLines = {};
-    teams.forEach((t) => { const d = dressTeam(t, linesByTeam[t.id], injuriesIn, day); dressedTeams[t.id] = d.team; dressedLines[t.id] = d.lines; });
+    teams.forEach((t) => { const d = dressTeam(withMorale(t), linesByTeam[t.id], injuriesIn, day); dressedTeams[t.id] = d.team; dressedLines[t.id] = d.lines; });
     const injRng = seededRandom(day * 7919 + 17 + games.length);
     let inj = injuriesIn;
     const fresh = [];
@@ -453,7 +471,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const newlyPlayed = [];
     let inj = injuries;
     const fresh = [];
-    const days = [...new Set(schedule.filter((g) => !g.played).map((g) => gameDay(seasonYear, g)))].sort((a, b) => a - b);
+    // Ne simule que le groupe en cours (présaison ou saison régulière) : sinon un simple clic
+    // pendant la présaison enchaînerait aussi toute la saison régulière d'un coup, sans laisser
+    // le temps de régler le personnel et l'alignement entre les deux.
+    const inPreseason = currentDay < dates.start;
+    const days = [...new Set(schedule.filter((g) => !g.played && !!g.exhibition === inPreseason).map((g) => gameDay(seasonYear, g)))].sort((a, b) => a - b);
     days.forEach((day) => {
       const slate = playSlate(schedule.filter((g) => !g.played && gameDay(seasonYear, g) === day), day, inj, rng);
       inj = slate.injuries; fresh.push(...slate.fresh); newlyPlayed.push(...slate.played);
@@ -1354,6 +1376,29 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         addMessage({ from: "Ligue", subject: `Mouvements autour de la ligue — ${label}`, category: "transaction", body: marketLines.join("\n") });
       }
     }
+    // Mécontentement prolongé (engine/contracts.js playerHappiness) : au-delà de
+    // UNHAPPY_MONTHS_LIMIT mois consécutifs sous le seuil, le joueur demande à être échangé — un
+    // seul message tant qu'il reste mécontent (tradeRequested), pour ne pas répéter chaque mois.
+    const UNHAPPY_THRESHOLD = -0.4, UNHAPPY_MONTHS_LIMIT = 3;
+    const myRosterNow = teamsById[myTeamId]?.roster || [];
+    const nextUnhappy = { ...unhappyMonths };
+    const nextRequested = { ...tradeRequested };
+    const newRequests = [];
+    myRosterNow.forEach((p) => {
+      const happiness = playerHappiness(p, teamsById[myTeamId], standings, myRosterNow);
+      if (happiness == null) return;
+      if (happiness < UNHAPPY_THRESHOLD) {
+        nextUnhappy[p.id] = (nextUnhappy[p.id] || 0) + months;
+        if (nextUnhappy[p.id] >= UNHAPPY_MONTHS_LIMIT && !nextRequested[p.id]) { nextRequested[p.id] = true; newRequests.push(p); }
+      } else {
+        nextUnhappy[p.id] = 0;
+        nextRequested[p.id] = false;
+      }
+    });
+    setUnhappyMonths(nextUnhappy);
+    setTradeRequested(nextRequested);
+    newRequests.forEach((p) => addMessage({ from: p.name, subject: `Demande d'échange : ${p.name}`, category: "transaction", playerIds: [p.id], body: `Mécontent depuis plusieurs mois (rôle et temps de glace, résultats de l'équipe, proximité de chez lui...), ${p.name} demande à être échangé. Rien ne t'y oblige, mais le laisser mécontent trop longtemps continue d'affecter légèrement son rendement en match.` }));
+
     setProfitThisMonth(0);
     setWinsThisMonth(0);
   }
@@ -1514,7 +1559,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       return line ? { ...p, minorHistory: [...(p.minorHistory || []), { season: seasonYear, club: lg.club, ...line }] } : p;
     })).map(promoteFromJunior)])));
     setFreeAgents((prev) => agePlayers(prev));
-    setSchedule(buildSchedule(aged));
+    setSchedule([...buildPreseasonSchedule(aged, seasonYear + 1), ...buildSchedule(aged)]);
     setLinesByTeam((prev) => Object.fromEntries(aged.map((t) => [t.id, t.id === myTeamId ? prev[t.id] : { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality }])));
     setPlayoffs(null);
     setDraft(null);
@@ -1534,8 +1579,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       return { ...prev, tvDeal: deal };
     });
     setSeasonYear(seasonYear + 1);
-    advanceTo(seasonDates(seasonYear + 1).start - 1);
-    addMessage({ from: "Ligue", subject: `Saison ${seasonYear + 1}-${seasonYear + 2}`, category: "general", body: `Premier match le ${formatDay(seasonDates(seasonYear + 1).start)}. Date limite des échanges : ${formatDay(seasonDates(seasonYear + 1).tradeDeadline)}.` });
+    advanceTo(seasonDates(seasonYear + 1).preseason - 1);
+    addMessage({ from: "Ligue", subject: `Saison ${seasonYear + 1}-${seasonYear + 2}`, category: "general", body: `Matchs préparatoires à partir du ${formatDay(seasonDates(seasonYear + 1).preseason)}, premier match qui compte le ${formatDay(seasonDates(seasonYear + 1).start)}. Date limite des échanges : ${formatDay(seasonDates(seasonYear + 1).tradeDeadline)}.` });
     setTab("roster");
   }
 
@@ -1579,8 +1624,8 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // commencent, repêchage avant la saison morte, transactions/agents libres hors des fenêtres
   // ouvertes) : la page reste accessible (utile pour consulter l'historique), seul un badge prévient.
   const TAB_LOCK_REASON = {
-    playoffs: phase === "regular" ? "Saison régulière en cours — les séries n'ont pas commencé." : null,
-    draft: ["regular", "endRegular", "playoffs"].includes(phase) ? "Saison en cours — le repêchage a lieu en saison morte." : null,
+    playoffs: phase === "preseason" ? "Présaison en cours — les séries n'ont pas commencé." : phase === "regular" ? "Saison régulière en cours — les séries n'ont pas commencé." : null,
+    draft: ["preseason", "regular", "endRegular", "playoffs"].includes(phase) ? "Saison en cours — le repêchage a lieu en saison morte." : null,
     transactions: !txWindow.open ? txWindow.reason : null,
     freeagents: !txWindow.open ? txWindow.reason : null,
   };
@@ -1656,9 +1701,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             <div style={{ fontSize: 11, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)", marginTop: 3 }}>{txWindow.open ? "Échanges et signatures ouverts" : "Échanges et signatures gelés"} — {txWindow.reason}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {phase === "regular" && <>
+            {(phase === "regular" || phase === "preseason") && <>
               <button onClick={simDay} disabled={!!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler la journée</button>
-              <button onClick={simToSeasonEnd} disabled={!!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> Simuler la saison</button>
+              <button onClick={simToSeasonEnd} disabled={!!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> {phase === "preseason" ? "Simuler la présaison" : "Simuler la saison"}</button>
             </>}
             {phase === "endRegular" && <button onClick={startPlayoffs} style={btnStyle("var(--red)")}><Award size={14} /> Commencer les séries</button>}
             {phase === "playoffs" && <>
@@ -1677,12 +1722,19 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "roster" && (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 8 }}>
               <h2 style={{ ...h2Style, marginBottom: 0 }}>Alignement</h2>
-              <button onClick={openCreatePlayer} style={btnStyle("var(--win)")}>+ Créer un joueur</button>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[["active", `Actif (${myTeam.roster.length})`], ["full", `Organisation complète (${myTeam.roster.length + (farmByTeam[myTeamId] || []).length})`]].map(([k, l]) => (
+                    <button key={k} onClick={() => setRosterScope(k)} style={{ ...btnStyle(rosterScope === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>
+                  ))}
+                </div>
+                <button onClick={openCreatePlayer} style={btnStyle("var(--win)")}>+ Créer un joueur</button>
+              </div>
             </div>
-            <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 14 }}>Clique un joueur pour voir ses cotes détaillées, puis "Modifier ce joueur" pour l'éditer.</p>
-            <RosterTable roster={myTeam.roster} lines={myLines} staff={business.staff} myTeamId={myTeamId} teamId={myTeamId} team={myTeam} standings={standings} scoutKnowledge={scoutKnowledge} onSelect={(p) => selectPlayer(p, myTeam)} onContextMenu={openPlayerContextMenu} injuries={injuries} day={currentDay} />
+            <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 14 }}>Clique un joueur pour voir ses cotes détaillées, puis "Modifier ce joueur" pour l'éditer. L'humeur influence la négociation de contrat, un léger effet sur le rendement en match, et une demande d'échange si elle reste mauvaise trop longtemps.{rosterScope === "full" && " Organisation complète : alignement actif et club-école ensemble."}</p>
+            <RosterTable roster={rosterScope === "full" ? [...myTeam.roster, ...myFarmView] : myTeam.roster} lines={myLines} staff={business.staff} myTeamId={myTeamId} teamId={myTeamId} team={myTeam} standings={standings} scoutKnowledge={scoutKnowledge} onSelect={(p) => selectPlayer(p, myTeam)} onContextMenu={openPlayerContextMenu} injuries={injuries} day={currentDay} />
           </div>
         )}
 
@@ -1762,10 +1814,11 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "stats" && statsMode === "regular" && <TeamOfTheWeek tow={weeklyTeam} onSelectPlayer={selectPlayer} />}
         {tab === "stats" && <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-          {[["regular", "Saison régulière"], ["playoffs", "Séries éliminatoires"]].map(([k, l]) => <button key={k} onClick={() => setStatsMode(k)} style={{ ...btnStyle(statsMode === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>)}
+          {[["preseason", "Présaison"], ["regular", "Saison régulière"], ["playoffs", "Séries éliminatoires"]].map(([k, l]) => <button key={k} onClick={() => setStatsMode(k)} style={{ ...btnStyle(statsMode === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>)}
         </div>}
         {tab === "stats" && statsMode === "playoffs" && playoffLeaders.length === 0 && <p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Aucun match de séries joué pour l'instant.</p>}
-        {tab === "stats" && <StatsTables leaders={statsMode === "playoffs" ? playoffLeaders : leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} />}
+        {tab === "stats" && statsMode === "preseason" && <PreseasonRatings ratings={preseasonRatings} onSelectPlayer={selectPlayer} />}
+        {tab === "stats" && statsMode !== "preseason" && <StatsTables leaders={statsMode === "playoffs" ? playoffLeaders : leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} />}
 
         {tab === "standings" && <StandingsTable standings={standings} teamsById={teamsById} myTeamId={myTeamId} history={history} />}
 

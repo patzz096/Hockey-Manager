@@ -169,10 +169,19 @@ tests/engine.test.js       tests du moteur
 - Auto-optimisation (meilleures lignes, meilleure stratégie, meilleur alignement spécial)
 
 **Saison (modèle LNH)**
-- Calendrier daté (`engine/calendar.js`) : premier match le 7 octobre, un tour tous les 3 jours,
-  date limite des échanges le 1er vendredi de mars, séries un jour sur deux, repêchage le
-  24 juin, agents libres le 1er juillet, nouvelle saison en octobre. Rapport de développement
-  et primes automatiques au début de chaque mois
+- Calendrier daté (`engine/calendar.js`) : présaison à partir du 1er septembre, premier match qui
+  compte le 7 octobre, un tour tous les 3 jours, date limite des échanges le 1er vendredi de
+  mars, séries un jour sur deux, repêchage le 24 juin, agents libres le 1er juillet, nouvelle
+  saison en octobre. Rapport de développement et primes automatiques au début de chaque mois
+- Matchs préparatoires (présaison, `engine/league.js` buildPreseasonSchedule) : 6 matchs hors-
+  concours par équipe entre le 1er septembre et le 7 octobre — le temps de signer ton personnel
+  et de régler ton alignement avant que ça compte pour vrai. Exclus du classement et des
+  statistiques de la saison régulière (`exhibition: true`), mais alimentent des **cotes de
+  présaison** séparées (onglet Statistiques → Présaison, `engine/stats.js` ratingsOf) : rendement
+  sur 10 (offensif/défensif/général) déduit des statistiques accumulées, 5/10 = rendement moyen.
+  « Simuler la présaison » (le bouton habituel « Simuler la saison », relabellé) ne simule que le
+  groupe en cours (présaison ou saison régulière), pour ne pas enchaîner les deux d'un coup et
+  garder la fenêtre de préparation utile.
 - Échanges et signatures d'agents libres gelés de la date limite jusqu'au 1er juillet
   (prolongations de contrat toujours permises)
 - Classement LNH (`engine/standings.js`) : V 2 pts, DP (défaite en prolongation ou tirs de
@@ -431,11 +440,18 @@ tests/engine.test.js       tests du moteur
 
 **Interface**
 - Onglet Alignement (`RosterTable`) en tableau dense façon FHM, une ligne par joueur : drapeau
-  de nationalité, humeur (déduite à la volée des mêmes facteurs que l'intérêt à signer — temps
-  de glace/rôle, équipe gagnante, proximité de chez lui, attachement à l'équipe, puisqu'aucun
-  moral persistant n'est stocké sur le joueur), % d'adéquation à son rôle assigné (`roleFit` +
-  `roleOf`, coloré vert/or/rouge), en plus des cotes en étoiles, de la forme et du contrat
-  désormais scindé en deux colonnes (salaire, durée + type de volet) plutôt qu'un texte long.
+  de nationalité, humeur (`engine/contracts.js` playerHappiness, déduite à la volée des mêmes
+  facteurs que l'intérêt à signer — temps de glace/rôle, équipe gagnante, proximité de chez lui,
+  attachement à l'équipe, puisqu'aucun moral persistant n'est stocké sur le joueur), % d'adéquation
+  à son rôle assigné (`roleFit` + `roleOf`, coloré vert/or/rouge), en plus des cotes en étoiles,
+  de la forme et du contrat désormais scindé en deux colonnes (salaire, durée + type de volet)
+  plutôt qu'un texte long. Filtre **Actif (LNH)** / **Organisation complète (LNH+LAH)** pour voir
+  aussi le club-école dans le même tableau.
+  - Impacts de l'humeur : en plus de la négociation de contrat (déjà la même mécanique), un léger
+    effet sur le rendement en match (`engine/simulation.js` moraleFactor, ± 5 % maximum selon
+    l'humeur, appliqué seulement à ton équipe) et un risque de demande d'échange en cas de
+    mécontentement prolongé (App.jsx monthlyTick : après 3 mois sous le seuil, le joueur demande
+    à être échangé — un seul message tant qu'il reste mécontent).
 - Joueurs cliquables partout (composant `PlayerLink`) : alignement, trios (double-clic),
   profondeur, statistiques, feuille de match, sommaire des buts (buteur et passeurs),
   échanges, agents libres, contrats, rapport de progression, et liens « Profils » dans les

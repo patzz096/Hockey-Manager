@@ -2,7 +2,7 @@ import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { lineLabel } from "../engine/lines";
 import { getScoutInfo } from "../engine/scouting";
 import { BASE_CONDITION, conditionColor, conditionLabel } from "../engine/training";
-import { interestFactors, lineupContext } from "../engine/contracts";
+import { playerHappiness } from "../engine/contracts";
 import { roleFit, roleOf } from "../engine/roles";
 import { NATION_FLAG, NATION_NAME } from "../data/names";
 import { money } from "../ui/format";
@@ -12,20 +12,6 @@ import { SortTh, StarRating, PlayerFace, InjuryBadge } from "./common";
 
 const td = { padding: "3px 7px" };
 const th = { textAlign: "left", padding: "6px 7px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid #ffffff22", whiteSpace: "nowrap" };
-
-// Humeur du joueur : aucun champ de moral n'est stocké dans le jeu, alors on la déduit à la volée
-// des mêmes facteurs qui pèsent sur son intérêt à rester (temps de glace/rôle, équipe gagnante,
-// proximité de chez lui, attachement à l'équipe) — engine/contracts.js interestFactors, déjà
-// utilisé pour la négociation de contrat. `team` : l'équipe elle-même (pour la région) ;
-// `standings` : pour son rang au classement.
-function happinessOf(player, team, standings, roster) {
-  if (!team || !standings?.length) return null;
-  const teamRank = standings.findIndex((s) => s.id === team.id);
-  if (teamRank < 0) return null;
-  const { lineupRank, slots } = lineupContext(player, roster);
-  const { interest } = interestFactors(player, { team, teamRank, teamCount: standings.length, isRenewal: true, lineupRank, slots });
-  return interest;
-}
 const HAPPY_FACE = (interest) => (interest == null ? { face: "—", color: "var(--iceMuted)", label: "" } : interest >= 0.3 ? { face: "😊", color: "var(--win)", label: "Content" } : interest >= -0.15 ? { face: "😐", color: "var(--gold)", label: "Neutre" } : { face: "😞", color: "var(--loss)", label: "Mécontent" });
 const fitColor = (pct) => (pct >= 65 ? "var(--win)" : pct >= 40 ? "var(--gold)" : "var(--loss)");
 
@@ -42,7 +28,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, team = nul
     if (key === "potential") return p.potential;
     if (key === "condition") return p.condition ?? BASE_CONDITION;
     if (key === "fit") return roleFit(p, roleOf(lines, p));
-    if (key === "happiness") return happinessOf(p, team, standings, roster) ?? 0;
+    if (key === "happiness") return playerHappiness(p, team, standings, roster) ?? 0;
     if (key === "salary") return p.contract?.salary || 0;
     return 0;
   };
@@ -71,7 +57,7 @@ export function RosterTable({ roster, lines, staff, myTeamId, teamId, team = nul
           const qColor = scoutQualityColor(scoutInfo.quality);
           const cond = p.condition ?? BASE_CONDITION;
           const fitPct = Math.round((roleFit(p, roleOf(lines, p)) + 1) * 50);
-          const happy = HAPPY_FACE(happinessOf(p, team, standings, roster));
+          const happy = HAPPY_FACE(playerHappiness(p, team, standings, roster));
           return (
           <tr key={p.id} onClick={() => onSelect(p)} onContextMenu={onContextMenu ? (e) => { e.preventDefault(); onContextMenu(e, p); } : undefined} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>

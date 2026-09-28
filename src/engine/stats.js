@@ -53,6 +53,27 @@ export function leadersOf(stats) {
   return Object.values(stats).filter((s) => s.player.pos !== "G" && s.gp > 0).sort((a, b) => b.pts - a.pts || b.g - a.g);
 }
 
+const clamp10 = (v) => Math.max(0, Math.min(10, v));
+const round1 = (v) => Math.round(v * 10) / 10;
+// Cote de performance sur 10 (offensive/défensive/générale), utile en présaison pour juger les
+// matchs préparatoires avant que la saison régulière ne compte pour vrai (voir App.jsx
+// preseasonRatings) : dérivée des statistiques déjà accumulées (aggregateStats), ramenées par
+// match joué. 5/10 = rendement moyen ; les gardiens (aucun suivi des arrêts par joueur pour
+// l'instant, seulement la victoire créditée au partant) sont notés uniquement sur leur fiche de
+// décisions.
+export function ratingsOf(stats) {
+  return Object.values(stats).filter((s) => s.gp > 0).map((s) => {
+    if (s.player.pos === "G") {
+      const winPct = s.w / s.gp;
+      const def = clamp10(5 + (winPct - 0.5) * 6);
+      return { player: s.player, team: s.team, gp: s.gp, off: null, def: round1(def), overall: round1(def) };
+    }
+    const off = clamp10(5 + (s.g / s.gp) * 3 + (s.a / s.gp) * 1.8 + (s.shots / s.gp) * 0.3);
+    const def = clamp10(5 + (s.plusMinus / s.gp) * 1.1 + (s.hits / s.gp) * 0.35 + (s.blocks / s.gp) * 0.4 - (s.pim / s.gp) * 0.25);
+    return { player: s.player, team: s.team, gp: s.gp, off: round1(off), def: round1(def), overall: round1((off + def) / 2) };
+  }).sort((a, b) => b.overall - a.overall);
+}
+
 const FWD_POS = ["C", "LW", "RW"], D_POS = ["LD", "RD"];
 // Équipe de la semaine (façon FM) : les 3 attaquants et 2 défenseurs les plus productifs (points,
 // puis buts) et le gardien le plus efficace (% d'arrêts, minimum 1 départ, victoires en

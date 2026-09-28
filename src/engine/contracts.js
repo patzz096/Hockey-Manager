@@ -178,6 +178,22 @@ export function lineupContext(player, roster) {
   return { lineupRank: better, slots };
 }
 
+// Humeur d'un joueur sur son équipe actuelle (−1..+1) : aucun moral persistant n'est stocké sur
+// le joueur, alors on la déduit à la volée des mêmes facteurs que son intérêt à rester (temps de
+// glace/rôle, équipe gagnante, proximité de chez lui, attachement à l'équipe) — `isRenewal: true`
+// pour que le facteur d'attachement s'applique, puisque c'est déjà son équipe. Réutilisée pour
+// l'affichage (RosterTable), un léger effet sur le rendement en match (engine/simulation.js
+// moraleFactor) et le risque de demande d'échange en cas de mécontentement prolongé (App.jsx
+// monthlyTick).
+export function playerHappiness(player, team, standings, roster) {
+  if (!team || !standings?.length) return null;
+  const teamRank = standings.findIndex((s) => s.id === team.id);
+  if (teamRank < 0) return null;
+  const { lineupRank, slots } = lineupContext(player, roster);
+  const { interest } = interestFactors(player, { team, teamRank, teamCount: standings.length, isRenewal: true, lineupRank, slots });
+  return interest;
+}
+
 // --------------------------- Négociation : lassitude du joueur ---------------------------
 // Trop d'offres refusées d'affilée pour le même joueur : son agent en demande plus (il se sent
 // méprisé) et, au-delà de MAX_OFFER_ATTEMPTS, il refuse carrément de négocier davantage pour

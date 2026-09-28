@@ -15,11 +15,13 @@ export function monthIndex(day) { const d = dayToDate(day); return d.getUTCFullY
 // Dates clés de la saison `year` (ex. 2026 = saison 2026-2027).
 export const ROUND_SPACING = 3; // un tour du calendrier tous les 3 jours
 export function seasonDates(year) {
-  const start = dateToDay(year, 9, 7); // 7 octobre : premier match
+  const start = dateToDay(year, 9, 7); // 7 octobre : premier match de la saison régulière
   const marchFirst = dateToDay(year + 1, 2, 1);
   const dow = dayToDate(marchFirst).getUTCDay(); // 5 = vendredi
   return {
-    preseason: dateToDay(year, 9, 1),
+    // 1er septembre : début de la présaison, environ un mois avant le premier match qui compte —
+    // le temps de signer ton personnel et de régler ton alignement avant que ça compte pour vrai.
+    preseason: dateToDay(year, 8, 1),
     start,
     tradeDeadline: marchFirst + ((5 - dow + 7) % 7), // 1er vendredi de mars
     draft: dateToDay(year + 1, 5, 24),            // une semaine avant le 1er juillet
@@ -32,7 +34,9 @@ export function roundDay(year, round) { return seasonDates(year).start + (round 
 // engine/league.js buildSchedule) sont étalés sur autant de jours consécutifs (`game.slot`,
 // 0..ROUND_SPACING-1) plutôt que joués tous le même soir par les 32 équipes à la fois — comme
 // dans la vraie LNH, où le calendrier complet ne se joue jamais en même temps pour tout le monde.
-export function gameDay(year, game) { return roundDay(year, game.round) + (game.slot || 0); }
+// `game.day` : jour explicite (matchs préparatoires, voir engine/league.js
+// buildPreseasonSchedule, calés sur la présaison plutôt que sur le calendrier régulier).
+export function gameDay(year, game) { return game.day ?? roundDay(year, game.round) + (game.slot || 0); }
 
 // Calendrier mensuel (onglet Calendrier, vue "mon équipe") : premier jour du mois contenant
 // `day`, et premier jour du mois `n` mois plus loin (n négatif = mois précédents).

@@ -6,7 +6,7 @@ import { seededRandom } from "./random";
 import { buildStaffMarket } from "./staff";
 import { capFor, payroll } from "./cap";
 import { CURRENT_YEAR, minSalaryFor } from "./contracts";
-import { ROUND_SPACING } from "./calendar";
+import { ROUND_SPACING, seasonDates } from "./calendar";
 
 // Les contrats générés (joueurs sans vrai contrat) sont réduits au besoin pour que chaque équipe
 // commence à 96 % du plafond au plus.
@@ -59,6 +59,30 @@ export function buildSchedule(teams) {
       }
       arr.splice(1, 0, arr.pop());
     }
+  }
+  return games;
+}
+
+// Calendrier préparatoire (présaison) : quelques matchs hors-concours avant le calendrier
+// régulier, pour signer ton personnel et régler ton alignement — voir engine/calendar.js
+// seasonDates().preseason (environ un mois avant le premier match qui compte). Même méthode du
+// cercle que buildSchedule, mais un seul aller (`roundsCount` rondes) et un jour explicite
+// (`day`) calé sur la présaison plutôt que sur le calendrier régulier ; `exhibition: true` les
+// exclut du classement (engine/standings.js) et des statistiques de la saison régulière
+// (App.jsx seasonStats), tout en alimentant des statistiques de présaison séparées.
+export function buildPreseasonSchedule(teams, year, roundsCount = 6) {
+  const ids = teams.map((t) => t.id);
+  const arr = [...ids];
+  const n = arr.length;
+  const games = [];
+  const baseDay = seasonDates(year).preseason;
+  for (let r = 0; r < Math.min(roundsCount, n - 1); r++) {
+    for (let i = 0; i < n / 2; i++) {
+      const home = arr[i], away = arr[n - 1 - i];
+      const slot = i % ROUND_SPACING;
+      games.push({ id: `PRE-${year}-${r}-${i}`, round: -1, slot, day: baseDay + r * ROUND_SPACING + slot, home, away, played: false, homeScore: null, awayScore: null, box: null, exhibition: true });
+    }
+    arr.splice(1, 0, arr.pop());
   }
   return games;
 }

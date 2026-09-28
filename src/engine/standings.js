@@ -19,7 +19,7 @@ export function compareRecords(a, b) {
 
 export function computeStandings(teams, games) {
   const table = Object.fromEntries(teams.map((t) => [t.id, emptyRecord(t.id)]));
-  const played = games.filter((g) => g.played && !g.playoff);
+  const played = games.filter((g) => g.played && !g.playoff && !g.exhibition);
   played.forEach((g) => {
     const h = table[g.home], a = table[g.away];
     if (!h || !a) return;
