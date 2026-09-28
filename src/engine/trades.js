@@ -28,10 +28,14 @@ export function pickValue(round) { return PICK_VALUE_BY_ROUND[round - 1] ?? 10; 
 // L'IA n'accepte plus de perdre de valeur nette (± 3 % de bruit aléatoire, pour ne pas être un
 // seuil parfaitement net) — elle exige au moins l'équivalent, jamais un rabais.
 const CPU_TRADE_TOLERANCE = 0;
-// Protection de ses meilleurs joueurs : elle refuse de céder un joueur nettement plus valable que
-// le meilleur qu'elle recevrait, même si la somme totale des deux côtés semble correcte — un
-// paquet de joueurs de profondeur ne remplace pas une vedette, dans la vraie vie comme ici.
+// Protection de ses bons joueurs : elle refuse de céder un joueur de calibre nettement plus
+// valable qu'aucune pièce reçue en retour, même si la somme totale des deux côtés semble
+// correcte — un paquet de joueurs de profondeur ne remplace pas un bon joueur, dans la vraie vie
+// comme ici. S'applique à CHAQUE joueur envoyé au-dessus du seuil de qualité (pas seulement le
+// meilleur) : consolider plusieurs bons joueurs contre une pile de pièces de profondeur dont la
+// somme atteint la même valeur nominale ne suffit pas à contourner la protection.
 const STAR_PROTECTION_RATIO = 1.15;
+const QUALITY_THRESHOLD = 62;
 
 // Évaluation d'une proposition d'échange du point de vue de l'équipe de l'ordinateur qui la
 // reçoit. `sentByCpu`/`receivedByCpu` : joueurs (vraies valeurs ovr/potential/age) que l'équipe de
@@ -51,9 +55,18 @@ export function evaluateTradeForCpu(sentByCpu, receivedByCpu, rng = Math.random,
   const noise = 1 + (rng() - 0.5) * 0.06; // ± 3 %
   const negotiationEdge = humanGmNegotiation == null ? 0 : clamp((humanGmNegotiation - 60) / 200, -0.15, 0.15);
   const overallOk = valueIn >= valueOut * (1 - CPU_TRADE_TOLERANCE - negotiationEdge) * noise;
-  const bestOut = outValues.length ? Math.max(...outValues) : 0;
-  const bestIn = inValues.length ? Math.max(...inValues) : 0;
-  const starProtected = bestOut === 0 || bestOut <= bestIn * STAR_PROTECTION_RATIO;
+  // Chaque joueur de qualité envoyé (au-dessus de QUALITY_THRESHOLD) doit trouver une pièce
+  // comparable reçue en retour (appariement glouton, chaque pièce reçue utilisée au plus une
+  // fois) : du plus valable au moins valable, sinon refus — peu importe la somme totale.
+  const outQuality = outValues.filter((v) => v >= QUALITY_THRESHOLD).sort((a, b) => b - a);
+  const inSorted = [...inValues].sort((a, b) => b - a);
+  const usedIn = new Array(inSorted.length).fill(false);
+  let starProtected = true;
+  for (const v of outQuality) {
+    const i = inSorted.findIndex((iv, idx) => !usedIn[idx] && iv >= v / STAR_PROTECTION_RATIO);
+    if (i === -1) { starProtected = false; break; }
+    usedIn[i] = true;
+  }
   const accept = overallOk && starProtected;
   // `reason` explique un refus (utilisé pour varier le message de l'IA, voir tradeResponseLine) :
   // "star" si la vraie cause est de céder un joueur trop précieux, "value" sinon.

@@ -136,8 +136,10 @@ function MissionEditor({ scout, mission, onSetMission, onFire }) {
           </select>
         </label>}
         <label style={field}>Cible
-          <select value={m.target} onChange={(e) => set({ target: e.target.value })} disabled={m.region === "pro"} style={selStyle}>
-            <option value="draft">Cuvée du repêchage</option><option value="all">Tous les joueurs</option>
+          <select value={m.target} onChange={(e) => set({ target: e.target.value })} style={selStyle}>
+            {m.region === "pro"
+              ? <><option value="all">Tous les joueurs</option><option value="fa">Agents libres seulement</option></>
+              : <><option value="draft">Cuvée du repêchage</option><option value="all">Tous les joueurs</option></>}
           </select>
         </label>
         <label style={field}>Durée

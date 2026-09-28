@@ -265,6 +265,13 @@ tests/engine.test.js       tests du moteur
     dépisteur en chef assigné automatiquement selon l'âge du joueur — chacun affiché avec sa
     cote pour ce joueur (avec la pénalité de -15 % hors spécialité), et le délai de mission qui en
     découle. Avec un seul dépisteur disponible, l'assignation reste automatique (rien à choisir).
+  - Cible « Agents libres seulement » pour la mission de zone du dépisteur pro/en renfort
+    (`ScoutingCenter` MissionEditor, `App.jsx` candidatesOf) : corrige les agents libres qui
+    n'étaient à peu près jamais dépistés par la mission générale « tous les joueurs » — un bassin
+    partagé avec les effectifs des 31 autres équipes, où un agent libre (presque toujours de
+    calibre inférieur, puisque personne n'a voulu de lui) se fait éclipser par des centaines de
+    joueurs de la LNH bien plus intéressants dans le tirage pondéré par la valeur du joueur (voir
+    `weeklyScouting`). Cette cible donne aux agents libres un bassin dédié, sans concurrence.
   - 11 critères de valeur communs à **tout** le personnel (`engine/staff.js`
     STAFF_ATTR_LABELS, échelle interne 20-99 affichée sur /20 comme les joueurs) : coaching
     gardien, coaching attaquant, coaching défenseur, évaluation de l'aptitude, évaluation du
@@ -383,9 +390,12 @@ tests/engine.test.js       tests du moteur
     pour ne pas être un seuil parfaitement net), ajusté selon le critère **Négociation** de ton
     DG : un bon négociateur obtient un rabais (l'ordinateur accepte de recevoir un peu moins de
     valeur que ce qu'il envoie), un DG faible doit au contraire surpayer pour faire accepter le
-    même échange. Refus aussi si elle cède un joueur nettement plus valable (plus de 15 %) que le
-    meilleur qu'elle recevrait, même quand la somme totale des deux côtés semble correcte : un
-    paquet de joueurs de profondeur ne fait pas le poids contre une vedette. Réponse « typique »
+    même échange. Refus aussi si elle cède, au-dessus d'un seuil de qualité, un joueur nettement
+    plus valable (plus de 15 %) qu'aucune pièce reçue en retour — pas seulement son meilleur
+    joueur envoyé contre le meilleur reçu : CHAQUE bon joueur envoyé doit trouver une pièce
+    comparable côté reçu (appariement du plus valable au moins valable, chaque pièce reçue
+    comptant une seule fois), pour empêcher de consolider deux bons joueurs contre une pile de
+    pièces de profondeur qui, additionnées, atteint la même valeur nominale totale. Réponse « typique »
     variée (façon DG
     réel) à l'acceptation comme au refus (`engine/trades.js` tradeResponseLine), annoncée par
     message du DG de l'équipe adverse ; un refus explique aussi la raison (valeur insuffisante

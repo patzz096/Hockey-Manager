@@ -904,6 +904,12 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     let spend = 0;
     const bench = teamOvrBenchmark(teamsById[myTeamId]);
     const candidatesOf = (regionId, mission) => {
+      // Cible « Agents libres seulement » (zone pro) : sans ça, les agents libres — presque
+      // toujours des joueurs de calibre inférieur — se noient dans le bassin bien plus grand et
+      // plus intéressant des effectifs des 31 autres équipes, et ne sont à peu près jamais tirés
+      // au sort malgré leur présence dans le bassin combiné (voir weeklyScouting, tirage pondéré
+      // par la valeur du joueur). Cette cible leur donne un bassin dédié.
+      if (regionId === "pro" && mission.target === "fa") return freeAgents.map((player) => ({ player, ownerTeamId: null }));
       if (regionId === "pro") return [
         ...teams.filter((t) => t.id !== myTeamId).flatMap((t) => t.roster.map((player) => ({ player, ownerTeamId: t.id }))),
         ...Object.entries(farmByTeam).filter(([id]) => id !== myTeamId).flatMap(([id, list]) => list.map((player) => ({ player, ownerTeamId: id }))),

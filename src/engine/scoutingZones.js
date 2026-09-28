@@ -92,7 +92,7 @@ export function focusLabel(mission) {
 export function missionSummary(mission) {
   if (!mission?.region) return "En réserve";
   const where = mission.league ? `${MINOR_LEAGUES[mission.league]?.short || "LNH"} (${regionLabel(mission.region)})` : regionLabel(mission.region);
-  return `${where} · ${focusLabel(mission)} · ${mission.target === "draft" ? "cuvée du repêchage" : "tous les joueurs"}`;
+  return `${where} · ${focusLabel(mission)} · ${mission.target === "draft" ? "cuvée du repêchage" : mission.target === "fa" ? "agents libres seulement" : "tous les joueurs"}`;
 }
 
 // Joueurs visés par la mission parmi les candidats de la zone.
