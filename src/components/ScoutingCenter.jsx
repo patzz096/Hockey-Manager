@@ -7,7 +7,7 @@ import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { teamOvrBenchmark, starsFor, attr20 } from "../engine/attributes";
 import { formatDay } from "../engine/calendar";
 import { NATION_FLAG } from "../data/names";
-import { h2Style, btnStyle } from "../ui/theme";
+import { h2Style, btnStyle, selectStyle } from "../ui/theme";
 import { StarRating, TeamCrest, ConfirmButton } from "./common";
 import { money as fmtMoney } from "../ui/format";
 
@@ -358,16 +358,15 @@ export function ScoutingCenter({ scouts, missions, coverage, onSetMission, marke
     return p ? { player: p, info: info(p) } : null;
   };
   const newCount = suggestions.filter((s) => s.grade !== "C").length;
-  const segBtn = (active) => ({ padding: "7px 13px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: active ? 700 : 500, color: active ? "#0A1627" : "var(--ice)", background: active ? "var(--accent)" : "transparent" });
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
         <h2 style={{ ...h2Style, marginBottom: 0 }}>Centre de dépistage</h2>
         <span style={{ fontSize: 12, color: "var(--iceMuted)" }}>{pendingScouts.length} mission{pendingScouts.length > 1 ? "s" : ""} individuelle{pendingScouts.length > 1 ? "s" : ""} en cours · {draftIds.length} espoir{draftIds.length > 1 ? "s" : ""} dans ta liste</span>
       </div>
-      <div role="tablist" aria-label="Dépistage" style={{ display: "inline-flex", flexWrap: "wrap", background: "var(--navy)", border: "1px solid var(--line)", borderRadius: 10, padding: 3, marginBottom: 14 }}>
+      <div role="tablist" aria-label="Dépistage" style={{ display: "inline-flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
         {VIEWS.map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} style={segBtn(view === k)}>
+          <button key={k} role="tab" aria-selected={view === k} onClick={() => setView(k)} style={selectStyle(view === k, { radius: 6, padding: "7px 13px" })}>
             {label}{k === "reports" && newCount > 0 ? ` (${newCount})` : ""}{k === "list" && draftIds.length ? ` (${draftIds.length})` : ""}
           </button>
         ))}

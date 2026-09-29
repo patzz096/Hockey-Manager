@@ -1,5 +1,5 @@
 import { STRATEGY_PHASES, normalizeStrategy, computeStrategyFits, optionEffects, optionValue, getStrategyMultipliers, playersForOption } from "../engine/strategy";
-import { h2Style, btnStyle } from "../ui/theme";
+import { h2Style, btnStyle, selectStyle } from "../ui/theme";
 import { PlayerLink } from "./common";
 
 export function MentalitySlider({ id, label, hint, value, onChange }) {
@@ -34,8 +34,8 @@ function FitMeter({ fit }) {
         <span style={{ color: "var(--iceMuted)" }}>Adéquation de ton effectif</span>
         <strong style={{ color: info.color }}>{info.label} ({fit > 0 ? "+" : ""}{Math.round(fit * 100)})</strong>
       </div>
-      <div style={{ position: "relative", height: 8, borderRadius: 4, background: "linear-gradient(90deg, var(--loss), var(--gold) 50%, var(--win))", opacity: 0.9 }}>
-        <div style={{ position: "absolute", left: `calc(${pct}% - 6px)`, top: -3, width: 12, height: 14, borderRadius: 3, background: "var(--ice)", boxShadow: "0 0 0 2px var(--navy)" }} />
+      <div style={{ height: 7, borderRadius: 4, background: "#ffffff14", overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: info.color }} />
       </div>
     </div>
   );
@@ -51,10 +51,10 @@ function Effects({ e, compact = false }) {
   const shown = compact ? rows : rows.filter((r) => Math.abs(r.pct) >= 0.5);
   if (!shown.length) return <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Effet neutre avec cet effectif.</div>;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
       {shown.map((r) => (
-        <span key={r.k} style={{ fontSize: 12, padding: "3px 8px", borderRadius: 999, background: Math.abs(r.pct) < 0.5 ? "#ffffff0d" : r.good > 0 ? "rgba(45,190,116,0.16)" : "rgba(240,96,93,0.16)", color: Math.abs(r.pct) < 0.5 ? "var(--iceMuted)" : r.good > 0 ? "#7FD6A0" : "#FF9A97", fontVariantNumeric: "tabular-nums" }}>
-          {r.label} {r.pct > 0 ? "+" : ""}{r.pct} %
+        <span key={r.k} style={{ fontSize: 12, color: "var(--iceMuted)" }}>
+          {r.label} <strong style={{ color: Math.abs(r.pct) < 0.5 ? "var(--iceMuted)" : r.good > 0 ? "var(--win)" : "var(--loss)", fontVariantNumeric: "tabular-nums" }}>{r.pct > 0 ? "+" : ""}{r.pct} %</strong>
         </span>
       ))}
     </div>
@@ -71,7 +71,7 @@ function PhaseCard({ phase, selected, fits, team, onPick, onSelectPlayer, onCont
     <section style={{ background: "var(--navy2)", border: "1px solid var(--line)", borderRadius: 10, padding: 16 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <h3 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 18, margin: 0, letterSpacing: 0.3 }}>{phase.label}</h3>
-        <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>Pastille : adéquation de ton effectif · ★ : le système le plus rentable pour lui</span>
+        <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>Pastille : adéquation de ton effectif · « meilleur choix » : le système le plus rentable pour lui</span>
       </div>
       <div role="radiogroup" aria-label={phase.label} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, marginBottom: 14 }}>
         {phase.options.map((o) => {
@@ -80,11 +80,9 @@ function PhaseCard({ phase, selected, fits, team, onPick, onSelectPlayer, onCont
           const active = o.id === selected;
           return (
             <button key={o.id} role="radio" aria-checked={active} onClick={() => onPick(phase.key, o.id)}
-              style={{ textAlign: "left", display: "flex", flexDirection: "column", gap: 5, padding: "9px 11px", borderRadius: 8, cursor: "pointer", color: "var(--ice)", fontFamily: "inherit",
-                background: active ? "linear-gradient(135deg, rgba(92,200,255,0.22), rgba(92,200,255,0.06))" : "var(--navy)",
-                border: `1px solid ${active ? "var(--accent)" : "var(--line)"}`, boxShadow: active ? "0 0 0 1px var(--accent), 0 6px 18px -8px rgba(92,200,255,0.6)" : "none" }}>
+              style={{ ...selectStyle(active, { radius: 6, padding: "9px 11px", fontSize: 13 }), textAlign: "left", flexDirection: "column", alignItems: "flex-start", gap: 5 }}>
               <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}>{o.label}</span>
-              {o.id === bestId && <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gold)", letterSpacing: 0.3 }}>★ MEILLEUR CHOIX</span>}
+              {o.id === bestId && <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gold)", letterSpacing: 0.3 }}>MEILLEUR CHOIX</span>}
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: info.color }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: info.color }} />{info.label}
               </span>

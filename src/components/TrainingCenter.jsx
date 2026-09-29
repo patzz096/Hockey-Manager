@@ -1,6 +1,6 @@
 import { attr20, starsFor, teamOvrBenchmark } from "../engine/attributes";
 import { BASE_CONDITION, TRAINING_FOCUSES, conditionColor, conditionLabel, cohesionColor, cohesionLabel } from "../engine/training";
-import { h2Style, btnStyle, attr20Color } from "../ui/theme";
+import { h2Style, btnStyle, attr20Color, selectStyle } from "../ui/theme";
 import { StarRating } from "./common";
 import { MonthlyCalendar } from "./MonthlyCalendar";
 
@@ -55,12 +55,15 @@ export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, on
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>La cohésion baisse quand tu changes ta stratégie et remonte à l'entraînement — un système bien rodé rend pleinement les bonus/malus de ta stratégie. Un entraîneur physique en poste accélère la récupération de la forme et contribue au développement des joueurs.</p>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>Planifie jusqu'à 2 séances précises par jour (matin et après-midi) ci-dessous — un jour de match n'en permet qu'une, le matin. Le programme par défaut ci-dessous ne s'applique que les semaines où tu n'as rien planifié.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 10, marginBottom: 10 }}>
-        {Object.entries(TRAINING_FOCUSES).map(([key, f]) => (
-          <button key={key} disabled={delegated} onClick={() => onSetTrainingFocus(key)} style={{ ...btnStyle(business.trainingFocus === key ? "var(--accent)" : "var(--steel)"), flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, opacity: delegated ? 0.55 : 1, cursor: delegated ? "default" : "pointer" }}>
+        {Object.entries(TRAINING_FOCUSES).map(([key, f]) => {
+          const active = business.trainingFocus === key;
+          return (
+          <button key={key} disabled={delegated} onClick={() => onSetTrainingFocus(key)} style={{ ...selectStyle(active, { radius: 6, padding: 10 }), flexDirection: "column", alignItems: "flex-start", gap: 4, opacity: delegated ? 0.55 : 1, cursor: delegated ? "default" : "pointer" }}>
             <span style={{ fontSize: 12, fontWeight: 600 }}>{f.label}</span>
-            <span style={{ fontSize: 10, color: business.trainingFocus === key ? "#0A1627" : "var(--iceMuted)" }}>{f.desc}</span>
+            <span style={{ fontSize: 10, color: "var(--iceMuted)" }}>{f.desc}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
       {delegated && <p style={{ fontSize: 11, color: "var(--iceMuted)" }}>Entraînement délégué — l'accent est choisi automatiquement chaque jour.</p>}
 

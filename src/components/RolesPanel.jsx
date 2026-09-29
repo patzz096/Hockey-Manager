@@ -4,7 +4,7 @@ import { attr20 } from "../engine/attributes";
 import { lineInfo } from "../engine/lines";
 import { specialUnitOf } from "../engine/specialTeams";
 import { ATTR_LABELS } from "../engine/attributes";
-import { h2Style, btnStyle, attr20Color } from "../ui/theme";
+import { h2Style, btnStyle, attr20Color, selectStyle } from "../ui/theme";
 import { PlayerLink } from "./common";
 
 function fitInfo(f) {
@@ -74,8 +74,7 @@ function PlayerRoleRow({ player, lines, team, selected, onPick, onFocus, focused
           const f = roleFit(player, id), fi = fitInfo(f), active = id === selected;
           return (
             <button key={id} role="radio" aria-checked={active} onClick={() => { onPick(player.id, id); onFocus(player.id, id); }} onFocus={() => onFocus(player.id, id)} onMouseEnter={() => onFocus(player.id, id)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 999, fontSize: 12, fontWeight: active ? 700 : 500, cursor: "pointer", fontFamily: "inherit", color: "var(--ice)",
-                background: active ? "linear-gradient(135deg, rgba(92,200,255,0.25), rgba(92,200,255,0.08))" : "var(--navy2)", border: `1px solid ${active ? "var(--accent)" : "var(--line)"}` }}>
+              style={selectStyle(active, { radius: 5, padding: "5px 10px" })}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: fi.color }} />{ROLES[id].label}
             </button>
           );
@@ -133,7 +132,7 @@ export function RolesPanel({ team, lines, onChangeRole, onNaturalRoles, onSelect
               <section key={`F${i}`}>
                 <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Trio {i + 1}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{ids.map(row)}</div>
-                {hints.map((h) => <div key={h} style={{ fontSize: 12, color: "var(--gold)", marginTop: 5 }}>💡 {h}</div>)}
+                {hints.map((h) => <div key={h} style={{ fontSize: 12, color: "var(--gold)", marginTop: 5 }}>Conseil : {h}</div>)}
               </section>
             );
           })}
@@ -144,7 +143,7 @@ export function RolesPanel({ team, lines, onChangeRole, onNaturalRoles, onSelect
               <section key={`D${i}`}>
                 <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Paire {i + 1}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{ids.map(row)}</div>
-                {hints.map((h) => <div key={h} style={{ fontSize: 12, color: "var(--gold)", marginTop: 5 }}>💡 {h}</div>)}
+                {hints.map((h) => <div key={h} style={{ fontSize: 12, color: "var(--gold)", marginTop: 5 }}>Conseil : {h}</div>)}
               </section>
             );
           })}
