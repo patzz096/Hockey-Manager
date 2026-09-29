@@ -22,7 +22,7 @@ import { buildLines } from "./engine/lines";
 import { seededRandom } from "./engine/random";
 import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT, evaluateStaffOffer, MAX_STAFF_OFFER_ATTEMPTS } from "./engine/staff";
-import { scoutOptions, scoutingDelay, createScoutReport, staffViewPlayer } from "./engine/scouting";
+import { scoutOptions, scoutingDelay, createScoutReport, staffViewPlayer, getScoutInfo } from "./engine/scouting";
 import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
@@ -1203,6 +1203,13 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       }
     } else if (isFreeAgent) {
       out.push({ key: "sign", label: "Offrir un contrat", color: "var(--win)", requiresKnown: true, disabled: !txWindow.open, hint: txWindow.open ? "Dépiste-le d'abord pour connaître sa valeur." : txWindow.reason, onClick: () => openOffer(player, false) });
+      const scoutInfo = getScoutInfo(player, null, myTeamId, business.staff, scoutKnowledge);
+      if (scoutInfo.estOvr == null) {
+        const pendingScout = pendingScouts.find((m) => m.playerId === player.id);
+        out.push(pendingScout
+          ? { key: "scout", label: "Annuler le dépistage", color: "var(--steel)", hint: `Rapport attendu le ${formatDay(pendingScout.dueDay)}.`, onClick: () => cancelScouting(player.id) }
+          : { key: "scout", label: "Demander un dépistage", color: "var(--accent)", hint: "Envoie ton meilleur dépisteur disponible ; choix précis du dépisteur dans son profil.", onClick: () => requestScouting(player) });
+      }
     }
     const inClass = draftClass.some((p) => p.id === player.id);
     if (inClass) {
@@ -1750,7 +1757,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 
-        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} freeAgents={freeAgents} txWindow={txWindow} />}
+        {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} onRequestScout={requestScouting} onCancelScout={cancelScouting} onContextMenu={openPlayerContextMenu} freeAgents={freeAgents} txWindow={txWindow} />}
 
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
