@@ -26,3 +26,12 @@ createRoot(document.getElementById("root")).render(
     </CustomizationProvider>
   </StrictMode>
 );
+
+// Mode hors ligne (PWA, "Ajouter à l'écran d'accueil") : uniquement en production (jamais en dev,
+// pour ne pas mettre en cache un état obsolète pendant le rechargement à chaud) ; sans effet dans
+// l'artefact Claude (iframe isolée), utile une fois le site hébergé (voir build:pages).
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+  });
+}
