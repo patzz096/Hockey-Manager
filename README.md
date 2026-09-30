@@ -34,7 +34,7 @@ src/
     names.js               prénoms/noms générés, drapeaux et nationalités
     rosters/               alignements réels, un fichier par division
       index.js             REAL_ROSTERS : identifiant d'équipe → données
-      atlantique.js, metropolitaine.js, cascades.js (inutilisé)
+      atlantique.js, metropolitaine.js, centrale.js, pacifique.js, cascades.js (inutilisé)
   engine/                  logique pure, sans React
     random.js              RNG à graine, poisson, tirage pondéré
     attributes.js          catégories d'attributs, cote (computeOvr), /20, étoiles
@@ -57,9 +57,11 @@ tests/engine.test.js       tests du moteur
 
 **Ligue et équipes**
 - 32 vraies équipes LNH (noms, couleurs, division, capacité réelle de l'aréna)
-- Alignements réels pour 16 équipes (Atlantique + Métropolitaine + Caroline), avec attributs
-  projetés à partir de vraies stats/contrats trouvés par recherche web. **16 équipes restantes
-  (Centrale + Pacifique) sont encore en joueurs générés procéduralement.**
+- Alignements réels pour les **32 équipes** (Atlantique, Métropolitaine, Centrale, Pacifique —
+  `src/data/rosters/atlantique.js`, `metropolitaine.js`, `centrale.js`, `pacifique.js`), avec
+  attributs projetés à partir de vraies stats/contrats connus (approximatifs pour certains
+  joueurs, en particulier les mouvements les plus récents — un import via l'API LNH reste plus
+  précis, voir « Importer les vrais alignements »).
 - Calendrier aller-retour complet (chaque équipe affronte toutes les autres, domicile/visiteur)
 - Onglet **Accueil** (`components/HomeDashboard.jsx`), premier onglet et page d'atterrissage par
   défaut : dossier et rang de ton équipe, classement de sa division (avec raccourci vers le
@@ -487,13 +489,15 @@ tests/engine.test.js       tests du moteur
 
 ## Ce qui reste incomplet ou en cours
 
-1. **16 équipes** (Centrale + Pacifique) sans vrais joueurs — voir section suivante.
-2. **Règles simplifiées** : rachats calculés pour des salaires constants ; l'âge de
+1. **Règles simplifiées** : rachats calculés pour des salaires constants ; l'âge de
    signature des joueurs des alignements de départ est estimé ; pas de joueurs blessés
    en séries remis en LTIR hors saison, ni de clauses de non-mouvement ou de primes.
-3. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
+2. Quelques approximations assumées : +/- approximatif (pas de simulation ligne par ligne
    réelle), côtés gauche/droite des joueurs réels assignés en alternance (pas vérifiés un par
-   un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs.
+   un), plusieurs numéros de chandail/contrats de joueurs récemment échangés approximatifs —
+   notamment pour la Centrale et le Pacifique (`centrale.js`/`pacifique.js`), écrits de mémoire
+   plutôt qu'importés de l'API LNH ; un import (voir « Importer les vrais alignements ») reste
+   la façon la plus fiable de les corriger.
 
 ## Personnalisation (façon FM / EHM)
 
@@ -539,8 +543,9 @@ pas les contrats : ils sont générés, comme avant.
 ## Notes techniques
 
 - **Données de joueurs** : fournir un CSV ou un JSON (nom, position, âge, stats, contrat) reste
-  la façon la plus rapide d'ajouter les 16 équipes manquantes. La conversion en attributs est
-  rapide, alors que chercher chaque joueur sur le web coûte cher.
+  la façon la plus rapide de corriger ou rafraîchir un alignement (voir « Importer les vrais
+  alignements »). La conversion en attributs est rapide, alors que chercher chaque joueur sur
+  le web coûte cher.
 - **Code mort retiré au découpage** : une première version de `LineupPitch` était écrasée par
   une seconde définition portant le même nom. C'est interdit dans un module ES, où la
   compilation échoue. Seule la version réellement utilisée a été gardée.
@@ -572,4 +577,5 @@ business = { cash, ticketTiers, facilities, parking, concessionItems, staff, del
 
 ## Prochaines étapes
 
-1. Ajouter les 16 équipes des divisions Centrale et Pacifique (voir « Ce qui reste incomplet », point 1).
+1. Affiner les alignements Centrale/Pacifique avec un import réel (API LNH, voir « Importer les
+   vrais alignements ») plutôt que les valeurs approximatives écrites de mémoire.
