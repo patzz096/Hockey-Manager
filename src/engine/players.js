@@ -23,6 +23,19 @@ export function buildRealRoster(data, teamIndex, rng) {
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
+// Agents libres réels (sans contrat, par définition) : même principe que buildRealRoster, pour
+// un fichier comme src/data/freeAgents.js plutôt qu'un alignement d'équipe.
+export function buildRealFreeAgents(data, rng) {
+  return data.map((d, i) => {
+    const allAttrs = d.pos === "G" ? [...GOALIE_TECH, ...MENTAL, ...GOALIE_PHYSICAL] : [...OFFENSIVE, ...DEFENSIVE, ...MENTAL, ...PHYSICAL];
+    const attrs = {};
+    allAttrs.forEach((a) => { attrs[a] = (d.attrs && d.attrs[a] != null) ? d.attrs[a] : 60; });
+    const ovr = computeOvr(d.pos, attrs);
+    const potential = d.potential != null ? Math.max(ovr, Math.min(99, d.potential)) : Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
+    return { id: `FA-real-${i}`, name: d.name, pos: d.pos, age: d.age, nationality: d.nationality, attrs, ovr, potential, contract: null, condition: randomCondition(rng) };
+  }).sort((a, b) => b.ovr - a.ovr);
+}
+
 export function buildNamedRoster(data, teamIndex, rng) {
   return data.map((d, i) => {
     const teamBase = 68 - teamIndex * 1.3;

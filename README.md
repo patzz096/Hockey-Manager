@@ -62,6 +62,10 @@ tests/engine.test.js       tests du moteur
   attributs projetés à partir de vraies stats/contrats connus (approximatifs pour certains
   joueurs, en particulier les mouvements les plus récents — un import via l'API LNH reste plus
   précis, voir « Importer les vrais alignements »).
+- Agents libres réels non signés (`src/data/freeAgents.js` `REAL_FREE_AGENTS`, classés par points
+  de la dernière saison connue) ajoutés au marché des joueurs autonomes au démarrage, en plus des
+  agents libres générés (`engine/players.js` `buildRealFreeAgents`) ; même mise en garde que les
+  alignements d'équipe (approximatif, écrit de mémoire).
 - Calendrier aller-retour complet (chaque équipe affronte toutes les autres, domicile/visiteur)
 - Onglet **Accueil** (`components/HomeDashboard.jsx`), premier onglet et page d'atterrissage par
   défaut : dossier et rang de ton équipe, classement de sa division (avec raccourci vers le

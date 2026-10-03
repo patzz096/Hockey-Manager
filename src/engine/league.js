@@ -1,7 +1,8 @@
 import { REAL_ROSTERS } from "../data/rosters";
+import { REAL_FREE_AGENTS } from "../data/freeAgents";
 import { TEAM_SEED } from "../data/teams";
 import { buildLines } from "./lines";
-import { buildRealRoster, buildRoster, buildFreeAgentPool, buildFarmRoster, assignDraftInfo } from "./players";
+import { buildRealRoster, buildRealFreeAgents, buildRoster, buildFreeAgentPool, buildFarmRoster, assignDraftInfo } from "./players";
 import { seededRandom } from "./random";
 import { buildStaffMarket } from "./staff";
 import { capFor, payroll } from "./cap";
@@ -31,7 +32,7 @@ export function initLeague(custom = null) {
   });
   const farmByTeam = {};
   teams.forEach((t, idx) => { farmByTeam[t.id] = buildFarmRoster(idx, rng, 10); });
-  const freeAgents = buildFreeAgentPool(rng, 16);
+  const freeAgents = [...buildRealFreeAgents(REAL_FREE_AGENTS, rng), ...buildFreeAgentPool(rng, 16)];
   const allPlayers = [...teams.flatMap((t) => t.roster), ...Object.values(farmByTeam).flat(), ...freeAgents];
   assignDraftInfo(allPlayers, rng);
   const staffMarket = buildStaffMarket(rng, 24);
