@@ -101,7 +101,7 @@ export const DET_ROSTER_DATA = [
   { name: "Dylan Larkin", number: 71, pos: "C", age: 29, nationality: "US", contract: { years: 5, salary: 8700 }, attrs: { speed: 83, shotAccuracy: 76, offensiveRead: 78, leadership: 83, acceleration: 83 } },
   { name: "Lucas Raymond", number: 23, pos: "LW", age: 23, nationality: "SE", contract: { years: 7, salary: 9000 }, attrs: { offensiveRead: 78, puckhandling: 76, shotAccuracy: 74, speed: 76 } },
   { name: "Alex DeBrincat", number: 93, pos: "RW", age: 28, nationality: "US", contract: { years: 1, salary: 7875 }, attrs: { shotAccuracy: 86, shotRange: 80, offensiveRead: 80, gettingOpen: 80, speed: 74 } },
-  { name: "Patrick Kane", number: 88, pos: "LW", age: 37, nationality: "US", contract: { years: 1, salary: 2750 }, attrs: { passing: 80, offensiveRead: 83, puckhandling: 78, shotAccuracy: 76, speed: 53, professionalism: 78 } },
+  { name: "Christian Fischer", number: 36, pos: "RW", age: 28, nationality: "US", contract: { years: 1, salary: 900 }, attrs: { hitting: 68, checking: 64, speed: 66, shotAccuracy: 60 } },
   { name: "J.T. Compher", number: 37, pos: "C", age: 30, nationality: "US", contract: { years: 3, salary: 5100 }, attrs: { checking: 66, defensiveRead: 66, shotAccuracy: 63 } },
   { name: "Andrew Copp", number: 18, pos: "C", age: 31, nationality: "US", contract: { years: 2, salary: 5625 }, attrs: { checking: 68, faceoffs: 66, defensiveRead: 66, hitting: 60 } },
   { name: "Marco Kasper", number: 92, pos: "C", age: 22, nationality: "AT", contract: { years: 2, salary: 950 }, attrs: { offensiveRead: 63, checking: 60, speed: 68 } },

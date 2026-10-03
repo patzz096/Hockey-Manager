@@ -120,7 +120,7 @@ export const WSH_ROSTER_DATA = [
   { name: "Aliaksei Protas", number: 21, pos: "LW", age: 24, nationality: "BY", contract: { years: 8, salary: 4550 }, attrs: { strength: 78, shotAccuracy: 74, offensiveRead: 70, speed: 72 } },
   { name: "Connor McMichael", number: 24, pos: "C", age: 24, nationality: "CA", contract: { years: 2, salary: 2150 }, attrs: { shotAccuracy: 74, speed: 76, offensiveRead: 68 } },
   { name: "Pierre-Luc Dubois", number: 80, pos: "C", age: 27, nationality: "CA", contract: { years: 6, salary: 6000 }, attrs: { strength: 80, faceoffs: 72, checking: 68, shotAccuracy: 70 } },
-  { name: "Andrew Mangiapane", number: 88, pos: "RW", age: 29, nationality: "CA", contract: { years: 3, salary: 3750 }, attrs: { speed: 76, shotAccuracy: 74, checking: 62 } },
+  { name: "Sonny Milano", number: 21, pos: "LW", age: 29, nationality: "US", contract: { years: 3, salary: 3750 }, attrs: { speed: 76, shotAccuracy: 74, puckhandling: 70 } },
   { name: "Anthony Beauvillier", number: 72, pos: "LW", age: 28, nationality: "CA", contract: { years: 1, salary: 1200 }, attrs: { speed: 76, shotAccuracy: 68 } },
   { name: "Nic Dowd", number: 26, pos: "C", age: 35, nationality: "US", contract: { years: 2, salary: 1600 }, attrs: { faceoffs: 74, checking: 68, defensiveRead: 70 } },
   { name: "John Carlson", number: 74, pos: "LD", age: 35, nationality: "US", contract: { years: 5, salary: 8000 }, attrs: { passing: 82, offensiveRead: 80, shotAccuracy: 76, puckhandling: 74, leadership: 78 } },
