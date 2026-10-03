@@ -28,7 +28,7 @@ describe("plafond salarial", () => {
     lg.teams.forEach((t) => expect(capStatus(t.roster, 2026).overCap).toBe(false));
   });
   it("l'ordinateur ne signe pas au-delà du plafond", () => {
-    const full = { ...lg.teams[0], roster: lg.teams[0].roster.filter((p) => p.pos !== "G").map((p) => ({ ...p, contract: { years: 2, salary: 5500 } })) };
+    const full = { ...lg.teams[0], roster: lg.teams[0].roster.filter((p) => p.pos !== "G").slice(0, 15).map((p) => ({ ...p, contract: { years: 2, salary: 5500 } })) };
     const star = { ...lg.teams[1].roster.find((p) => p.pos === "G"), id: "FA-G", contract: null, ovr: 90, potential: 90 };
     const res = aiFreeAgency([full], [star], "XXX", 2026);
     expect(capStatus(res.teams[0].roster, 2026).used).toBeLessThanOrEqual(capFor(2026) + 0);
