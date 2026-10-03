@@ -1,8 +1,9 @@
 import { REAL_ROSTERS } from "../data/rosters";
 import { REAL_FREE_AGENTS } from "../data/freeAgents";
+import { REAL_FARMS } from "../data/farms";
 import { TEAM_SEED } from "../data/teams";
 import { buildLines } from "./lines";
-import { buildRealRoster, buildRealFreeAgents, buildRoster, buildFreeAgentPool, buildFarmRoster, assignDraftInfo } from "./players";
+import { buildRealRoster, buildRealFreeAgents, buildRealFarmRoster, buildRoster, buildFreeAgentPool, buildFarmRoster, assignDraftInfo } from "./players";
 import { seededRandom } from "./random";
 import { buildStaffMarket } from "./staff";
 import { capFor, payroll } from "./cap";
@@ -31,7 +32,7 @@ export function initLeague(custom = null) {
     return { ...t, roster, lines: buildLines(roster) };
   });
   const farmByTeam = {};
-  teams.forEach((t, idx) => { farmByTeam[t.id] = buildFarmRoster(idx, rng, 10); });
+  teams.forEach((t, idx) => { farmByTeam[t.id] = REAL_FARMS[t.id] ? buildRealFarmRoster(REAL_FARMS[t.id], idx, rng) : buildFarmRoster(idx, rng, 10); });
   const freeAgents = [...buildRealFreeAgents(REAL_FREE_AGENTS, rng), ...buildFreeAgentPool(rng, 16)];
   const allPlayers = [...teams.flatMap((t) => t.roster), ...Object.values(farmByTeam).flat(), ...freeAgents];
   assignDraftInfo(allPlayers, rng);

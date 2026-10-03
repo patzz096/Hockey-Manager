@@ -66,6 +66,12 @@ tests/engine.test.js       tests du moteur
   de la dernière saison connue) ajoutés au marché des joueurs autonomes au démarrage, en plus des
   agents libres générés (`engine/players.js` `buildRealFreeAgents`) ; même mise en garde que les
   alignements d'équipe (approximatif, écrit de mémoire).
+- Clubs-écoles (LAH) réels pour les équipes couvertes (`src/data/farms/`, `REAL_FARMS` ;
+  actuellement Boston seulement), en plus de l'alignement LNH — `buildRealFarmRoster`
+  (`engine/players.js`) les ajoute à `farmByTeam` au démarrage ; les autres équipes gardent un
+  club-école généré tant que leur alignement réel n'a pas été ajouté. Les joueurs de LAH n'étant
+  souvent identifiés que par leur nom de famille dans les dépôts de contrats consultés, leurs
+  prénoms sont une estimation plus incertaine que le reste des données réelles du jeu.
 - Calendrier aller-retour complet (chaque équipe affronte toutes les autres, domicile/visiteur)
 - Onglet **Accueil** (`components/HomeDashboard.jsx`), premier onglet et page d'atterrissage par
   défaut : dossier et rang de ton équipe, classement de sa division (avec raccourci vers le

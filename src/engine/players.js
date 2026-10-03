@@ -36,6 +36,21 @@ export function buildRealFreeAgents(data, rng) {
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
+// Club-école réel (LAH) : même principe que buildRealRoster, mais niveau "LAH" et attributs par
+// défaut plus bas (54 plutôt que 60) pour refléter un calibre sous la LNH tant qu'un attribut
+// précis n'est pas fourni — voir src/data/farms/.
+export function buildRealFarmRoster(data, teamIndex, rng) {
+  return data.map((d, i) => {
+    const allAttrs = d.pos === "G" ? [...GOALIE_TECH, ...MENTAL, ...GOALIE_PHYSICAL] : [...OFFENSIVE, ...DEFENSIVE, ...MENTAL, ...PHYSICAL];
+    const attrs = {};
+    allAttrs.forEach((a) => { attrs[a] = (d.attrs && d.attrs[a] != null) ? d.attrs[a] : 54; });
+    const ovr = computeOvr(d.pos, attrs);
+    const potential = d.potential != null ? Math.max(ovr, Math.min(99, d.potential)) : Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
+    const contract = d.contract ? { type: "one", ...d.contract } : { ...randomContract(rng, { age: d.age, ovr, potential, pos: d.pos, level: "LAH" }), generated: true };
+    return { id: `FARM-real-${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, attrs, ovr, potential, contract, level: "LAH", condition: d.condition ?? randomCondition(rng) };
+  }).sort((a, b) => b.ovr - a.ovr);
+}
+
 export function buildNamedRoster(data, teamIndex, rng) {
   return data.map((d, i) => {
     const teamBase = 68 - teamIndex * 1.3;
