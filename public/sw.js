@@ -1,9 +1,10 @@
-// Service worker minimal : cache-avec-repli-réseau (stale-while-revalidate) sur toutes les
-// requêtes GET, pour que l'app (chargée une première fois en ligne) reste jouable hors ligne
-// ensuite — utile pour "Ajouter à l'écran d'accueil" sur iPhone. Pas de préchargement d'une
-// liste de fichiers : les noms des fichiers JS/CSS de build sont hachés et changent à chaque
-// déploiement, donc on met en cache au fil des requêtes réelles plutôt qu'une liste figée.
-const CACHE = "hockey-gm-v1";
+// Service worker : réseau d'abord pour le document HTML (toujours la dernière version quand il y
+// a internet — sinon la page ouvre une ancienne version qui pointe vers des fichiers JS/CSS
+// renommés, qui n'existent plus sur GitHub Pages après un nouveau déploiement, et l'app reste
+// blanche), cache d'abord pour le reste (JS/CSS/images : noms hachés par le build, donc leur
+// contenu ne change jamais pour un nom donné — sûr à garder tel quel). Permet le mode hors ligne
+// ("Ajouter à l'écran d'accueil") : après un premier chargement en ligne, tout reste jouable.
+const CACHE = "hockey-gm-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -14,15 +15,26 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+const isDocument = (req) => req.mode === "navigate" || req.destination === "document" || req.url.endsWith("/") || req.url.endsWith(".html");
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const { request } = event;
+  if (isDocument(request)) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => { caches.open(CACHE).then((cache) => cache.put(request, res.clone())); return res; })
+        .catch(() => caches.open(CACHE).then((cache) => cache.match(request)))
+    );
+    return;
+  }
   event.respondWith(
     caches.open(CACHE).then(async (cache) => {
-      const cached = await cache.match(event.request);
-      const network = fetch(event.request)
-        .then((res) => { if (res.ok) cache.put(event.request, res.clone()); return res; })
-        .catch(() => cached);
-      return cached || network;
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      const res = await fetch(request);
+      if (res.ok) cache.put(request, res.clone());
+      return res;
     })
   );
 });
