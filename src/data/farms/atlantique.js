@@ -24,3 +24,25 @@ export const BOS_FARM_DATA = [
   { name: "Leo Cavallin", number: 32, pos: "G", age: 23, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
   { name: "Erik Lundgren", number: 33, pos: "G", age: 24, nationality: "US", contract: { years: 1, salary: 953 }, attrs: { reflexes: 56, positioning: 56 } },
 ];
+
+export const BUF_FARM_DATA = [
+  { name: "Conor Sheary", number: 73, pos: "LW", age: 33, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 60, speed: 60, professionalism: 70 } },
+  { name: "Jacob Geertsen", number: 18, pos: "LW", age: 22, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { offensiveRead: 56, speed: 58 } },
+  { name: "Jack Polin", number: 42, pos: "RW", age: 23, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Ryan Kuntar", number: 57, pos: "C", age: 23, nationality: "CA", contract: { years: 2, salary: 875 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Anthony Richard", number: 61, pos: "RW", age: 29, nationality: "CA", contract: { years: 2, salary: 1010 }, attrs: { speed: 64, shotAccuracy: 60 } },
+  { name: "Nathan Meyer", number: 38, pos: "RW", age: 23, nationality: "US", contract: { years: 2, salary: 850 }, attrs: { shotAccuracy: 56, speed: 58 } },
+  { name: "Matty Fiddler-Schultz", number: 27, pos: "C", age: 22, nationality: "CA", contract: { years: 2, salary: 940 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Ryan McDonough", number: 45, pos: "LW", age: 23, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { checking: 56, speed: 56 } },
+  { name: "Mike Costantini", number: 52, pos: "C", age: 22, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 54, speed: 56 } },
+  { name: "Ethan Gilbert", number: 5, pos: "LD", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 54, strength: 58 } },
+  { name: "Ryan Johnson", number: 55, pos: "LD", age: 23, nationality: "US", contract: { years: 2, salary: 875 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Radim Mrtka", number: 70, pos: "RD", age: 20, nationality: "CZ", contract: { years: 3, salary: 974 }, attrs: { strength: 62, positioning: 56, speed: 58 } },
+  { name: "Milan Strbak", number: 59, pos: "LD", age: 21, nationality: "SK", contract: { years: 3, salary: 1030 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Devin McCarthy", number: 65, pos: "RD", age: 22, nationality: "US", contract: { years: 3, salary: 1010 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Nikita Komarov", number: 74, pos: "RD", age: 23, nationality: "RU", contract: { years: 3, salary: 910 }, attrs: { positioning: 56, strength: 58 } },
+  { name: "Jack Rathbone", number: 3, pos: "LD", age: 26, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { offensiveRead: 58, speed: 62 } },
+  { name: "Scott Villalta", number: 31, pos: "G", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
+  { name: "Dylan Ratzlaff", number: 35, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 935 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Topias Leinonen", number: 71, pos: "G", age: 22, nationality: "FI", contract: { years: 2, salary: 962 }, attrs: { reflexes: 58, positioning: 56 } },
+];

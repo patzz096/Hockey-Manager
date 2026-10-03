@@ -16,7 +16,7 @@ export const CHI_ROSTER_DATA = [
   { name: "Kevin Korchinski", number: 58, pos: "LD", age: 20, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { passing: 73, offensiveRead: 67, speed: 71, positioning: 57 } },
   { name: "Wyatt Kaiser", number: 44, pos: "LD", age: 22, nationality: "US", contract: { years: 2, salary: 1000 }, attrs: { speed: 73, positioning: 61, passing: 63 } },
   { name: "TJ Brodie", number: 78, pos: "RD", age: 35, nationality: "CA", contract: { years: 1, salary: 1200 }, attrs: { positioning: 71, defensiveRead: 69, professionalism: 79, speed: 59 } },
-  { name: "Louis Crevier", number: 77, pos: "RD", age: 25, nationality: "CA", contract: { years: 2, salary: 775 }, attrs: { strength: 79, hitting: 71, positioning: 55 } },
+  { name: "Jarred Tinordi", number: 77, pos: "RD", age: 25, nationality: "CA", contract: { years: 2, salary: 775 }, attrs: { strength: 79, hitting: 71, positioning: 55 } },
   { name: "Sam Rinzel", number: 15, pos: "RD", age: 21, nationality: "US", contract: { years: 3, salary: 950 }, attrs: { speed: 79, offensiveRead: 63, passing: 65, positioning: 55 } },
   { name: "Spencer Knight", number: 30, pos: "G", age: 24, nationality: "US", contract: { years: 3, salary: 4500 }, attrs: { reflexes: 79, positioning: 77, reboundControl: 73, recovery: 73 } },
   { name: "Arvid Söderblom", number: 40, pos: "G", age: 26, nationality: "SE", contract: { years: 2, salary: 1000 }, attrs: { reflexes: 67, positioning: 67, reboundControl: 63 } },
