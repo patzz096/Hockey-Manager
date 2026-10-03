@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock } from "lucide-react";
+import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
@@ -134,6 +134,17 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [tab, setTab] = useState("home");
   // Onglet Alignement : actif (LNH, 23 joueurs) ou organisation complète (LNH + club-école).
   const [rosterScope, setRosterScope] = useState("active");
+  // Vue mobile (réagencée, tableaux à défilement) ou vue bureau forcée (zoom arrière façon
+  // "Demander le site pour ordinateur", conservée d'une visite à l'autre). Par défaut : vue
+  // mobile responsive sur petit écran, comme avant — rien ne change tant que l'utilisateur ne
+  // choisit pas explicitement.
+  const [forceDesktop, setForceDesktop] = useState(() => { try { return localStorage.getItem("hgm-force-desktop") === "1"; } catch { return false; } });
+  useEffect(() => {
+    try { localStorage.setItem("hgm-force-desktop", forceDesktop ? "1" : "0"); } catch { /* lecteurs sans localStorage */ }
+    document.body.classList.toggle("force-desktop", forceDesktop);
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) viewport.setAttribute("content", forceDesktop ? "width=1100" : "width=device-width, initial-scale=1.0");
+  }, [forceDesktop]);
   const [rngSeed, setRngSeed] = useState(1000);
   const [expandedGameId, setExpandedGameId] = useState(null);
   const [liveMatch, setLiveMatch] = useState(null);
@@ -1687,7 +1698,10 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           </button>
           );
         })}
-        <div style={{ marginTop: "auto", padding: "0 8px", fontSize: 11, color: "var(--iceMuted)" }}><span style={{ color: "var(--ice)" }}>{formatDay(currentDay)}</span><br />Plafond : <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} compact /><br />Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
+        <button title={forceDesktop ? "Revenir à la vue mobile (réagencée pour petit écran)" : "Vue bureau (comme sur ordinateur — zoom/défilement plutôt que réagencement)"} onClick={() => setForceDesktop((v) => !v)} style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 8, padding: "7px 11px", borderRadius: 6, border: "1px solid var(--line)", background: "transparent", color: "var(--iceMuted)", fontSize: 12, cursor: "pointer", textAlign: "left" }}>
+          {forceDesktop ? <Smartphone size={14} /> : <Monitor size={14} />} {forceDesktop ? "Vue mobile" : "Vue bureau"}
+        </button>
+        <div style={{ padding: "8px 8px 0", fontSize: 11, color: "var(--iceMuted)" }}><span style={{ color: "var(--ice)" }}>{formatDay(currentDay)}</span><br />Plafond : <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} compact /><br />Rang: <span style={{ color: "var(--ice)" }}>{myRank}e</span> · {myStanding?.pts ?? 0} pts</div>
       </div>
       <div key={tab} className="tab-view" style={{ flex: 1, padding: "24px 32px", overflow: "auto", background: "var(--navy)" }}>
         {notice && <div onClick={() => setNotice(null)} style={{ background: "#B84A4A33", border: "1px solid var(--loss)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 13, cursor: "pointer" }}>{notice} <span style={{ color: "var(--iceMuted)", fontSize: 11 }}>(clique pour fermer)</span></div>}

@@ -496,6 +496,10 @@ tests/engine.test.js       tests du moteur
   segment plutôt que de laisser ce trio seul sur la glace plusieurs minutes d'affilée
   (`App.jsx` `runLiveSegment`) ; le déploiement "auto" habituel reste disponible en un clic
 - Filtres et tri sur presque tous les tableaux (division, équipe, colonnes)
+- Mise en page mobile automatique sous 760 px (barre latérale en haut, tableaux à défilement
+  horizontal) — bouton **Vue bureau** en bas de la barre latérale pour revenir à la mise en page
+  exacte du PC (zoom/défilement façon « Demander le site pour ordinateur » plutôt que réagencée),
+  préférence conservée d'une visite à l'autre (`localStorage`).
 
 ## Ce qui reste incomplet ou en cours
 
