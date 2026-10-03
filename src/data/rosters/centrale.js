@@ -134,7 +134,7 @@ export const UTA_ROSTER_DATA = [
   { name: "Kevin Stenlund", number: 82, pos: "C", age: 28, nationality: "SE", contract: { years: 3, salary: 2500 }, attrs: { strength: 73, checking: 65, faceoffs: 59 } },
   { name: "Sean Durzi", number: 5, pos: "RD", age: 26, nationality: "CA", contract: { years: 4, salary: 4400 }, attrs: { offensiveRead: 69, passing: 69, speed: 69 } },
   { name: "Mikhail Sergachev", number: 98, pos: "LD", age: 27, nationality: "RU", contract: { years: 8, salary: 8500 }, attrs: { strength: 77, offensiveRead: 75, positioning: 73, shotAccuracy: 67 } },
-  { name: "Juuso Välimäki", number: 4, pos: "LD", age: 27, nationality: "FI", contract: { years: 3, salary: 2750 }, attrs: { positioning: 67, defensiveRead: 65, strength: 71 } },
+  { name: "Niko Mikkola", number: 4, pos: "LD", age: 29, nationality: "FI", contract: { years: 3, salary: 2750 }, attrs: { positioning: 67, defensiveRead: 65, strength: 71 } },
   { name: "Michael Kesselring", number: 2, pos: "RD", age: 24, nationality: "US", contract: { years: 3, salary: 2200 }, attrs: { strength: 73, hitting: 63, speed: 65 } },
   { name: "John Marino", number: 6, pos: "RD", age: 28, nationality: "US", contract: { years: 4, salary: 4400 }, attrs: { positioning: 71, defensiveRead: 71, speed: 65 } },
   { name: "Karel Vejmelka", number: 70, pos: "G", age: 29, nationality: "CZ", contract: { years: 3, salary: 3400 }, attrs: { reflexes: 73, positioning: 73 } },

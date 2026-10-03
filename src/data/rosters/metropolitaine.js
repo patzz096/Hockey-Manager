@@ -1,7 +1,7 @@
 // Alignement projeté à partir des statistiques réelles 2025-26 et des contrats connus (approximatifs pour certains joueurs)
 export const CAR_ROSTER_DATA = [
   { name: "Sebastian Aho", number: 20, pos: "C", age: 28, nationality: "FI", contract: { years: 6, salary: 9750 }, attrs: { shotAccuracy: 85, offensiveRead: 85, passing: 80, faceoffs: 70, speed: 78, leadership: 82 } },
-  { name: "Seth Jarvis", number: 24, pos: "LW", age: 23, nationality: "CA", contract: { years: 8, salary: 8000 }, attrs: { shotAccuracy: 78, speed: 78, offensiveRead: 74, puckhandling: 72 } },
+  { name: "Seth Jarvis", number: 24, pos: "LW", age: 24, nationality: "CA", contract: { years: 8, salary: 7420 }, attrs: { shotAccuracy: 78, speed: 78, offensiveRead: 74, puckhandling: 72 } },
   { name: "Andrei Svechnikov", number: 37, pos: "RW", age: 25, nationality: "RU", contract: { years: 5, salary: 7750 }, attrs: { strength: 80, hitting: 65, shotAccuracy: 78, puckhandling: 75, speed: 75 } },
   { name: "Jordan Staal", number: 11, pos: "C", age: 37, nationality: "CA", contract: { years: 1, salary: 5000 }, attrs: { faceoffs: 78, defensiveRead: 78, checking: 70, strength: 78, leadership: 75 } },
   { name: "Nikolaj Ehlers", number: 27, pos: "LW", age: 29, nationality: "DK", contract: { years: 8, salary: 6375 }, attrs: { shotAccuracy: 82, speed: 82, offensiveRead: 76, acceleration: 82 } },
@@ -15,8 +15,10 @@ export const CAR_ROSTER_DATA = [
   { name: "Shayne Gostisbehere", number: 4, pos: "RD", age: 32, nationality: "US", contract: { years: 1, salary: 3200 }, attrs: { passing: 76, offensiveRead: 74, puckhandling: 74, speed: 70, positioning: 55 } },
   { name: "Jalen Chatfield", number: 5, pos: "LD", age: 29, nationality: "CA", contract: { years: 3, salary: 3000 }, attrs: { positioning: 68, hitting: 65, defensiveRead: 65 } },
   { name: "Alexander Nikishin", number: 73, pos: "RD", age: 23, nationality: "RU", contract: { years: 2, salary: 950 }, attrs: { puckhandling: 68, speed: 74, offensiveRead: 64, strength: 72 } },
-  { name: "Pyotr Kochetkov", number: 52, pos: "G", age: 26, nationality: "RU", contract: { years: 3, salary: 3125 }, attrs: { reflexes: 80, positioning: 78, reboundControl: 75, recovery: 76 } },
+  { name: "Pyotr Kochetkov", number: 52, pos: "G", age: 27, nationality: "RU", contract: { years: 3, salary: 2000 }, attrs: { reflexes: 80, positioning: 78, reboundControl: 75, recovery: 76 } },
   { name: "Frederik Andersen", number: 31, pos: "G", age: 36, nationality: "DK", contract: { years: 2, salary: 3600 }, attrs: { reflexes: 78, positioning: 80, reboundControl: 76, recovery: 74, professionalism: 82 } },
+  { name: "Mike Reilly", number: 3, pos: "LD", age: 33, nationality: "US", contract: { years: 2, salary: 850 }, attrs: { offensiveRead: 62, passing: 62, speed: 66 } },
+  { name: "Brandon Bussi", number: 32, pos: "G", age: 28, nationality: "US", contract: { years: 2, salary: 1900 }, attrs: { reflexes: 70, positioning: 70 } },
 ];
 
 export const NYR_ROSTER_DATA = [
