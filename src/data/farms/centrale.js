@@ -25,3 +25,28 @@ export const CHI_FARM_DATA = [
   { name: "Drew Commesso", number: 33, pos: "G", age: 24, nationality: "US", contract: { years: 2, salary: 875 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Jackson Bernard", number: 1, pos: "G", age: 26, nationality: "US", contract: { years: 1, salary: 850, generated: true }, attrs: { reflexes: 56, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Eagles de Colorado) de l'Avalanche — même disclaimer que ci-dessus.
+export const COL_FARM_DATA = [
+  { name: "Gavin Brindley", number: 54, pos: "RW", age: 22, nationality: "US", contract: { years: 3, salary: 875 }, attrs: { speed: 66, offensiveRead: 60, shotAccuracy: 58 } },
+  { name: "Vinnie Hinostroza", number: 18, pos: "RW", age: 33, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { speed: 62, offensiveRead: 60, checking: 56 } },
+  { name: "Fabian Lysell", number: 22, pos: "RW", age: 24, nationality: "SE", contract: { years: 2, salary: 850 }, attrs: { speed: 68, shotAccuracy: 60, offensiveRead: 58 } },
+  { name: "Tristen Nielsen", number: 57, pos: "LW", age: 27, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { checking: 60, speed: 58 } },
+  { name: "Adam Beckman", number: 32, pos: "LW", age: 25, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 60, offensiveRead: 58 } },
+  { name: "Matthew DiMarsico", number: 14, pos: "C", age: 23, nationality: "US", contract: { years: 2, salary: 980 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Nikita Prishchepov", number: 85, pos: "C", age: 23, nationality: "RU", contract: { years: 2, salary: 882 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Cooper Gay", number: 58, pos: "RW", age: 25, nationality: "US", contract: { years: 2, salary: 948 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Georgii Merkulov", number: 49, pos: "C", age: 26, nationality: "RU", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Taylor Makar", number: 16, pos: "LW", age: 26, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { speed: 58, offensiveRead: 56 } },
+  { name: "Keaton Middleton", number: 67, pos: "LD", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 64, positioning: 58 } },
+  { name: "Sean Behrens", number: 2, pos: "LD", age: 24, nationality: "US", contract: { years: 2, salary: 923 }, attrs: { offensiveRead: 60, passing: 58, speed: 58 } },
+  { name: "Alex Gagne", number: 28, pos: "LD", age: 24, nationality: "US", contract: { years: 2, salary: 910 }, attrs: { strength: 62, positioning: 58 } },
+  { name: "Wyatt Aamodt", number: 5, pos: "LD", age: 29, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, strength: 60 } },
+  { name: "Gustav Stjernberg", number: 44, pos: "RD", age: 24, nationality: "SE", contract: { years: 2, salary: 980 }, attrs: { positioning: 58, offensiveRead: 58 } },
+  { name: "Domenick Fensore", number: 3, pos: "LD", age: 25, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 60, speed: 62, passing: 58 } },
+  { name: "Christian Wolanin", number: 86, pos: "LD", age: 32, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, passing: 58 } },
+  { name: "Saige Weinstein", number: 89, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 883 }, attrs: { positioning: 56, speed: 60 } },
+  { name: "Ilya Nabokov", number: 30, pos: "G", age: 24, nationality: "RU", contract: { years: 2, salary: 975 }, attrs: { reflexes: 60, positioning: 58 } },
+  { name: "Nikita Novosyolov", number: 31, pos: "G", age: 22, nationality: "RU", contract: { years: 2, salary: 980 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Trent Miner", number: 50, pos: "G", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
+];

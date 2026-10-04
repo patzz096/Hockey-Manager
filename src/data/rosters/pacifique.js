@@ -25,7 +25,7 @@ export const ANA_ROSTER_DATA = [
 ];
 
 export const CGY_ROSTER_DATA = [
-  { name: "Nazem Kadri", number: 91, pos: "C", age: 35, nationality: "CA", contract: { years: 4, salary: 7000 }, attrs: { shotAccuracy: 73, offensiveRead: 71, faceoffs: 63, aggressiveness: 63 } },
+  { name: "Kevin Rooney", number: 23, pos: "C", age: 31, nationality: "CA", contract: { years: 2, salary: 1300 }, attrs: { checking: 68, faceoffs: 62, defensiveRead: 62 } },
   { name: "Jonathan Huberdeau", number: 10, pos: "LW", age: 33, nationality: "CA", contract: { years: 5, salary: 10500 }, attrs: { passing: 77, offensiveRead: 73, puckhandling: 73, shotAccuracy: 63 } },
   { name: "Mikael Backlund", number: 11, pos: "C", age: 37, nationality: "SE", contract: { years: 2, salary: 3250 }, attrs: { faceoffs: 69, defensiveRead: 71, checking: 65, leadership: 77 } },
   { name: "Blake Coleman", number: 20, pos: "C", age: 34, nationality: "US", contract: { years: 3, salary: 4900 }, attrs: { checking: 73, hitting: 67, speed: 71, defensiveRead: 67 } },
@@ -107,7 +107,7 @@ export const SEA_ROSTER_DATA = [
   { name: "Andre Burakovsky", number: 92, pos: "LW", age: 30, nationality: "SE", contract: { years: 5, salary: 5500 }, attrs: { shotAccuracy: 71, offensiveRead: 67, puckhandling: 67 } },
   { name: "Jordan Eberle", number: 7, pos: "RW", age: 35, nationality: "CA", contract: { years: 3, salary: 6000 }, attrs: { shotAccuracy: 73, offensiveRead: 69, professionalism: 75 } },
   { name: "Oliver Bjorkstrand", number: 22, pos: "RW", age: 30, nationality: "DK", contract: { years: 3, salary: 5400 }, attrs: { shotAccuracy: 73, offensiveRead: 65, speed: 65 } },
-  { name: "Jaden Schwartz", number: 17, pos: "LW", age: 33, nationality: "CA", contract: { years: 3, salary: 5500 }, attrs: { shotAccuracy: 67, offensiveRead: 63, professionalism: 73 } },
+  { name: "Eeli Tolvanen", number: 56, pos: "LW", age: 26, nationality: "FI", contract: { years: 2, salary: 1850 }, attrs: { shotAccuracy: 71, speed: 69, offensiveRead: 63 } },
   { name: "Shane Wright", number: 91, pos: "C", age: 21, nationality: "CA", contract: { years: 3, salary: 894 }, attrs: { offensiveRead: 65, faceoffs: 57, shotAccuracy: 61 } },
   { name: "Vince Dunn", number: 29, pos: "LD", age: 28, nationality: "CA", contract: { years: 7, salary: 7350 }, attrs: { offensiveRead: 73, passing: 73, speed: 73, positioning: 57 } },
   { name: "Brandon Montour", number: 26, pos: "RD", age: 31, nationality: "CA", contract: { years: 7, salary: 7000 }, attrs: { speed: 75, offensiveRead: 69, shotAccuracy: 63 } },

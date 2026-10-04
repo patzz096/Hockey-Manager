@@ -31,7 +31,7 @@ export const TOR_ROSTER_DATA = [
   { name: "Max Domi", number: 11, pos: "C", age: 31, nationality: "CA", contract: { years: 2, salary: 3750 }, attrs: { checking: 73, hitting: 68, aggressiveness: 76, passing: 70, offensiveRead: 66, speed: 70 } },
   { name: "Matthew Knies", number: 23, pos: "RW", age: 23, nationality: "US", contract: { years: 6, salary: 7750 }, attrs: { strength: 80, hitting: 73, checking: 68, shotAccuracy: 73, puckhandling: 66, speed: 68, determination: 78 } },
   { name: "Bobby McMann", number: 74, pos: "LW", age: 29, nationality: "CA", contract: { years: 2, salary: 2000 }, attrs: { shotAccuracy: 68, speed: 73, hitting: 58, checking: 56 } },
-  { name: "Nicolas Roy", number: 55, pos: "C", age: 29, nationality: "CA", contract: { years: 4, salary: 4000 }, attrs: { defensiveRead: 73, faceoffs: 70, checking: 63, hitting: 60, shotAccuracy: 60 } },
+  { name: "Calle Järnkrok", number: 19, pos: "C", age: 34, nationality: "SE", contract: { years: 2, salary: 2100 }, attrs: { defensiveRead: 69, checking: 65, shotAccuracy: 62, faceoffs: 60 } },
   { name: "David Kämpf", number: 64, pos: "C", age: 31, nationality: "CZ", contract: { years: 1, salary: 2400 }, attrs: { defensiveRead: 83, faceoffs: 80, positioning: 80, stickchecking: 78, shotAccuracy: 43 } },
   { name: "Pontus Holmberg", number: 29, pos: "C", age: 25, nationality: "SE", contract: { years: 2, salary: 1300 }, attrs: { offensiveRead: 58, defensiveRead: 60, speed: 66 } },
   { name: "Nikita Grebenkin", number: 68, pos: "RW", age: 23, nationality: "RU", contract: { years: 2, salary: 900 }, attrs: { puckhandling: 66, speed: 70, strength: 63 } },
