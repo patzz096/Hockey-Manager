@@ -16,7 +16,7 @@ export const CAR_ROSTER_DATA = [
   { name: "Jalen Chatfield", number: 5, pos: "LD", age: 29, nationality: "CA", contract: { years: 3, salary: 3000 }, attrs: { positioning: 68, hitting: 65, defensiveRead: 65 } },
   { name: "Alexander Nikishin", number: 73, pos: "RD", age: 23, nationality: "RU", contract: { years: 2, salary: 950 }, attrs: { puckhandling: 68, speed: 74, offensiveRead: 64, strength: 72 } },
   { name: "Pyotr Kochetkov", number: 52, pos: "G", age: 27, nationality: "RU", contract: { years: 3, salary: 2000 }, attrs: { reflexes: 80, positioning: 78, reboundControl: 75, recovery: 76 } },
-  { name: "Frederik Andersen", number: 31, pos: "G", age: 36, nationality: "DK", contract: { years: 2, salary: 3600 }, attrs: { reflexes: 78, positioning: 80, reboundControl: 76, recovery: 74, professionalism: 82 } },
+  { name: "Spencer Martin", number: 41, pos: "G", age: 30, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 65, positioning: 65 } },
   { name: "Mike Reilly", number: 3, pos: "LD", age: 33, nationality: "US", contract: { years: 2, salary: 850 }, attrs: { offensiveRead: 62, passing: 62, speed: 66 } },
   { name: "Brandon Bussi", number: 32, pos: "G", age: 28, nationality: "US", contract: { years: 2, salary: 1900 }, attrs: { reflexes: 70, positioning: 70 } },
 ];
@@ -109,7 +109,7 @@ export const PIT_ROSTER_DATA = [
   { name: "Ryan Graves", number: 27, pos: "LD", age: 29, nationality: "CA", contract: { years: 4, salary: 4500 }, attrs: { hitting: 74, checking: 70, strength: 78, positioning: 64 } },
   { name: "Owen Pickering", number: 78, pos: "RD", age: 21, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { speed: 74, puckhandling: 62, positioning: 58 } },
   { name: "Ian Moore", number: 24, pos: "LD", age: 23, nationality: "US", contract: { years: 2, salary: 850 }, attrs: { positioning: 60, puckhandling: 60 } },
-  { name: "Tristan Jarry", number: 35, pos: "G", age: 30, nationality: "CA", contract: { years: 2, salary: 5375 }, attrs: { reflexes: 78, positioning: 78, reboundControl: 72 } },
+  { name: "Sergei Murashov", number: 34, pos: "G", age: 22, nationality: "RU", contract: { years: 3, salary: 950 }, attrs: { reflexes: 71, positioning: 67 } },
   { name: "Alex Nedeljkovic", number: 39, pos: "G", age: 29, nationality: "US", contract: { years: 2, salary: 1750 }, attrs: { reflexes: 72, positioning: 72, reboundControl: 68 } },
 ];
 

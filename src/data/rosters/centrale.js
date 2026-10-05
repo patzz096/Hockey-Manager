@@ -125,7 +125,7 @@ export const STL_ROSTER_DATA = [
   { name: "Alexey Toropchenko", number: 45, pos: "LW", age: 25, nationality: "RU", contract: { years: 3, salary: 1650 }, attrs: { strength: 79, hitting: 71, checking: 65 } },
   { name: "Jimmy Snuggerud", number: 84, pos: "RW", age: 21, nationality: "US", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 73, offensiveRead: 65, speed: 69 } },
   { name: "Nathan Walker", number: 79, pos: "LW", age: 31, nationality: "AU", contract: { years: 2, salary: 1000 }, attrs: { checking: 65, speed: 67, defensiveRead: 59 } },
-  { name: "Mathieu Joseph", number: 21, pos: "LW", age: 27, nationality: "CA", contract: { years: 3, salary: 2900 }, attrs: { speed: 75, defensiveRead: 63, shotAccuracy: 61 } },
+  { name: "Zach Dean", number: 59, pos: "LW", age: 23, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { speed: 65, offensiveRead: 59, checking: 55 } },
   { name: "Colton Parayko", number: 55, pos: "RD", age: 32, nationality: "CA", contract: { years: 8, salary: 7500 }, attrs: { strength: 81, positioning: 75, shotAccuracy: 65, hitting: 67 } },
   { name: "Tyler Tucker", number: 75, pos: "RD", age: 25, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { hitting: 67, strength: 69, positioning: 59 } },
   { name: "Philip Broberg", number: 6, pos: "LD", age: 24, nationality: "SE", contract: { years: 2, salary: 2900 }, attrs: { speed: 79, offensiveRead: 63, positioning: 57 } },

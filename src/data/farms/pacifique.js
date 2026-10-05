@@ -25,3 +25,25 @@ export const CGY_FARM_DATA = [
   { name: "Matvei Gridin", number: 92, pos: "LW", age: 21, nationality: "RU", contract: { years: 3, salary: 954 }, attrs: { shotAccuracy: 62, offensiveRead: 58, speed: 60 } },
   { name: "Zayne Parekh", number: 19, pos: "RD", age: 21, nationality: "CA", contract: { years: 3, salary: 954 }, attrs: { offensiveRead: 64, shotAccuracy: 60, speed: 62 } },
 ];
+
+// Club-école réel (LAH, Condors de Bakersfield) d'Edmonton — même disclaimer que ci-dessus.
+export const EDM_FARM_DATA = [
+  { name: "Quinn Hutson", number: 23, pos: "RW", age: 25, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Connor Clattenburg", number: 64, pos: "LW", age: 21, nationality: "CA", contract: { years: 3, salary: 928 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Viljami Marjala", number: 57, pos: "C", age: 24, nationality: "FI", contract: { years: 2, salary: 948 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "William Nicholl", number: 56, pos: "C", age: 20, nationality: "CA", contract: { years: 2, salary: 985 }, attrs: { offensiveRead: 62, speed: 60 } },
+  { name: "Aku Räty", number: 38, pos: "RW", age: 25, nationality: "FI", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Eduards Tralmaks", number: 36, pos: "LW", age: 30, nationality: "LV", contract: { years: 1, salary: 850 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Brady Stonehouse", number: 41, pos: "RW", age: 22, nationality: "CA", contract: { years: 2, salary: 897 }, attrs: { speed: 62, shotAccuracy: 58 } },
+  { name: "James Stefan", number: 70, pos: "RW", age: 23, nationality: "US", contract: { years: 2, salary: 945 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Damien Carfagna", number: 73, pos: "RD", age: 24, nationality: "US", contract: { years: 2, salary: 938 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Riley Stillman", number: 61, pos: "LD", age: 29, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Josh Brown", number: 44, pos: "RD", age: 33, nationality: "CA", contract: { years: 1, salary: 1000 }, attrs: { strength: 64, hitting: 60 } },
+  { name: "Tomas Cibulka", number: 78, pos: "LD", age: 23, nationality: "CZ", contract: { years: 2, salary: 955 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Beau Akey", number: 82, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { positioning: 56, speed: 60 } },
+  { name: "Atro Leppänen", number: 37, pos: "LD", age: 28, nationality: "FI", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Matt Tomkins", number: 90, pos: "G", age: 32, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 58 } },
+  { name: "Connor Ungar", number: 32, pos: "G", age: 25, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Samuel Jonsson", number: 33, pos: "G", age: 23, nationality: "SE", contract: { years: 2, salary: 955 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Nathaniel Day", number: 40, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { reflexes: 58, positioning: 56 } },
+];
