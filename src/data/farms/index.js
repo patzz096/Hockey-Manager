@@ -1,5 +1,5 @@
 import { BOS_FARM_DATA, BUF_FARM_DATA, DET_FARM_DATA, FLA_FARM_DATA, MTL_FARM_DATA } from "./atlantique";
-import { CAR_FARM_DATA, CBJ_FARM_DATA } from "./metropolitaine";
+import { CAR_FARM_DATA, CBJ_FARM_DATA, NJD_FARM_DATA } from "./metropolitaine";
 import { CGY_FARM_DATA, EDM_FARM_DATA, LAK_FARM_DATA } from "./pacifique";
 import { CHI_FARM_DATA, COL_FARM_DATA, DAL_FARM_DATA, MIN_FARM_DATA } from "./centrale";
 
@@ -14,6 +14,7 @@ export const REAL_FARMS = {
   MTL: MTL_FARM_DATA,
   CAR: CAR_FARM_DATA,
   CBJ: CBJ_FARM_DATA,
+  NJD: NJD_FARM_DATA,
   CGY: CGY_FARM_DATA,
   EDM: EDM_FARM_DATA,
   LAK: LAK_FARM_DATA,

@@ -52,3 +52,27 @@ export const CBJ_FARM_DATA = [
   { name: "Evan Gardner", number: 35, pos: "G", age: 21, nationality: "CA", contract: { years: 1, salary: 963 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Sergei Ivanov", number: 1, pos: "G", age: 23, nationality: "RU", contract: { years: 1, salary: 970 }, attrs: { reflexes: 58, positioning: 58 } },
 ];
+
+// Club-école réel (LAH, Comets d'Utica) du New Jersey — même disclaimer que ci-dessus.
+export const NJD_FARM_DATA = [
+  { name: "Riley Tufte", number: 10, pos: "LW", age: 29, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Marc McLaughlin", number: 21, pos: "C", age: 27, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Colin White", number: 36, pos: "C", age: 30, nationality: "US", contract: { years: 1, salary: 900 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Ben Steeves", number: 37, pos: "LW", age: 24, nationality: "US", contract: { years: 2, salary: 850 }, attrs: { shotAccuracy: 58, speed: 60 } },
+  { name: "Xavier Parent", number: 67, pos: "LW", age: 26, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Shane Lachance", number: 20, pos: "LW", age: 23, nationality: "US", contract: { years: 2, salary: 943 }, attrs: { strength: 62, shotAccuracy: 60 } },
+  { name: "Lenni Hämeenaho", number: 29, pos: "RW", age: 22, nationality: "FI", contract: { years: 3, salary: 973 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Cam Squires", number: 77, pos: "RW", age: 22, nationality: "CA", contract: { years: 2, salary: 938 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Josh Filmon", number: 89, pos: "LW", age: 23, nationality: "CA", contract: { years: 2, salary: 913 }, attrs: { shotAccuracy: 58, speed: 60 } },
+  { name: "Matyas Melovsky", number: 57, pos: "C", age: 22, nationality: "CZ", contract: { years: 2, salary: 973 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Vladislav Kolyachonok", number: 18, pos: "LD", age: 25, nationality: "BY", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Topias Vilen", number: 38, pos: "LD", age: 24, nationality: "FI", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Anton Silayev", number: 52, pos: "LD", age: 21, nationality: "RU", contract: { years: 2, salary: 1075 }, attrs: { strength: 62, positioning: 58 } },
+  { name: "Etienne Morin", number: 59, pos: "LD", age: 22, nationality: "CA", contract: { years: 2, salary: 934 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Ethan Edwards", number: 73, pos: "RD", age: 24, nationality: "CA", contract: { years: 2, salary: 943 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Jeremy Hanzel", number: 56, pos: "RD", age: 24, nationality: "CA", contract: { years: 2, salary: 927 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Mikael Diotte", number: 55, pos: "RD", age: 24, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Seamus Casey", number: 24, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 950 }, attrs: { offensiveRead: 60, speed: 62 } },
+  { name: "David Rittich", number: 33, pos: "G", age: 34, nationality: "CZ", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
+  { name: "Jakub Málek", number: 31, pos: "G", age: 25, nationality: "CZ", contract: { years: 2, salary: 875 }, attrs: { reflexes: 58, positioning: 58 } },
+];
