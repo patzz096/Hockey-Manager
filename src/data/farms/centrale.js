@@ -50,3 +50,29 @@ export const COL_FARM_DATA = [
   { name: "Nikita Novosyolov", number: 31, pos: "G", age: 22, nationality: "RU", contract: { years: 2, salary: 980 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Trent Miner", number: 50, pos: "G", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Stars du Texas) de Dallas — même disclaimer que ci-dessus.
+export const DAL_FARM_DATA = [
+  { name: "Angus MacDonell", number: 47, pos: "C", age: 21, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Harrison Scott", number: 37, pos: "LW", age: 26, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Cameron Hughes", number: 34, pos: "C", age: 30, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Jaxon Fuder", number: 48, pos: "LW", age: 21, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 60, speed: 62 } },
+  { name: "Emil Hemming", number: 39, pos: "RW", age: 20, nationality: "FI", contract: { years: 3, salary: 942 }, attrs: { shotAccuracy: 62, speed: 60 } },
+  { name: "Artem Shlaine", number: 67, pos: "C", age: 25, nationality: "RU", contract: { years: 2, salary: 953 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Dylan Hryckowian", number: 46, pos: "RW", age: 22, nationality: "CA", contract: { years: 2, salary: 1014 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Ayrton Martino", number: 60, pos: "LW", age: 24, nationality: "CA", contract: { years: 1, salary: 943 }, attrs: { offensiveRead: 58, speed: 60 } },
+  { name: "Justin Ertel", number: 62, pos: "LW", age: 23, nationality: "CA", contract: { years: 2, salary: 942 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Christian Fitzgerald", number: 52, pos: "C", age: 24, nationality: "CA", contract: { years: 2, salary: 953 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Charlie Paquette", number: 63, pos: "RW", age: 21, nationality: "CA", contract: { years: 2, salary: 850, generated: true }, attrs: { shotAccuracy: 56, speed: 58 } },
+  { name: "Matthew Seminoff", number: 43, pos: "RW", age: 23, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Aram Minnetian", number: 44, pos: "RD", age: 22, nationality: "US", contract: { years: 3, salary: 1075 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Connor Punnett", number: 35, pos: "LD", age: 23, nationality: "CA", contract: { years: 2, salary: 945 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Niilopekka Muhonen", number: 41, pos: "LD", age: 21, nationality: "FI", contract: { years: 2, salary: 950 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Tristan Bertucci", number: 42, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 934 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Luke Krys", number: 36, pos: "RD", age: 26, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { positioning: 56, strength: 60 } },
+  { name: "Kyle Burroughs", number: 28, pos: "RD", age: 31, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { hitting: 60, positioning: 58 } },
+  { name: "Trey Taylor", number: 27, pos: "LD", age: 25, nationality: "CA", contract: { years: 2, salary: 975 }, attrs: { positioning: 58, speed: 60 } },
+  { name: "Jack Anderson", number: 40, pos: "LD", age: 24, nationality: "US", contract: { years: 2, salary: 1050 }, attrs: { strength: 60, positioning: 58 } },
+  { name: "Brandon Halverson", number: 33, pos: "G", age: 31, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 58 } },
+  { name: "Arno Tiefensee", number: 50, pos: "G", age: 24, nationality: "DE", contract: { years: 1, salary: 925 }, attrs: { reflexes: 58, positioning: 56 } },
+];

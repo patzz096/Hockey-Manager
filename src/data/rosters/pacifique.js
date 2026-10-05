@@ -129,7 +129,7 @@ export const VAN_ROSTER_DATA = [
   { name: "Aatu Räty", number: 71, pos: "C", age: 22, nationality: "FI", contract: { years: 2, salary: 850 }, attrs: { offensiveRead: 59, faceoffs: 55, speed: 63 } },
   { name: "Quinn Hughes", number: 43, pos: "LD", age: 26, nationality: "US", contract: { years: 8, salary: 7850 }, attrs: { speed: 87, offensiveRead: 85, passing: 83, puckhandling: 81, leadership: 75 } },
   { name: "Filip Hronek", number: 17, pos: "RD", age: 27, nationality: "CZ", contract: { years: 8, salary: 7250 }, attrs: { offensiveRead: 71, passing: 69, positioning: 63 } },
-  { name: "Tyler Myers", number: 57, pos: "RD", age: 35, nationality: "CA", contract: { years: 2, salary: 3000 }, attrs: { strength: 73, positioning: 63, hitting: 57 } },
+  { name: "Marcus Pettersson", number: 28, pos: "LD", age: 29, nationality: "SE", contract: { years: 4, salary: 5500 }, attrs: { positioning: 71, defensiveRead: 69, strength: 71 } },
   { name: "Vincent Desharnais", number: 73, pos: "RD", age: 29, nationality: "CA", contract: { years: 3, salary: 2200 }, attrs: { strength: 75, positioning: 57, hitting: 59 } },
   { name: "Elias Pettersson", number: 25, pos: "LD", age: 25, nationality: "SE", contract: { years: 3, salary: 2050 }, attrs: { positioning: 59, defensiveRead: 59, speed: 65 } },
   { name: "Thatcher Demko", number: 35, pos: "G", age: 30, nationality: "US", contract: { years: 5, salary: 5000 }, attrs: { reflexes: 79, positioning: 77, reboundControl: 73 } },
