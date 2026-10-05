@@ -96,3 +96,26 @@ export const FLA_FARM_DATA = [
   { name: "Kirill Gerasimyuk", number: 80, pos: "G", age: 23, nationality: "RU", contract: { years: 1, salary: 925 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Tyler Muszelik", number: 35, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 960 }, attrs: { reflexes: 60, positioning: 58 } },
 ];
+
+// Club-école réel (LAH, Rocket de Laval) de Montréal — même disclaimer que ci-dessus.
+export const MTL_FARM_DATA = [
+  { name: "Hunter McKown", number: 41, pos: "C", age: 24, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Filip Mesar", number: 46, pos: "RW", age: 23, nationality: "SK", contract: { years: 2, salary: 887 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Owen Beck", number: 62, pos: "C", age: 23, nationality: "CA", contract: { years: 2, salary: 853 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Jared Davidson", number: 49, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Tyler Thorpe", number: 54, pos: "RW", age: 21, nationality: "CA", contract: { years: 2, salary: 968 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Lucas Condotta", number: 82, pos: "C", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Brett Berard", number: 37, pos: "LW", age: 24, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { speed: 60, shotAccuracy: 58 } },
+  { name: "Samuel Poulin", number: 88, pos: "LW", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Alex Belzile", number: 60, pos: "RW", age: 35, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { checking: 58, speed: 56 } },
+  { name: "Sasha Pastujov", number: 40, pos: "RW", age: 23, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "David Reinbacher", number: 64, pos: "RD", age: 22, nationality: "AT", contract: { years: 2, salary: 909 }, attrs: { positioning: 60, strength: 60 } },
+  { name: "Reilly Walsh", number: 44, pos: "RD", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Maksymilian Szuber", number: 79, pos: "LD", age: 24, nationality: "DE", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Ethan Samson", number: 74, pos: "RD", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Owen Protz", number: 68, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 1004 }, attrs: { strength: 62, positioning: 58 } },
+  { name: "Luke Mittelstadt", number: 65, pos: "LD", age: 24, nationality: "US", contract: { years: 2, salary: 1014 }, attrs: { positioning: 58, speed: 60 } },
+  { name: "Bryce Pickford", number: 94, pos: "RD", age: 21, nationality: "CA", contract: { years: 2, salary: 964 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Jacob Fowler", number: 32, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 946 }, attrs: { reflexes: 60, positioning: 58 } },
+  { name: "Kaapo Kahkonen", number: 34, pos: "G", age: 30, nationality: "FI", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
+];
