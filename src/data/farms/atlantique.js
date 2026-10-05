@@ -70,3 +70,29 @@ export const DET_FARM_DATA = [
   { name: "Trey Augustine", number: 31, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { reflexes: 60, positioning: 58 } },
   { name: "Michal Postava", number: 35, pos: "G", age: 25, nationality: "CZ", contract: { years: 1, salary: 975 }, attrs: { reflexes: 58, positioning: 58 } },
 ];
+
+// Club-école réel (LAH, Checkers de Charlotte) de Floride — même disclaimer que ci-dessus.
+export const FLA_FARM_DATA = [
+  { name: "Cole Reinhardt", number: 29, pos: "LW", age: 27, nationality: "CA", contract: { years: 1, salary: 813 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Cole Schwindt", number: 79, pos: "C", age: 25, nationality: "CA", contract: { years: 2, salary: 875 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Nathan Bastian", number: 11, pos: "RW", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Jack Devine", number: 38, pos: "RW", age: 23, nationality: "US", contract: { years: 2, salary: 973 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Angus Crookshank", number: 28, pos: "LW", age: 27, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "John Beecher", number: 17, pos: "C", age: 26, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 62, checking: 58 } },
+  { name: "Gracyn Sawchyn", number: 59, pos: "C", age: 22, nationality: "CA", contract: { years: 3, salary: 934 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Hunter St. Martin", number: 85, pos: "LW", age: 21, nationality: "CA", contract: { years: 2, salary: 929 }, attrs: { shotAccuracy: 58, speed: 60 } },
+  { name: "Kai Schwindt", number: 97, pos: "LW", age: 23, nationality: "CA", contract: { years: 1, salary: 873 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Samu Salminen", number: 64, pos: "C", age: 24, nationality: "FI", contract: { years: 2, salary: 980 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Mackenzie Entwistle", number: 44, pos: "RW", age: 27, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 61, checking: 57 } },
+  { name: "Donovan Sebrango", number: 73, pos: "LD", age: 25, nationality: "NL", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Tobias Bjornfot", number: 22, pos: "LD", age: 26, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Mikulas Hovorka", number: 96, pos: "RD", age: 25, nationality: "CZ", contract: { years: 1, salary: 850 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Casey Fitzgerald", number: 4, pos: "RD", age: 30, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Emil Pieniniemi", number: 74, pos: "LD", age: 22, nationality: "FI", contract: { years: 2, salary: 907 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Marek Alscher", number: 51, pos: "LD", age: 23, nationality: "CZ", contract: { years: 2, salary: 865 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Matvei Shuravin", number: 76, pos: "LD", age: 21, nationality: "RU", contract: { years: 3, salary: 1000 }, attrs: { offensiveRead: 58, speed: 60 } },
+  { name: "Ludvig Jansson", number: 54, pos: "RD", age: 23, nationality: "SE", contract: { years: 2, salary: 955 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Cooper Black", number: 31, pos: "G", age: 25, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Kirill Gerasimyuk", number: 80, pos: "G", age: 23, nationality: "RU", contract: { years: 1, salary: 925 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Tyler Muszelik", number: 35, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 960 }, attrs: { reflexes: 60, positioning: 58 } },
+];
