@@ -22,7 +22,7 @@ export const CAR_ROSTER_DATA = [
 ];
 
 export const NYR_ROSTER_DATA = [
-  { name: "Artemi Panarin", number: 10, pos: "LW", age: 33, nationality: "RU", contract: { years: 2, salary: 11643 }, attrs: { passing: 90, offensiveRead: 88, puckhandling: 85, shotAccuracy: 82, speed: 78 } },
+  { name: "Arthur Kaliyev", number: 34, pos: "LW", age: 24, nationality: "US", contract: { years: 2, salary: 2200 }, attrs: { shotAccuracy: 74, offensiveRead: 66, speed: 63 } },
   { name: "Mika Zibanejad", number: 93, pos: "C", age: 32, nationality: "SE", contract: { years: 5, salary: 8500 }, attrs: { shotAccuracy: 82, offensiveRead: 78, faceoffs: 68, passing: 75, leadership: 75 } },
   { name: "Vincent Trocheck", number: 16, pos: "C", age: 32, nationality: "CA", contract: { years: 3, salary: 5625 }, attrs: { faceoffs: 75, checking: 70, offensiveRead: 72, speed: 76 } },
   { name: "J.T. Miller", number: 9, pos: "C", age: 32, nationality: "US", contract: { years: 5, salary: 8000 }, attrs: { shotAccuracy: 76, offensiveRead: 78, hitting: 68, checking: 65, passing: 74 } },
@@ -65,14 +65,14 @@ export const NJD_ROSTER_DATA = [
   { name: "Timo Meier", number: 28, pos: "RW", age: 29, nationality: "CH", contract: { years: 8, salary: 8800 }, attrs: { strength: 82, shotAccuracy: 80, hitting: 68, checking: 62 } },
   { name: "Dawson Mercer", number: 91, pos: "LW", age: 24, nationality: "CA", contract: { years: 3, salary: 4600 }, attrs: { offensiveRead: 72, speed: 76, shotAccuracy: 72 } },
   { name: "Ondrej Palat", number: 18, pos: "RW", age: 34, nationality: "CZ", contract: { years: 1, salary: 3350 }, attrs: { offensiveRead: 70, checking: 62, shotAccuracy: 68 } },
-  { name: "Erik Haula", number: 56, pos: "C", age: 34, nationality: "FI", contract: { years: 1, salary: 1500 }, attrs: { speed: 74, faceoffs: 65, checking: 62 } },
+  { name: "Michael McLeod", number: 20, pos: "C", age: 27, nationality: "CA", contract: { years: 1, salary: 1100 }, attrs: { speed: 71, faceoffs: 61, checking: 59 } },
   { name: "Stefan Noesen", number: 23, pos: "LW", age: 32, nationality: "US", contract: { years: 3, salary: 2750 }, attrs: { hitting: 74, checking: 70, strength: 76 } },
   { name: "Luke Hughes", number: 43, pos: "LD", age: 22, nationality: "US", contract: { years: 8, salary: 7100 }, attrs: { passing: 82, offensiveRead: 80, puckhandling: 78, speed: 80 } },
   { name: "Dougie Hamilton", number: 7, pos: "RD", age: 32, nationality: "CA", contract: { years: 4, salary: 9000 }, attrs: { shotAccuracy: 78, passing: 78, offensiveRead: 76, strength: 76, puckhandling: 74 } },
   { name: "Jonas Siegenthaler", number: 71, pos: "LD", age: 28, nationality: "CH", contract: { years: 4, salary: 3400 }, attrs: { positioning: 78, defensiveRead: 76, hitting: 70, strength: 78 } },
   { name: "Brett Pesce", number: 3, pos: "RD", age: 30, nationality: "US", contract: { years: 6, salary: 6000 }, attrs: { positioning: 80, defensiveRead: 78, shotBlocking: 76, strength: 76 } },
   { name: "Simon Nemec", number: 24, pos: "LD", age: 21, nationality: "SK", contract: { years: 2, salary: 950 }, attrs: { puckhandling: 74, offensiveRead: 72, speed: 74 } },
-  { name: "Jacob Markström", number: 25, pos: "G", age: 35, nationality: "SE", contract: { years: 4, salary: 6000 }, attrs: { reflexes: 82, positioning: 84, reboundControl: 78, professionalism: 82 } },
+  { name: "Nico Daws", number: 50, pos: "G", age: 25, nationality: "CA", contract: { years: 3, salary: 2500 }, attrs: { reflexes: 73, positioning: 73, reboundControl: 69 } },
   { name: "Jake Allen", number: 34, pos: "G", age: 35, nationality: "CA", contract: { years: 2, salary: 1800 }, attrs: { reflexes: 74, positioning: 76, reboundControl: 70 } },
 ];
 

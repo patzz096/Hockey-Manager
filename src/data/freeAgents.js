@@ -32,8 +32,6 @@ export const REAL_FREE_AGENTS = [
   { name: "Ryan Reaves", pos: "RW", age: 39, nationality: "CA", attrs: { fighting: 85, hitting: 78, strength: 80, aggressiveness: 80, shotAccuracy: 35 } },
   { name: "Patrik Laine", pos: "LW", age: 28, nationality: "FI", attrs: { shotAccuracy: 86, shotRange: 88, offensiveRead: 68, checking: 32, defensiveRead: 40 } },
   { name: "Evgenii Dadonov", pos: "RW", age: 36, nationality: "RU", attrs: { shotAccuracy: 64, offensiveRead: 60, speed: 58 } },
-  { name: "Kevin Rooney", pos: "C", age: 31, nationality: "US", attrs: { checking: 58, faceoffs: 54, defensiveRead: 56 } },
-  { name: "Arthur Kaliyev", pos: "RW", age: 24, nationality: "US", attrs: { shotAccuracy: 66, offensiveRead: 54, speed: 54 } },
 
   { name: "John Klingberg", pos: "RD", age: 33, nationality: "SE", attrs: { offensiveRead: 76, passing: 76, shotAccuracy: 68, positioning: 56, defensiveRead: 54 } },
   { name: "Jeff Petry", pos: "RD", age: 38, nationality: "CA", attrs: { offensiveRead: 62, positioning: 62, passing: 62 } },

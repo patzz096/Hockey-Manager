@@ -82,7 +82,7 @@ export const MIN_ROSTER_DATA = [
   { name: "Joel Eriksson Ek", number: 14, pos: "C", age: 28, nationality: "SE", contract: { years: 8, salary: 8500 }, attrs: { faceoffs: 75, checking: 73, defensiveRead: 73, strength: 75, shotAccuracy: 69 } },
   { name: "Marco Rossi", number: 23, pos: "C", age: 24, nationality: "AT", contract: { years: 3, salary: 5000 }, attrs: { offensiveRead: 75, shotAccuracy: 73, speed: 73 } },
   { name: "Ryan Hartman", number: 38, pos: "C", age: 30, nationality: "US", contract: { years: 3, salary: 2900 }, attrs: { aggressiveness: 73, checking: 67, shotAccuracy: 63 } },
-  { name: "Mats Zuccarello", number: 36, pos: "RW", age: 38, nationality: "NO", contract: { years: 1, salary: 4000 }, attrs: { passing: 79, offensiveRead: 75, professionalism: 81 } },
+  { name: "Vinni Lettieri", number: 36, pos: "RW", age: 31, nationality: "US", contract: { years: 1, salary: 900 }, attrs: { speed: 65, shotAccuracy: 61, offensiveRead: 59 } },
   { name: "Marcus Foligno", number: 17, pos: "LW", age: 34, nationality: "US", contract: { years: 4, salary: 4000 }, attrs: { hitting: 81, checking: 75, strength: 81, leadership: 71 } },
   { name: "Frederick Gaudreau", number: 89, pos: "C", age: 32, nationality: "CA", contract: { years: 3, salary: 2000 }, attrs: { faceoffs: 63, defensiveRead: 61, shotAccuracy: 61 } },
   { name: "Yakov Trenin", number: 13, pos: "LW", age: 28, nationality: "RU", contract: { years: 4, salary: 2600 }, attrs: { hitting: 73, checking: 69, strength: 73 } },

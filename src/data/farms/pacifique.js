@@ -47,3 +47,31 @@ export const EDM_FARM_DATA = [
   { name: "Samuel Jonsson", number: 33, pos: "G", age: 23, nationality: "SE", contract: { years: 2, salary: 955 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Nathaniel Day", number: 40, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Reign d'Ontario) de Los Angeles — même disclaimer que ci-dessus.
+export const LAK_FARM_DATA = [
+  { name: "Taylor Ward", number: 17, pos: "RW", age: 29, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Jared Wright", number: 25, pos: "RW", age: 24, nationality: "US", contract: { years: 2, salary: 943 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Kenny Connors", number: 34, pos: "C", age: 24, nationality: "US", contract: { years: 2, salary: 943 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Lane Pederson", number: 29, pos: "C", age: 29, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Francesco Pinelli", number: 71, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Martin Chromiak", number: 42, pos: "RW", age: 24, nationality: "SK", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Cole Guttman", number: 82, pos: "C", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Koehn Ziemmer", number: 89, pos: "RW", age: 22, nationality: "CA", contract: { years: 3, salary: 904 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Aatu Jamsen", number: 74, pos: "RW", age: 24, nationality: "FI", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Vojtech Cihar", number: 87, pos: "LW", age: 20, nationality: "CZ", contract: { years: 3, salary: 974 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Kaleb Lawrence", number: 88, pos: "C", age: 24, nationality: "CA", contract: { years: 2, salary: 928 }, attrs: { strength: 62, offensiveRead: 58 } },
+  { name: "Grant Slukynsky", number: 86, pos: "C", age: 25, nationality: "US", contract: { years: 2, salary: 953 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Jan Jenik", number: 73, pos: "LW", age: 26, nationality: "CZ", contract: { years: 1, salary: 850 }, attrs: { speed: 60, shotAccuracy: 58 } },
+  { name: "Kirill Kirsanov", number: 78, pos: "LD", age: 24, nationality: "RU", contract: { years: 2, salary: 943 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Scott Perunovich", number: 7, pos: "RD", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 60, passing: 60 } },
+  { name: "Joe Hicketts", number: 27, pos: "RD", age: 30, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Angus Booth", number: 81, pos: "LD", age: 22, nationality: "GB", contract: { years: 2, salary: 902 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Jared Woolley", number: 80, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 958 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Henry Brzustewicz", number: 68, pos: "RD", age: 20, nationality: "US", contract: { years: 3, salary: 1075 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Jakub Dvorak", number: 51, pos: "LD", age: 21, nationality: "CZ", contract: { years: 2, salary: 905 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Otto Salin", number: 60, pos: "RD", age: 23, nationality: "FI", contract: { years: 2, salary: 956 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Erik Portillo", number: 1, pos: "G", age: 26, nationality: "SE", contract: { years: 2, salary: 833 }, attrs: { reflexes: 60, positioning: 58 } },
+  { name: "Carter George", number: 70, pos: "G", age: 20, nationality: "CA", contract: { years: 2, salary: 929 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Hampton Slukynsky", number: 50, pos: "G", age: 21, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { reflexes: 58, positioning: 56 } },
+];

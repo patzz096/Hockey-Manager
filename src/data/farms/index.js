@@ -1,6 +1,6 @@
 import { BOS_FARM_DATA, BUF_FARM_DATA, DET_FARM_DATA, FLA_FARM_DATA } from "./atlantique";
 import { CAR_FARM_DATA, CBJ_FARM_DATA } from "./metropolitaine";
-import { CGY_FARM_DATA, EDM_FARM_DATA } from "./pacifique";
+import { CGY_FARM_DATA, EDM_FARM_DATA, LAK_FARM_DATA } from "./pacifique";
 import { CHI_FARM_DATA, COL_FARM_DATA, DAL_FARM_DATA } from "./centrale";
 
 // Clubs-écoles réels (LAH) par équipe — alimente engine/league.js initLeague (buildRealFarmRoster)
@@ -15,6 +15,7 @@ export const REAL_FARMS = {
   CBJ: CBJ_FARM_DATA,
   CGY: CGY_FARM_DATA,
   EDM: EDM_FARM_DATA,
+  LAK: LAK_FARM_DATA,
   CHI: CHI_FARM_DATA,
   COL: COL_FARM_DATA,
   DAL: DAL_FARM_DATA,
