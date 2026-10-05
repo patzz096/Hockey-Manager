@@ -46,3 +46,27 @@ export const BUF_FARM_DATA = [
   { name: "Dylan Ratzlaff", number: 35, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 935 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Topias Leinonen", number: 71, pos: "G", age: 22, nationality: "FI", contract: { years: 2, salary: 962 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Griffins de Grand Rapids) de Detroit — même disclaimer que ci-dessus.
+export const DET_FARM_DATA = [
+  { name: "Théo Rochette", number: 48, pos: "C", age: 25, nationality: "CA", contract: { years: 2, salary: 1025 }, attrs: { offensiveRead: 62, speed: 60 } },
+  { name: "John Leonard", number: 43, pos: "LW", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Dominik Shine", number: 65, pos: "C", age: 34, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { checking: 60, speed: 56 } },
+  { name: "Sheldon Dries", number: 15, pos: "C", age: 33, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Wilmer Skoog", number: 73, pos: "C", age: 27, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Cameron Butler", number: 47, pos: "RW", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Dylan James", number: 70, pos: "LW", age: 23, nationality: "CA", contract: { years: 2, salary: 1050 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Jesse Kiiskinen", number: 79, pos: "RW", age: 21, nationality: "FI", contract: { years: 2, salary: 946 }, attrs: { speed: 62, shotAccuracy: 58 } },
+  { name: "Noah Dower Nilsson", number: 74, pos: "C", age: 21, nationality: "SE", contract: { years: 2, salary: 990 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Ondrej Becher", number: 57, pos: "C", age: 23, nationality: "CZ", contract: { years: 2, salary: 940 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Sutter Muzzatti", number: 38, pos: "LW", age: 23, nationality: "US", contract: { years: 2, salary: 1050 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Carter Bear", number: 41, pos: "LW", age: 20, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 62, speed: 60 } },
+  { name: "Chase Stillman", number: 49, pos: "RW", age: 24, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { speed: 58, shotAccuracy: 58 } },
+  { name: "Jacob Bryson", number: 78, pos: "LD", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Shai Buium", number: 17, pos: "LD", age: 24, nationality: "US", contract: { years: 2, salary: 943 }, attrs: { positioning: 60, strength: 60 } },
+  { name: "Ronald Attard", number: 56, pos: "RD", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, strength: 60 } },
+  { name: "William Lagesson", number: 84, pos: "LD", age: 31, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Carter Gylander", number: 32, pos: "G", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 58 } },
+  { name: "Trey Augustine", number: 31, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { reflexes: 60, positioning: 58 } },
+  { name: "Michal Postava", number: 35, pos: "G", age: 25, nationality: "CZ", contract: { years: 1, salary: 975 }, attrs: { reflexes: 58, positioning: 58 } },
+];
