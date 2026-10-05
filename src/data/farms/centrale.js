@@ -76,3 +76,28 @@ export const DAL_FARM_DATA = [
   { name: "Brandon Halverson", number: 33, pos: "G", age: 31, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 58 } },
   { name: "Arno Tiefensee", number: 50, pos: "G", age: 24, nationality: "DE", contract: { years: 1, salary: 925 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Wild de l'Iowa) du Minnesota — même disclaimer que ci-dessus.
+export const MIN_FARM_DATA = [
+  { name: "Charlie Stramel", number: 15, pos: "C", age: 22, nationality: "US", contract: { years: 3, salary: 1075 }, attrs: { strength: 62, offensiveRead: 58, speed: 58 } },
+  { name: "Tyler Pitlick", number: 19, pos: "C", age: 35, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { speed: 60, shotAccuracy: 58 } },
+  { name: "Justin Kirkland", number: 28, pos: "C", age: 30, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Hunter Haight", number: 37, pos: "C", age: 23, nationality: "CA", contract: { years: 2, salary: 883 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Rasmus Kumpulainen", number: 68, pos: "C", age: 21, nationality: "FI", contract: { years: 2, salary: 920 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Rieger Lorenz", number: 61, pos: "LW", age: 23, nationality: "CA", contract: { years: 2, salary: 1014 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Dylan Gambrell", number: 23, pos: "C", age: 30, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Riley Heidt", number: 58, pos: "C", age: 22, nationality: "CA", contract: { years: 3, salary: 941 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Caedan Bankier", number: 76, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Mason Shaw", number: 18, pos: "C", age: 28, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { checking: 60, speed: 58 } },
+  { name: "Jagger Joshua", number: 27, pos: "LW", age: 28, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { speed: 60, shotAccuracy: 58 } },
+  { name: "Carson Lambos", number: 55, pos: "LD", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Matt Kiersted", number: 26, pos: "LD", age: 29, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Viking Gustafsson Nyberg", number: 6, pos: "LD", age: 23, nationality: "SE", contract: { years: 2, salary: 975 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Roman Schmidt", number: 63, pos: "RD", age: 24, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, strength: 60 } },
+  { name: "Ben Dexheimer", number: 8, pos: "RD", age: 24, nationality: "US", contract: { years: 2, salary: 980 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Jack Peart", number: 41, pos: "LD", age: 23, nationality: "US", contract: { years: 2, salary: 943 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Stevie Leskovar", number: 81, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 960 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Riley Mercer", number: 1, pos: "G", age: 23, nationality: "CA", contract: { years: 2, salary: 920 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Chase Wutzke", number: 95, pos: "G", age: 20, nationality: "CA", contract: { years: 2, salary: 958 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Filip Ruzicka", number: 33, pos: "G", age: 19, nationality: "CZ", contract: { years: 3, salary: 988 }, attrs: { reflexes: 58, positioning: 56 } },
+];

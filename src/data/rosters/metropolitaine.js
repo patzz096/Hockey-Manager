@@ -82,7 +82,7 @@ export const PHI_ROSTER_DATA = [
   { name: "Sean Couturier", number: 14, pos: "C", age: 32, nationality: "CA", contract: { years: 4, salary: 4533 }, attrs: { defensiveRead: 82, faceoffs: 78, checking: 72, offensiveRead: 70 } },
   { name: "Owen Tippett", number: 74, pos: "LW", age: 26, nationality: "CA", contract: { years: 6, salary: 5300 }, attrs: { shotAccuracy: 78, speed: 76, strength: 74 } },
   { name: "Tyson Foerster", number: 71, pos: "RW", age: 23, nationality: "CA", contract: { years: 6, salary: 3900 }, attrs: { shotAccuracy: 76, offensiveRead: 70, strength: 72 } },
-  { name: "Bobby Brink", number: 10, pos: "LW", age: 23, nationality: "US", contract: { years: 2, salary: 1400 }, attrs: { offensiveRead: 68, puckhandling: 68, speed: 70 } },
+  { name: "Olle Lycksell", number: 62, pos: "LW", age: 26, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { speed: 67, offensiveRead: 61, checking: 57 } },
   { name: "Noah Cates", number: 27, pos: "C", age: 26, nationality: "US", contract: { years: 3, salary: 3200 }, attrs: { defensiveRead: 72, checking: 66, faceoffs: 62 } },
   { name: "Trevor Zegras", number: 11, pos: "C", age: 24, nationality: "US", contract: { years: 1, salary: 5750 }, attrs: { puckhandling: 80, offensiveRead: 76, shotAccuracy: 72, passing: 74 } },
   { name: "Travis Sanheim", number: 6, pos: "LD", age: 29, nationality: "CA", contract: { years: 8, salary: 6250 }, attrs: { positioning: 78, puckhandling: 74, offensiveRead: 72, speed: 76 } },
