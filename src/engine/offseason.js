@@ -94,25 +94,32 @@ export function aiTradesAmongCpu(teams, myTeamId, year, rng, maxTrades = 2) {
   return { teams: nextTeams, trades };
 }
 
-// Les équipes de l'ordinateur comblent leurs trous (par position) avec les meilleurs agents libres.
+// Les équipes de l'ordinateur comblent leurs trous (par position) avec les meilleurs agents libres,
+// le 1er juillet. Plafonné à `maxPerTeam` signatures par équipe (comme la vraie ouverture du marché,
+// où même les équipes les plus actives ne concluent qu'une poignée d'ententes) : sans ça, les
+// 31 autres équipes videraient le marché au complet avant même que le joueur ouvre l'onglet Agents
+// libres (chaque équipe pouvant chercher jusqu'à 20 postes à combler — voir ROSTER_NEEDS). Le reste
+// des trous se comble plus tard dans la saison via aiSignFreeAgentsInSeason, au compte-gouttes.
 // Respecte le plafond salarial de la saison `year` : un joueur trop cher est ignoré.
-export function aiFreeAgency(teams, freeAgents, myTeamId, year = 2027) {
+export function aiFreeAgency(teams, freeAgents, myTeamId, year = 2027, maxPerTeam = 2) {
   let pool = [...freeAgents].sort((a, b) => b.ovr - a.ovr);
   const signings = [];
   const nextTeams = teams.map((t) => {
     if (t.id === myTeamId) return t;
     const roster = [...t.roster];
-    Object.entries(ROSTER_NEEDS).forEach(([pos, need]) => {
+    let signedHere = 0;
+    for (const [pos, need] of Object.entries(ROSTER_NEEDS)) {
       let have = roster.filter((p) => p.pos === pos).length;
-      while (have < need) {
+      while (have < need && signedHere < maxPerTeam) {
         const fa = pool.find((p) => p.pos === pos && fitsUnderCap(roster, year, marketValue(p, year)));
         if (!fa) break;
         pool = pool.filter((p) => p.id !== fa.id);
         const signed = { ...fa, contract: { years: expectedYears(fa), salary: marketValue(fa, year), type: "one" } };
         roster.push(signed); signings.push({ player: signed, teamId: t.id });
-        have++;
+        have++; signedHere++;
       }
-    });
+      if (signedHere >= maxPerTeam) break;
+    }
     return { ...t, roster: roster.sort((a, b) => b.ovr - a.ovr) };
   });
   return { teams: nextTeams, freeAgents: pool, signings };

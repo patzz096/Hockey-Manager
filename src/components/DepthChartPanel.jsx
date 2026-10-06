@@ -58,7 +58,7 @@ function PlayerLine({ entry, rank, benchmark, lines, injuries, day, onOpen, comp
 }
 
 // ------------------------------------ Vue patinoire ------------------------------------
-function PositionCard({ def, list, benchmark, lines, injuries, day, onOpen, depth }) {
+function PositionCard({ def, list, benchmark, lines, injuries, day, onOpen }) {
   const nhl = list.filter((e) => e.level === "NHL" && !(injuries[e.p.id] && injuries[e.p.id].until > day)).length;
   const ok = nhl >= def.need;
   return (
@@ -71,14 +71,13 @@ function PositionCard({ def, list, benchmark, lines, injuries, day, onOpen, dept
         </span>
       </div>
       {list.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)", padding: "4px 0" }}>Aucun joueur</div>}
-      {list.slice(0, depth).map((e, i) => <PlayerLine key={e.p.id} entry={e} rank={i + 1} benchmark={benchmark} lines={lines} injuries={injuries} day={day} onOpen={onOpen} compact />)}
-      {list.length > depth && <div style={{ fontSize: 10, color: "var(--iceMuted)", marginTop: 2 }}>+ {list.length - depth} autre{list.length - depth > 1 ? "s" : ""} dans l'organisation</div>}
+      {list.map((e, i) => <PlayerLine key={e.p.id} entry={e} rank={i + 1} benchmark={benchmark} lines={lines} injuries={injuries} day={day} onOpen={onOpen} compact />)}
     </section>
   );
 }
 
 function RinkView({ byPos, ...rest }) {
-  const card = (pos) => <PositionCard def={POSITIONS.find((d) => d.pos === pos)} list={byPos[pos]} depth={POSITIONS.find((d) => d.pos === pos).need + 1} {...rest} />;
+  const card = (pos) => <PositionCard def={POSITIONS.find((d) => d.pos === pos)} list={byPos[pos]} {...rest} />;
   return (
     <div className="depth-rink" style={{ position: "relative", borderRadius: 16, padding: 16, background: "radial-gradient(120% 100% at 50% 50%, #1B3A58, #0C1D31)", border: "1px solid var(--line)", overflow: "hidden" }}>
       {/* Lignes de patinoire, vue de côté : défensive à gauche, offensive à droite. */}
