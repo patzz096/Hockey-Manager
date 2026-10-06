@@ -16,12 +16,17 @@
       html, body { margin: 0; background: #0B1B2E; color: #F0F4F8; }
       /* Téléphone : la barre latérale passe au-dessus, le contenu défile seul. Désactivé par la
          vue bureau forcée (bouton dans la barre latérale, voir App.jsx) : classe "force-desktop"
-         sur <body>, qui garde la mise en page PC intacte (défilement/zoom plutôt que réagencement). */
+         sur <body>, qui garde la mise en page PC intacte (défilement/zoom plutôt que réagencement).
+         Ciblé par classe (.app-shell/.app-sidebar/.app-content, voir App.jsx) plutôt que par
+         position (:first-of-type / :nth-of-type) : une fenêtre plein écran (PlayerModal, fiche
+         d'équipe, etc.), affichée avant la barre latérale dans le JSX, ne doit pas se faire
+         passer pour elle au premier rendu. Les tableaux défilent horizontalement partout, y
+         compris dans ces fenêtres, pas seulement dans le contenu principal. */
       @media (max-width: 760px) {
-        body:not(.force-desktop) #root > div { flex-direction: column !important; }
-        body:not(.force-desktop) #root > div > div:first-of-type { width: auto !important; flex-direction: row !important; flex-wrap: wrap; border-right: none !important; }
-        body:not(.force-desktop) #root > div > div:nth-of-type(2) { padding: 16px !important; overflow-x: auto; }
-        body:not(.force-desktop) #root table { display: block; overflow-x: auto; }
+        body:not(.force-desktop) .app-shell { flex-direction: column !important; }
+        body:not(.force-desktop) .app-sidebar { width: auto !important; flex-direction: row !important; flex-wrap: wrap; border-right: none !important; }
+        body:not(.force-desktop) .app-content { padding: 16px !important; overflow-x: auto; }
+        body:not(.force-desktop) table { display: block; overflow-x: auto; }
       }
       body.force-desktop { overflow-x: auto; }
     </style>
