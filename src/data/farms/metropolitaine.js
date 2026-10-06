@@ -152,3 +152,27 @@ export const PHI_FARM_DATA = [
   { name: "Alexei Kolosov", number: 35, pos: "G", age: 25, nationality: "BY", contract: { years: 3, salary: 850 }, attrs: { reflexes: 65, positioning: 65 } },
   { name: "Carson Bjarnason", number: 64, pos: "G", age: 21, nationality: "CA", contract: { years: 2, salary: 885 }, attrs: { reflexes: 60, positioning: 58 } },
 ];
+
+// Club-école réel (LAH, Penguins de Wilkes-Barre/Scranton) de Pittsburgh — même disclaimer.
+export const PIT_FARM_DATA = [
+  { name: "David Gustafsson", number: 13, pos: "C", age: 27, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Rutger McGroarty", number: 2, pos: "LW", age: 22, nationality: "US", contract: { years: 3, salary: 950 }, attrs: { strength: 65, shotAccuracy: 59 } },
+  { name: "Bill Zonnon", number: 16, pos: "LW", age: 20, nationality: "CA", contract: { years: 3, salary: 1075 }, attrs: { shotAccuracy: 60, strength: 62 } },
+  { name: "Avery Hayes", number: 85, pos: "C", age: 24, nationality: "US", contract: { years: 1, salary: 905 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Tanner Howe", number: 74, pos: "LW", age: 21, nationality: "CA", contract: { years: 2, salary: 929 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Mikhail Ilyin", number: 54, pos: "LW", age: 22, nationality: "RU", contract: { years: 2, salary: 952 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Atley Calvert", number: 84, pos: "C", age: 23, nationality: "CA", contract: { years: 1, salary: 930 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Oliver Okuliar", number: 8, pos: "LW", age: 26, nationality: "SK", contract: { years: 1, salary: 850 }, attrs: { speed: 58, shotAccuracy: 58 } },
+  { name: "Melvin Fernström", number: 43, pos: "RW", age: 21, nationality: "SE", contract: { years: 2, salary: 965 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Tristan Broz", number: 26, pos: "C", age: 24, nationality: "US", contract: { years: 1, salary: 943 }, attrs: { offensiveRead: 58, strength: 60 } },
+  { name: "Harrison Brunicke", number: 45, pos: "RD", age: 20, nationality: "ZA", contract: { years: 2, salary: 929 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Caleb Jones", number: 82, pos: "LD", age: 29, nationality: "US", contract: { years: 1, salary: 900 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Owen Pickering", number: 38, pos: "LD", age: 23, nationality: "CA", contract: { years: 2, salary: 886 }, attrs: { speed: 62, puckhandling: 58 } },
+  { name: "Jake Livanavage", number: 4, pos: "LD", age: 22, nationality: "US", contract: { years: 1, salary: 975 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Chase Pietila", number: 44, pos: "RD", age: 23, nationality: "US", contract: { years: 1, salary: 960 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Philip Kemp", number: 52, pos: "RD", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, strength: 60 } },
+  { name: "Finn Harding", number: 50, pos: "RD", age: 22, nationality: "CA", contract: { years: 1, salary: 955 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Daniel Laatsch", number: 5, pos: "LD", age: 25, nationality: "US", contract: { years: 1, salary: 935 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Joel Blomqvist", number: 30, pos: "G", age: 25, nationality: "FI", contract: { years: 1, salary: 875 }, attrs: { reflexes: 62, positioning: 60 } },
+  { name: "Taylor Gauthier", number: 33, pos: "G", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
+];

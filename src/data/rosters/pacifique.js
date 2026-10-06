@@ -30,7 +30,7 @@ export const CGY_ROSTER_DATA = [
   { name: "Mikael Backlund", number: 11, pos: "C", age: 37, nationality: "SE", contract: { years: 2, salary: 3250 }, attrs: { faceoffs: 69, defensiveRead: 71, checking: 65, leadership: 77 } },
   { name: "Martin Pospisil", number: 76, pos: "LW", age: 25, nationality: "SK", contract: { years: 4, salary: 3300 }, attrs: { hitting: 69, checking: 65, strength: 71 } },
   { name: "Yegor Sharangovich", number: 17, pos: "C", age: 28, nationality: "BY", contract: { years: 4, salary: 5750 }, attrs: { shotAccuracy: 71, offensiveRead: 65, speed: 69 } },
-  { name: "Andrei Kuzmenko", number: 96, pos: "RW", age: 29, nationality: "RU", contract: { years: 2, salary: 5500 }, attrs: { shotAccuracy: 73, offensiveRead: 69, puckhandling: 67 } },
+  { name: "Jakob Pelletier", number: 96, pos: "RW", age: 24, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { shotAccuracy: 65, speed: 65, offensiveRead: 59 } },
   { name: "Matt Coronato", number: 27, pos: "RW", age: 24, nationality: "US", contract: { years: 4, salary: 6500 }, attrs: { shotAccuracy: 78, speed: 74, offensiveRead: 70 } },
   { name: "Connor Zary", number: 47, pos: "LW", age: 25, nationality: "CA", contract: { years: 3, salary: 3775 }, attrs: { offensiveRead: 68, shotAccuracy: 66, speed: 68 } },
   { name: "Morgan Frost", number: 16, pos: "C", age: 27, nationality: "CA", contract: { years: 3, salary: 4375 }, attrs: { offensiveRead: 70, passing: 68, shotAccuracy: 66 } },
@@ -171,7 +171,7 @@ export const VGK_ROSTER_DATA = [
   { name: "Alex Pietrangelo", number: 7, pos: "RD", age: 35, nationality: "CA", contract: { years: 3, salary: 8800 }, attrs: { positioning: 73, offensiveRead: 71, leadership: 77 } },
   { name: "Noah Hanifin", number: 15, pos: "LD", age: 28, nationality: "US", contract: { years: 8, salary: 7300 }, attrs: { positioning: 71, offensiveRead: 67, speed: 69 } },
   { name: "Dylan Coghlan", number: 14, pos: "RD", age: 29, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { offensiveRead: 61, speed: 65, positioning: 55 } },
-  { name: "Kaedan Korczak", number: 6, pos: "RD", age: 24, nationality: "CA", contract: { years: 2, salary: 1300 }, attrs: { positioning: 57, hitting: 57, speed: 63 } },
+  { name: "Jeremy Lauzon", number: 6, pos: "LD", age: 28, nationality: "CA", contract: { years: 4, salary: 2500 }, attrs: { hitting: 73, checking: 71, strength: 73 } },
   { name: "Adin Hill", number: 33, pos: "G", age: 29, nationality: "CA", contract: { years: 3, salary: 4900 }, attrs: { reflexes: 73, positioning: 73, reboundControl: 69 } },
   { name: "Ilya Samsonov", number: 30, pos: "G", age: 28, nationality: "RU", contract: { years: 1, salary: 2000 }, attrs: { reflexes: 69, positioning: 67 } },
 ];
