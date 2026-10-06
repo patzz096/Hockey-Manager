@@ -170,7 +170,7 @@ export const VGK_ROSTER_DATA = [
   { name: "Shea Theodore", number: 27, pos: "LD", age: 29, nationality: "CA", contract: { years: 7, salary: 5200 }, attrs: { offensiveRead: 75, passing: 73, speed: 73 } },
   { name: "Alex Pietrangelo", number: 7, pos: "RD", age: 35, nationality: "CA", contract: { years: 3, salary: 8800 }, attrs: { positioning: 73, offensiveRead: 71, leadership: 77 } },
   { name: "Noah Hanifin", number: 15, pos: "LD", age: 28, nationality: "US", contract: { years: 8, salary: 7300 }, attrs: { positioning: 71, offensiveRead: 67, speed: 69 } },
-  { name: "Nicolas Hague", number: 14, pos: "LD", age: 26, nationality: "CA", contract: { years: 4, salary: 3600 }, attrs: { strength: 77, hitting: 65, positioning: 59 } },
+  { name: "Dylan Coghlan", number: 14, pos: "RD", age: 29, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { offensiveRead: 61, speed: 65, positioning: 55 } },
   { name: "Kaedan Korczak", number: 6, pos: "RD", age: 24, nationality: "CA", contract: { years: 2, salary: 1300 }, attrs: { positioning: 57, hitting: 57, speed: 63 } },
   { name: "Adin Hill", number: 33, pos: "G", age: 29, nationality: "CA", contract: { years: 3, salary: 4900 }, attrs: { reflexes: 73, positioning: 73, reboundControl: 69 } },
   { name: "Ilya Samsonov", number: 30, pos: "G", age: 28, nationality: "RU", contract: { years: 1, salary: 2000 }, attrs: { reflexes: 69, positioning: 67 } },

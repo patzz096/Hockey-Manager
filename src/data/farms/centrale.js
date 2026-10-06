@@ -101,3 +101,29 @@ export const MIN_FARM_DATA = [
   { name: "Chase Wutzke", number: 95, pos: "G", age: 20, nationality: "CA", contract: { years: 2, salary: 958 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Filip Ruzicka", number: 33, pos: "G", age: 19, nationality: "CZ", contract: { years: 3, salary: 988 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Admirals de Milwaukee) de Nashville — même disclaimer que ci-dessus.
+export const NSH_FARM_DATA = [
+  { name: "Tyson Jost", number: 17, pos: "LW", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Brady Martin", number: 44, pos: "C", age: 20, nationality: "CA", contract: { years: 3, salary: 974 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Felix Nilsson", number: 62, pos: "C", age: 21, nationality: "SE", contract: { years: 2, salary: 1020 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Cole O'Hara", number: 19, pos: "RW", age: 24, nationality: "CA", contract: { years: 1, salary: 935 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Ozzy Wiesblatt", number: 89, pos: "C", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Joakim Kemell", number: 25, pos: "RW", age: 22, nationality: "FI", contract: { years: 2, salary: 887 }, attrs: { shotAccuracy: 62, speed: 62 } },
+  { name: "David Edstrom", number: 60, pos: "C", age: 22, nationality: "SE", contract: { years: 2, salary: 909 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Chase Bradley", number: 38, pos: "LW", age: 25, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Jake Lucchini", number: 27, pos: "C", age: 31, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Kalan Lind", number: 45, pos: "LW", age: 22, nationality: "CA", contract: { years: 2, salary: 907 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Hiroki Gojsic", number: 53, pos: "RW", age: 20, nationality: "CA", contract: { years: 2, salary: 930 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Joseph Willis", number: 61, pos: "C", age: 22, nationality: "US", contract: { years: 2, salary: 960 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Austin Roest", number: 93, pos: "RW", age: 23, nationality: "CA", contract: { years: 2, salary: 920 }, attrs: { offensiveRead: 58, speed: 60 } },
+  { name: "Aiden Fink", number: 11, pos: "RW", age: 22, nationality: "CA", contract: { years: 2, salary: 973 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Ryan Ufko", number: 12, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 943 }, attrs: { offensiveRead: 60, passing: 58, speed: 58 } },
+  { name: "Hunter Skinner", number: 57, pos: "LD", age: 25, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, strength: 60 } },
+  { name: "Tanner Molendyk", number: 50, pos: "LD", age: 22, nationality: "CA", contract: { years: 2, salary: 909 }, attrs: { positioning: 58, speed: 60 } },
+  { name: "Daniel Nieminen", number: 54, pos: "LD", age: 21, nationality: "FI", contract: { years: 2, salary: 975 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Andrew Gibson", number: 92, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 925 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Viggo Gustafsson", number: 40, pos: "LD", age: 20, nationality: "SE", contract: { years: 2, salary: 990 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Matthew Murray", number: 32, pos: "G", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Isak Posch", number: 30, pos: "G", age: 25, nationality: "SE", contract: { years: 2, salary: 948 }, attrs: { reflexes: 58, positioning: 58 } },
+];
