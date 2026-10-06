@@ -128,3 +128,27 @@ export const NYR_FARM_DATA = [
   { name: "Spencer Martin", number: 41, pos: "G", age: 31, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Callum Tung", number: 98, pos: "G", age: 23, nationality: "CA", contract: { years: 2, salary: 973 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Phantoms de Lehigh Valley) de Philadelphie — même disclaimer.
+export const PHI_FARM_DATA = [
+  { name: "Cole Knuble", number: 54, pos: "C", age: 22, nationality: "US", contract: { years: 2, salary: 980 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Jett Luchanko", number: 77, pos: "C", age: 20, nationality: "CA", contract: { years: 3, salary: 942 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Jacob Gaucher", number: 78, pos: "C", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, strength: 60 } },
+  { name: "Zach Aston-Reese", number: 21, pos: "LW", age: 32, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { checking: 60, speed: 58 } },
+  { name: "Jack Studnicka", number: 23, pos: "C", age: 28, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Nolan Foote", number: 25, pos: "LW", age: 26, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Noah Powell", number: 50, pos: "RW", age: 22, nationality: "US", contract: { years: 2, salary: 985 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Riley Thompson", number: 37, pos: "C", age: 24, nationality: "CA", contract: { years: 2, salary: 1025 }, attrs: { strength: 62, offensiveRead: 58 } },
+  { name: "David Goyette", number: 29, pos: "C", age: 23, nationality: "CA", contract: { years: 2, salary: 892 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Alex Ciernik", number: 45, pos: "LW", age: 22, nationality: "SK", contract: { years: 2, salary: 1008 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Ilya Pautov", number: 97, pos: "RW", age: 20, nationality: "RU", contract: { years: 2, salary: 980 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Jack Berglund", number: 26, pos: "C", age: 21, nationality: "SE", contract: { years: 3, salary: 1075 }, attrs: { offensiveRead: 62, strength: 60 } },
+  { name: "Oliver Bonk", number: 59, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 909 }, attrs: { offensiveRead: 60, positioning: 58 } },
+  { name: "Cam Dineen", number: 85, pos: "LD", age: 28, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Ty Murchison", number: 96, pos: "LD", age: 24, nationality: "US", contract: { years: 1, salary: 935 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Hunter McDonald", number: 75, pos: "LD", age: 24, nationality: "US", contract: { years: 1, salary: 913 }, attrs: { strength: 64, positioning: 56 } },
+  { name: "Spencer Gill", number: 42, pos: "RD", age: 20, nationality: "CA", contract: { years: 2, salary: 932 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Jackson Edward", number: 92, pos: "LD", age: 23, nationality: "CA", contract: { years: 2, salary: 907 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Alexei Kolosov", number: 35, pos: "G", age: 25, nationality: "BY", contract: { years: 3, salary: 850 }, attrs: { reflexes: 65, positioning: 65 } },
+  { name: "Carson Bjarnason", number: 64, pos: "G", age: 21, nationality: "CA", contract: { years: 2, salary: 885 }, attrs: { reflexes: 60, positioning: 58 } },
+];
