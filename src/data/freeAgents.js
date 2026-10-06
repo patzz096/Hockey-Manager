@@ -23,8 +23,6 @@ export const REAL_FREE_AGENTS = [
   { name: "Pavol Regenda", pos: "LW", age: 24, nationality: "SK", attrs: { speed: 72, shotAccuracy: 60, strength: 66 } },
   { name: "Rodrigo Abols", pos: "C", age: 29, nationality: "LV", attrs: { strength: 68, faceoffs: 56, offensiveRead: 58 } },
   { name: "Brandon Saad", pos: "LW", age: 33, nationality: "CA", attrs: { speed: 66, shotAccuracy: 60, strength: 68 } },
-  { name: "Kevin Hayes", pos: "C", age: 33, nationality: "US", attrs: { strength: 72, offensiveRead: 60, faceoffs: 58 } },
-  { name: "Calle Jarnkrok", pos: "C", age: 34, nationality: "SE", attrs: { defensiveRead: 62, shotAccuracy: 58, speed: 60 } },
   { name: "Curtis Lazar", pos: "C", age: 31, nationality: "CA", attrs: { checking: 62, hitting: 60, faceoffs: 56 } },
   { name: "David Kämpf", pos: "C", age: 31, nationality: "CZ", attrs: { faceoffs: 78, defensiveRead: 76, positioning: 72, shotAccuracy: 40 } },
   { name: "Robby Fabbri", pos: "C", age: 29, nationality: "CA", attrs: { speed: 66, offensiveRead: 58, shotAccuracy: 56 } },

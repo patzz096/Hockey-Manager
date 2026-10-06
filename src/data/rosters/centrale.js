@@ -133,7 +133,7 @@ export const STL_ROSTER_DATA = [
   { name: "Robert Thomas", number: 18, pos: "C", age: 26, nationality: "CA", contract: { years: 8, salary: 8100 }, attrs: { offensiveRead: 81, passing: 81, shotAccuracy: 71, speed: 73 } },
   { name: "Jordan Kyrou", number: 25, pos: "RW", age: 27, nationality: "CA", contract: { years: 7, salary: 8250 }, attrs: { speed: 85, shotAccuracy: 75, offensiveRead: 73 } },
   { name: "Pavel Buchnevich", number: 89, pos: "LW", age: 30, nationality: "RU", contract: { years: 4, salary: 5800 }, attrs: { shotAccuracy: 79, offensiveRead: 75, puckhandling: 73 } },
-  { name: "Brayden Schenn", number: 10, pos: "C", age: 34, nationality: "CA", contract: { years: 4, salary: 6500 }, attrs: { shotAccuracy: 71, leadership: 79, checking: 65, faceoffs: 65 } },
+  { name: "Kevin Hayes", number: 12, pos: "C", age: 34, nationality: "US", contract: { years: 4, salary: 6500 }, attrs: { shotAccuracy: 71, leadership: 75, checking: 65, faceoffs: 65 } },
   { name: "Dylan Holloway", number: 81, pos: "LW", age: 23, nationality: "CA", contract: { years: 2, salary: 2500 }, attrs: { speed: 81, strength: 73, shotAccuracy: 65 } },
   { name: "Alexey Toropchenko", number: 45, pos: "LW", age: 25, nationality: "RU", contract: { years: 3, salary: 1650 }, attrs: { strength: 79, hitting: 71, checking: 65 } },
   { name: "Jimmy Snuggerud", number: 84, pos: "RW", age: 21, nationality: "US", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 73, offensiveRead: 65, speed: 69 } },

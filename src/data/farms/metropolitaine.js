@@ -76,3 +76,28 @@ export const NJD_FARM_DATA = [
   { name: "David Rittich", number: 33, pos: "G", age: 34, nationality: "CZ", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
   { name: "Jakub Málek", number: 31, pos: "G", age: 25, nationality: "CZ", contract: { years: 2, salary: 875 }, attrs: { reflexes: 58, positioning: 58 } },
 ];
+
+// Club-école réel (LAH, Islanders de Bridgeport) des Islanders de New York — même disclaimer.
+export const NYI_FARM_DATA = [
+  { name: "Cole Eiserman", number: 57, pos: "LW", age: 20, nationality: "US", contract: { years: 3, salary: 1075 }, attrs: { shotAccuracy: 62, speed: 60 } },
+  { name: "Liam Foudy", number: 43, pos: "C", age: 27, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { speed: 62, offensiveRead: 58 } },
+  { name: "Pierre Engvall", number: 18, pos: "LW", age: 30, nationality: "SE", contract: { years: 3, salary: 3000 }, attrs: { speed: 68, checking: 58, strength: 68 } },
+  { name: "Mitchell Chaffee", number: 26, pos: "RW", age: 29, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Daylan Kuefler", number: 52, pos: "LW", age: 25, nationality: "CA", contract: { years: 2, salary: 875 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Matt Luff", number: 25, pos: "RW", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Daniil Prokhorov", number: 76, pos: "RW", age: 19, nationality: "RU", contract: { years: 3, salary: 965 }, attrs: { shotAccuracy: 60, strength: 62 } },
+  { name: "Alex Jefferies", number: 45, pos: "LW", age: 25, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Jesse Nurmi", number: 72, pos: "LW", age: 22, nationality: "FI", contract: { years: 2, salary: 938 }, attrs: { shotAccuracy: 58, speed: 60 } },
+  { name: "Gleb Veremyev", number: 67, pos: "C", age: 23, nationality: "US", contract: { years: 2, salary: 935 }, attrs: { offensiveRead: 58, strength: 60 } },
+  { name: "Joey Larson", number: 61, pos: "RW", age: 26, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Quinn Finley", number: 59, pos: "LW", age: 22, nationality: "US", contract: { years: 2, salary: 980 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Isaiah George", number: 36, pos: "LD", age: 23, nationality: "CA", contract: { years: 2, salary: 913 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Kashawn Aitcheson", number: 37, pos: "LD", age: 20, nationality: "CA", contract: { years: 3, salary: 1075 }, attrs: { strength: 62, hitting: 60 } },
+  { name: "Marshall Warren", number: 7, pos: "LD", age: 26, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Ethan Bear", number: 74, pos: "RD", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Jesse Pulkkinen", number: 42, pos: "LD", age: 22, nationality: "FI", contract: { years: 2, salary: 931 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Calle Odelius", number: 39, pos: "LD", age: 22, nationality: "SE", contract: { years: 2, salary: 865 }, attrs: { offensiveRead: 58, speed: 60 } },
+  { name: "Vitek Vanecek", number: 41, pos: "G", age: 31, nationality: "CZ", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
+  { name: "Joshua Kotai", number: 60, pos: "G", age: 24, nationality: "CA", contract: { years: 2, salary: 965 }, attrs: { reflexes: 60, positioning: 58 } },
+  { name: "Henrik Tikkanen", number: 70, pos: "G", age: 26, nationality: "FI", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
+];
