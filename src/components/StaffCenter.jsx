@@ -37,8 +37,15 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
             <button onClick={() => onSetDelegation("hockeyOps", "delegated")} style={{ ...btnStyle(business.delegation.hockeyOps === "delegated" ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
           </div>
         </div>
+        <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, flex: 1, minWidth: 220 }}>
+          <div style={{ fontSize: 12, marginBottom: 8 }}>Entraîneur-chef du club-école {business.staff.ahlCoach ? `(${business.staff.ahlCoach.name})` : "(poste vacant)"}</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => onSetDelegation("farmLines", "manual")} style={{ ...btnStyle(business.delegation.farmLines === "manual" ? "var(--red)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
+            <button onClick={() => onSetDelegation("farmLines", "delegated")} style={{ ...btnStyle(business.delegation.farmLines === "delegated" ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
+          </div>
+        </div>
       </div>
-      <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -18, marginBottom: 26 }}>Finances déléguées: le directeur ajuste les prix des billets et investit dans les installations après chaque match local. Opérations hockey déléguées: le directeur comble automatiquement les postes vacants (entraîneurs, adjoints, dépisteurs) à chaque avancement de mois. Entraînement : réglages séparés dans l'onglet Entraînement.</p>
+      <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -18, marginBottom: 26 }}>Finances déléguées: le directeur ajuste les prix des billets et investit dans les installations après chaque match local. Opérations hockey déléguées: le directeur comble automatiquement les postes vacants (entraîneurs, adjoints, dépisteurs) à chaque avancement de mois. Club-école délégué: les trios de la LAH (onglet Trios LAH) sont reconstruits automatiquement par l'entraîneur-chef du club-école. Entraînement : réglages séparés dans l'onglet Entraînement.</p>
 
       <h2 style={h2Style}>Personnel en poste</h2>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 28 }}>

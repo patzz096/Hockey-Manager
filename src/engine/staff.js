@@ -8,14 +8,14 @@ import { pickNationality } from "./players";
 // broadcastDirector : relations médias et diffusion (engine/finance.js) — accélère la
 // progression de l'engagement des partisans, négocie un meilleur contrat de diffusion, et
 // attire un peu plus de spectateurs (marketing).
-export const STAFF_ROLES = { hockeyOpsDirector: "Directeur des opérations hockey", gm: "Directeur général", financeDirector: "Directeur des finances", headCoach: "Entraîneur-chef", assistantOff: "Adjoint offensif", assistantDef: "Adjoint défensif", fitnessCoach: "Entraîneur physique", scoutAmateur: "Dépisteur amateur", scoutPro: "Dépisteur professionnel", broadcastDirector: "Directeur des communications" };
+export const STAFF_ROLES = { hockeyOpsDirector: "Directeur des opérations hockey", gm: "Directeur général", financeDirector: "Directeur des finances", headCoach: "Entraîneur-chef", assistantOff: "Adjoint offensif", assistantDef: "Adjoint défensif", fitnessCoach: "Entraîneur physique", scoutAmateur: "Dépisteur amateur", scoutPro: "Dépisteur professionnel", broadcastDirector: "Directeur des communications", ahlCoach: "Entraîneur-chef du club-école" };
 
 // Salaires de base (en milliers de $, avant l'effet de la cote et du hasard) calés sur la
 // réalité de la LNH plutôt que sur l'échelle des joueurs : le DG et l'entraîneur-chef sont les
 // mieux payés (jusqu'à quelques millions pour les meilleurs), le personnel de soutien (adjoints,
 // dépisteurs, entraîneur physique, communications) gagne nettement moins, de l'ordre de la
 // centaine de milliers à quelques centaines de milliers par saison.
-export const STAFF_BASE_SALARY = { hockeyOpsDirector: 1300, gm: 2400, financeDirector: 850, headCoach: 2200, assistantOff: 400, assistantDef: 400, fitnessCoach: 200, scoutAmateur: 140, scoutPro: 200, broadcastDirector: 320 };
+export const STAFF_BASE_SALARY = { hockeyOpsDirector: 1300, gm: 2400, financeDirector: 850, headCoach: 2200, assistantOff: 400, assistantDef: 400, fitnessCoach: 200, scoutAmateur: 140, scoutPro: 200, broadcastDirector: 320, ahlCoach: 380 };
 
 // Libellés des critères de valeur communs à tout le personnel (échelle interne 20-99, affichée
 // sur /20) — les mêmes 11 critères existent chez chaque candidat, quel que soit le poste visé ;
@@ -41,6 +41,7 @@ export const STAFF_ATTRS = {
   gm: [["Gestion", "negotiation"], ["Gestion", "teamManagement"], ["Gestion", "motivation"], ["Gestion", "finance"]],
   financeDirector: [["Gestion", "finance"], ["Gestion", "negotiation"]],
   hockeyOpsDirector: [["Gestion", "teamManagement"], ["Gestion", "negotiation"], ["Gestion", "finance"]],
+  ahlCoach: [["Entraînement", "coachOff"], ["Entraînement", "coachDef"], ["Entraînement", "devYoung"], ["Gestion", "teamManagement"]],
 };
 const STAFF_ATTR_KEYS = Object.keys(STAFF_ATTR_LABELS);
 // Spécialité principale d'un poste de dépisteur : le pro juge des joueurs déjà actifs (aptitude

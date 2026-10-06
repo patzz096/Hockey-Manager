@@ -60,6 +60,7 @@ import { naturalRoles } from "./engine/roles";
 import { DraftPanel } from "./components/DraftPanel";
 import { CapSummary } from "./components/CapSummary";
 import { WaiversPanel } from "./components/WaiversPanel";
+import { TeamRosterModal } from "./components/TeamRosterModal";
 
 const PHASE_LABEL = { preseason: "Matchs préparatoires", regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
 const NEXT_STEP = { preseason: "", regular: "", endRegular: "Saison régulière terminée : place aux séries éliminatoires.", playoffs: "Ton équipe est éliminée ou attend son prochain match.", preDraft: "Les séries sont terminées. Prochaine étape : le repêchage.", draft: "Le repêchage est en cours.", preFreeAgency: "Repêchage terminé. Le marché des agents libres ouvre le 1er juillet.", offseason: "Marché des agents libres ouvert. Prépare la prochaine saison." };
@@ -155,6 +156,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [calendarMonth, setCalendarMonth] = useState(() => monthStartDay(seasonDates(FIRST_SEASON).preseason - 1));
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null); // { staff, role, isHired }
+  const [viewedTeamId, setViewedTeamId] = useState(null); // équipe dont on affiche l'alignement (clic sur son nom)
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [offerTarget, setOfferTarget] = useState(null);
   // Offres de contrat en attente de réponse (délai de l'agent, voir queueOffer/advanceDays) et
@@ -175,7 +177,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, player }
   const [compareBase, setCompareBase] = useState(null); // joueur en attente d'un second choix
   const [comparePlayers, setComparePlayers] = useState(null); // [p1, p2]
-  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), merchItems: DEFAULT_MERCH_ITEMS.map((i) => ({ ...i })), fanEngagement: DEFAULT_ENGAGEMENT, tvDeal: negotiateTvDeal(DEFAULT_ENGAGEMENT, 0.5, FIRST_SEASON), staff: { hockeyOpsDirector: null, gm: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null, broadcastDirector: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
+  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), merchItems: DEFAULT_MERCH_ITEMS.map((i) => ({ ...i })), fanEngagement: DEFAULT_ENGAGEMENT, tvDeal: negotiateTvDeal(DEFAULT_ENGAGEMENT, 0.5, FIRST_SEASON), staff: { hockeyOpsDirector: null, gm: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null, broadcastDirector: null, ahlCoach: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual", farmLines: "delegated" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
   // Ton équipe telle que ton personnel la perçoit (valeurs estimées) : c'est ce qu'affiche l'interface.
@@ -648,6 +650,66 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: applyStrategy(prev[myTeamId], bestStrategy(myTeamView, prev[myTeamId], business.staff.headCoach?.attrs?.teamManagement ?? null)) }));
   }
   function setTrainingFocus(focus) { setBusiness((prev) => ({ ...prev, trainingFocus: focus })); }
+
+  // Trios du club-école : délégués à l'entraîneur-chef du club-école (reconstruits automatiquement
+  // dès que l'effectif de la LAH change) ou gérés manuellement (éditions conservées dans
+  // manualFarmLines, nettoyées des joueurs qui ont quitté le club-école — rappel, échange,
+  // ballottage — à chaque rendu, plutôt que d'intercepter chaque site de mouvement de joueur).
+  const [manualFarmLines, setManualFarmLines] = useState(null);
+  const farmLines = useMemo(() => {
+    const farmRoster = farmByTeam[myTeamId] || [];
+    const coachSkill = business.staff.ahlCoach?.attrs?.teamManagement ?? null;
+    if (business.delegation.farmLines !== "manual" || !manualFarmLines) return buildLines(farmRoster, coachSkill);
+    const validIds = new Set(farmRoster.map((p) => p.id));
+    let l = manualFarmLines;
+    const allIds = [
+      ...l.forwards.flatMap((x) => Object.values(x)), ...l.defense.flatMap((x) => Object.values(x)),
+      l.goalies.starter, l.goalies.backup,
+      ...specialUnits(l, "pp").flatMap((u) => Object.values(u)), ...specialUnits(l, "pk").flatMap((u) => Object.values(u)),
+    ];
+    allIds.forEach((id) => { if (id && !validIds.has(id)) l = cleanLinesOfPlayer(l, id); });
+    return l;
+  }, [farmByTeam, myTeamId, business.delegation.farmLines, manualFarmLines, business.staff.ahlCoach]);
+  function updateFarmLine(section, idx, slot, playerId) {
+    setManualFarmLines(() => {
+      let teamLines = farmLines;
+      const from = findSlot(teamLines, section, playerId);
+      const current = getSlotValue(teamLines, section, idx, slot);
+      if (from) teamLines = setSlotValue(teamLines, from.sec, from.idx, from.key, current);
+      teamLines = setSlotValue(teamLines, section, idx, slot, playerId);
+      return teamLines;
+    });
+  }
+  function swapFarmLineSlots(secA, idxA, keyA, secB, idxB, keyB) {
+    setManualFarmLines(() => {
+      let teamLines = farmLines;
+      const valA = getSlotValue(teamLines, secA, idxA, keyA);
+      const valB = getSlotValue(teamLines, secB, idxB, keyB);
+      teamLines = setSlotValue(teamLines, secA, idxA, keyA, valB);
+      teamLines = setSlotValue(teamLines, secB, idxB, keyB, valA);
+      return teamLines;
+    });
+  }
+  function updateFarmRole(playerId, roleId) {
+    setManualFarmLines(() => ({ ...farmLines, roles: { ...(farmLines.roles || {}), [playerId]: roleId } }));
+  }
+  function resetFarmNaturalRoles() {
+    setManualFarmLines(() => ({ ...farmLines, roles: naturalRoles(farmByTeam[myTeamId] || []) }));
+  }
+  function autoOptimizeFarmLines() {
+    const fresh = buildLines(myFarmView, business.staff.ahlCoach?.attrs?.teamManagement ?? null);
+    setManualFarmLines(() => ({ ...farmLines, forwards: fresh.forwards, defense: fresh.defense, goalies: fresh.goalies }));
+  }
+  function updateFarmSpecialSystem(kind, systemId) {
+    setManualFarmLines(() => ({ ...farmLines, special: { ...specialSystems(farmLines), [kind]: systemId } }));
+  }
+  function autoFarmSpecialUnits(kind) {
+    setManualFarmLines(() => ({ ...farmLines, [kind]: autoUnits(myFarmView, kind, specialSystems(farmLines)[kind]) }));
+  }
+  function bestFarmSpecialSystem(kind) {
+    const best = bestSpecial(myFarmView, kind);
+    setManualFarmLines(() => ({ ...farmLines, [kind]: best.units, special: { ...specialSystems(farmLines), [kind]: best.id } }));
+  }
 
   function cleanLinesOfPlayer(l, playerId) {
     return {
@@ -1635,6 +1697,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   }
 
   const myTeam = myTeamView;
+  const myFarmTeam = { ...myTeam, roster: myFarmView };
   const myLines = linesByTeam[myTeamId];
   const myStanding = standings.find((s) => s.id === myTeamId);
   const myRank = standings.findIndex((s) => s.id === myTeamId) + 1;
@@ -1653,6 +1716,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     { key: "lines", label: "Trios", icon: Layers },
     { key: "roles", label: "Rôles", icon: UserCog },
     { key: "depth", label: "Profondeur", icon: Network },
+    { key: "farmlines", label: "Trios LAH", icon: Layers },
     { key: "strategy", label: "Stratégie", icon: Sliders },
     { key: "schedule", label: "Calendrier", icon: CalendarDays },
     { key: "stats", label: "Statistiques", icon: BarChart3 },
@@ -1674,6 +1738,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       <style>{FONT_IMPORT}</style>
       {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} extraScouts={business.scoutTeam || []} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
       {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
+      {viewedTeamId && <TeamRosterModal team={teamsById[viewedTeamId]} teamId={viewedTeamId} lines={linesByTeam[viewedTeamId]} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} seasonStats={seasonStats} injuries={injuries} day={currentDay} onSelectPlayer={selectPlayer} onClose={() => setViewedTeamId(null)} />}
       {comparePlayers && <ComparePlayersModal players={comparePlayers} team={myTeam} onClose={() => setComparePlayers(null)} />}
       {ctxMenu && <ContextMenu x={ctxMenu.x} y={ctxMenu.y} items={ctxMenu.items} onClose={() => setCtxMenu(null)} />}
       {offerTarget && <ContractOfferModal capSpace={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts).space + (offerTarget.isRenewal ? capHit(offerTarget.player.contract) : 0)} player={offerTarget.isRenewal ? staffViewPlayer(offerTarget.player, business.staff) : offerTarget.player} realPlayer={realPlayer(offerTarget.player)} isRenewal={offerTarget.isRenewal} team={myTeam} context={offerContext(realPlayer(offerTarget.player), offerTarget.isRenewal)} stats={seasonStats[offerTarget.player.id]} gmRating={gmNegotiationRating} financeRating={business.staff.financeDirector?.attrs?.finance ?? business.staff.gm?.attrs?.finance ?? null} rejections={negotiations[offerTarget.player.id]?.rejections || 0} onClose={() => setOfferTarget(null)} onSubmit={queueOffer} />}
@@ -1763,6 +1828,25 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "depth" && <DepthChartPanel team={myTeam} farm={myFarmView} lines={myLines} needsWaivers={(p) => !waiverExempt(p, careerGames(p.id), seasonYear)} onSelectPlayer={selectPlayer} injuries={injuries} day={currentDay} cap={capStatus(teamsById[myTeamId].roster, seasonYear, myCapOpts)} />}
 
+        {tab === "farmlines" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+              <h2 style={{ ...h2Style, marginBottom: 0 }}>Trios du club-école</h2>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[["delegated", "Délégué à l'entraîneur-chef LAH"], ["manual", "Contrôle manuel"]].map(([k, l]) => (
+                  <button key={k} onClick={() => setDelegation("farmLines", k)} style={{ ...btnStyle(business.delegation.farmLines === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: -8, marginBottom: 14 }}>
+              {business.delegation.farmLines === "delegated"
+                ? `Les trios sont reconstruits automatiquement${business.staff.ahlCoach ? ` par ${business.staff.ahlCoach.name}` : " (aucun entraîneur-chef du club-école en poste — embauche-en un dans l'onglet Personnel pour de meilleurs trios)"} à chaque changement d'effectif.`
+                : "Trios gérés manuellement — reste figés tant que tu ne les changes pas (les joueurs rappelés, échangés ou perdus au ballottage sont retirés automatiquement)."}
+            </p>
+            <TacticsPlanner team={myFarmTeam} lines={farmLines} onAssign={updateFarmLine} onSwap={swapFarmLineSlots} onChangeRole={updateFarmRole} onNaturalRoles={resetFarmNaturalRoles} onAutoLines={autoOptimizeFarmLines} onChangeSystem={updateFarmSpecialSystem} onBestSystem={bestFarmSpecialSystem} onAutoUnits={autoFarmSpecialUnits} onSelectPlayer={selectPlayer} />
+          </div>
+        )}
+
         {tab === "roles" && <RolesPanel team={myTeam} lines={myLines} onChangeRole={updateRole} onNaturalRoles={resetNaturalRoles} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} />}
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} />}
@@ -1841,7 +1925,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "stats" && statsMode === "preseason" && <PreseasonRatings ratings={preseasonRatings} onSelectPlayer={selectPlayer} />}
         {tab === "stats" && statsMode !== "preseason" && <StatsTables leaders={statsMode === "playoffs" ? playoffLeaders : leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} />}
 
-        {tab === "standings" && <StandingsTable standings={standings} teamsById={teamsById} myTeamId={myTeamId} history={history} />}
+        {tab === "standings" && <StandingsTable standings={standings} teamsById={teamsById} myTeamId={myTeamId} history={history} onSelectTeam={setViewedTeamId} />}
 
         {tab === "playoffs" && <PlayoffsPanel playoffs={playoffs} teamsById={teamsById} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
 

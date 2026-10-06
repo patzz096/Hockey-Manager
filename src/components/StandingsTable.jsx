@@ -17,7 +17,7 @@ function cell(s, key) {
   return s[key] ?? "";
 }
 
-function Table({ rows, teamsById, myTeamId, marks, cutAfter = [], title }) {
+function Table({ rows, teamsById, myTeamId, marks, cutAfter = [], title, onSelectTeam }) {
   return (
     <div style={{ marginBottom: 20, overflowX: "auto" }}>
       {title && <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, margin: "4px 0 6px" }}>{title}</div>}
@@ -33,7 +33,7 @@ function Table({ rows, teamsById, myTeamId, marks, cutAfter = [], title }) {
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 16, color: "var(--iceMuted)", fontSize: 11 }}>{i + 1}</span>
                   <TeamCrest team={teamsById[s.id]} size={20} />
-                  <span style={{ color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400 }}>{teamsById[s.id].name}</span>
+                  <span onClick={() => onSelectTeam?.(s.id)} style={{ color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400, cursor: onSelectTeam ? "pointer" : "default" }}>{teamsById[s.id].name}</span>
                   {marks[s.id] && <span title={MARK_LABEL[marks[s.id]]} style={{ fontSize: 10, color: "var(--gold)", fontWeight: 700 }}>{marks[s.id]}</span>}
                 </span>
               </td>
@@ -46,7 +46,7 @@ function Table({ rows, teamsById, myTeamId, marks, cutAfter = [], title }) {
   );
 }
 
-export function StandingsTable({ standings, teamsById, myTeamId, history = [] }) {
+export function StandingsTable({ standings, teamsById, myTeamId, history = [], onSelectTeam }) {
   const [view, setView] = useState("division");
   const marks = standings.some((s) => s.gp > 0) ? qualificationMarks(standings, teamsById) : {};
   const seeds = playoffSeeds(standings, teamsById);
@@ -64,9 +64,9 @@ export function StandingsTable({ standings, teamsById, myTeamId, history = [] })
         Modèle LNH : victoire 2 pts, défaite en prolongation ou tirs de barrage (DP) 1 pt, défaite 0. Départage : points, % de points, victoires en temps réglementaire (VR), en temps réglementaire + prolongation (VRP), victoires, différentiel.
         Séries : 3 premiers de chaque division + 2 équipes repêchées par association. <strong style={{ color: "var(--gold)" }}>y</strong> champion de division · <strong style={{ color: "var(--gold)" }}>x</strong> qualifié · <strong style={{ color: "var(--gold)" }}>w</strong> équipe repêchée.
       </p>
-      {view === "league" && <Table rows={standings} teamsById={teamsById} myTeamId={myTeamId} marks={marks} />}
+      {view === "league" && <Table rows={standings} teamsById={teamsById} myTeamId={myTeamId} marks={marks} onSelectTeam={onSelectTeam} />}
       {view === "division" && Object.values(CONFERENCES).flat().map((d) => (
-        <Table key={d} title={`Division ${d}`} rows={standings.filter((s) => teamsById[s.id].division === d)} teamsById={teamsById} myTeamId={myTeamId} marks={marks} cutAfter={[2]} />
+        <Table key={d} title={`Division ${d}`} rows={standings.filter((s) => teamsById[s.id].division === d)} teamsById={teamsById} myTeamId={myTeamId} marks={marks} cutAfter={[2]} onSelectTeam={onSelectTeam} />
       ))}
       {view === "wildcard" && Object.entries(seeds).map(([conf, c]) => {
         const top = new Set(Object.values(c.divisions).flat().map((s) => s.id));
@@ -74,8 +74,8 @@ export function StandingsTable({ standings, teamsById, myTeamId, history = [] })
         return (
           <div key={conf}>
             <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 18, margin: "6px 0" }}>Association de l'{conf}</div>
-            {c.order.map((d) => <Table key={d} title={`${d} — 3 premiers`} rows={c.divisions[d]} teamsById={teamsById} myTeamId={myTeamId} marks={marks} />)}
-            <Table title="Équipes repêchées (2 places)" rows={rest} teamsById={teamsById} myTeamId={myTeamId} marks={marks} cutAfter={[1]} />
+            {c.order.map((d) => <Table key={d} title={`${d} — 3 premiers`} rows={c.divisions[d]} teamsById={teamsById} myTeamId={myTeamId} marks={marks} onSelectTeam={onSelectTeam} />)}
+            <Table title="Équipes repêchées (2 places)" rows={rest} teamsById={teamsById} myTeamId={myTeamId} marks={marks} cutAfter={[1]} onSelectTeam={onSelectTeam} />
           </div>
         );
       })}
