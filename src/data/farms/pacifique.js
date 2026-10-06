@@ -77,6 +77,29 @@ export const SEA_FARM_DATA = [
   { name: "Dolan Gilbert", number: 0, pos: "G", age: 26, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
 ];
 
+// Club-école réel (LAH, Barracuda de San Jose) — même disclaimer que ci-dessus.
+export const SJS_FARM_DATA = [
+  { name: "Patrick Giles", number: 54, pos: "C", age: 27, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { strength: 62, offensiveRead: 58 } },
+  { name: "Filip Bystedt", number: 18, pos: "C", age: 23, nationality: "SE", contract: { years: 2, salary: 918 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Jimmy Huntington", number: 15, pos: "C", age: 28, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 56, speed: 58 } },
+  { name: "Ethan Cardwell", number: 56, pos: "RW", age: 24, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Carson Wetsch", number: 62, pos: "RW", age: 20, nationality: "CA", contract: { years: 2, salary: 998 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Tye Felhaber", number: 28, pos: "LW", age: 28, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 56 } },
+  { name: "Andre Gasseau", number: 26, pos: "C", age: 23, nationality: "CA", contract: { years: 1, salary: 1050 }, attrs: { strength: 62, offensiveRead: 58 } },
+  { name: "Quentin Musty", number: 13, pos: "LW", age: 21, nationality: "US", contract: { years: 2, salary: 909 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Cameron Lund", number: 46, pos: "RW", age: 22, nationality: "US", contract: { years: 2, salary: 942 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Alex Barre-Boulet", number: 16, pos: "C", age: 29, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, shotAccuracy: 58, speed: 56 } },
+  { name: "Eric Pohlkamp", number: 48, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 1050 }, attrs: { offensiveRead: 58, passing: 58 } },
+  { name: "Libor Hajek", number: 24, pos: "LD", age: 29, nationality: "CZ", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Phillip Sinn", number: 53, pos: "LD", age: 23, nationality: "DE", contract: { years: 1, salary: 1050 }, attrs: { positioning: 56, strength: 58 } },
+  { name: "Leo Sahlin Wallenius", number: 72, pos: "LD", age: 21, nationality: "SE", contract: { years: 2, salary: 965 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Mattias Hävelid", number: 22, pos: "RD", age: 23, nationality: "SE", contract: { years: 2, salary: 953 }, attrs: { offensiveRead: 60, passing: 58 } },
+  { name: "Ilya Samsonov", number: 35, pos: "G", age: 30, nationality: "RU", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Eric Comrie", number: 1, pos: "G", age: 31, nationality: "CA", contract: { years: 2, salary: 1150 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Kyle Keyser", number: 36, pos: "G", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
+  { name: "Nathan Airey", number: 0, pos: "G", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 54, positioning: 54 } },
+];
+
 // Club-école réel (LAH, Reign d'Ontario) de Los Angeles — même disclaimer que ci-dessus.
 export const LAK_FARM_DATA = [
   { name: "Taylor Ward", number: 17, pos: "RW", age: 29, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 58, speed: 58 } },

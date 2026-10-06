@@ -160,7 +160,7 @@ export const UTA_ROSTER_DATA = [
   { name: "J.J. Moser", number: 90, pos: "LD", age: 25, nationality: "CH", contract: { years: 4, salary: 4400 }, attrs: { offensiveRead: 65, speed: 71, positioning: 59 } },
   { name: "Mikhail Sergachev", number: 98, pos: "LD", age: 27, nationality: "RU", contract: { years: 8, salary: 8500 }, attrs: { strength: 77, offensiveRead: 75, positioning: 73, shotAccuracy: 67 } },
   { name: "Robert Bortuzzo", number: 4, pos: "LD", age: 36, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { positioning: 63, strength: 69, hitting: 61 } },
-  { name: "Michael Kesselring", number: 2, pos: "RD", age: 24, nationality: "US", contract: { years: 3, salary: 2200 }, attrs: { strength: 73, hitting: 63, speed: 65 } },
+  { name: "Victor Söderström", number: 2, pos: "RD", age: 24, nationality: "SE", contract: { years: 3, salary: 2200 }, attrs: { strength: 73, hitting: 63, speed: 65 } },
   { name: "John Marino", number: 6, pos: "RD", age: 28, nationality: "US", contract: { years: 4, salary: 4400 }, attrs: { positioning: 71, defensiveRead: 71, speed: 65 } },
   { name: "Karel Vejmelka", number: 70, pos: "G", age: 29, nationality: "CZ", contract: { years: 3, salary: 3400 }, attrs: { reflexes: 73, positioning: 73 } },
   { name: "Connor Ingram", number: 39, pos: "G", age: 28, nationality: "CA", contract: { years: 3, salary: 2500 }, attrs: { reflexes: 71, positioning: 69 } },
@@ -182,5 +182,5 @@ export const WPG_ROSTER_DATA = [
   { name: "Dylan Samberg", number: 54, pos: "LD", age: 26, nationality: "US", contract: { years: 5, salary: 4500 }, attrs: { strength: 75, positioning: 69, hitting: 63 } },
   { name: "Haydn Fleury", number: 5, pos: "LD", age: 29, nationality: "CA", contract: { years: 1, salary: 800 }, attrs: { positioning: 59, strength: 67 } },
   { name: "Connor Hellebuyck", number: 37, pos: "G", age: 32, nationality: "US", contract: { years: 7, salary: 8500 }, attrs: { reflexes: 87, positioning: 85, reboundControl: 79, recovery: 79 } },
-  { name: "Eric Comrie", number: 1, pos: "G", age: 30, nationality: "CA", contract: { years: 2, salary: 1350 }, attrs: { reflexes: 67, positioning: 67 } },
+  { name: "Domenic DiVincentiis", number: 1, pos: "G", age: 23, nationality: "CA", contract: { years: 2, salary: 1350 }, attrs: { reflexes: 67, positioning: 67 } },
 ];
