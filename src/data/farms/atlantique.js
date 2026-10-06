@@ -119,3 +119,28 @@ export const MTL_FARM_DATA = [
   { name: "Jacob Fowler", number: 32, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 946 }, attrs: { reflexes: 60, positioning: 58 } },
   { name: "Kaapo Kahkonen", number: 34, pos: "G", age: 30, nationality: "FI", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
 ];
+
+// Club-école réel (LAH, Sénateurs de Belleville) d'Ottawa — même disclaimer que ci-dessus.
+export const OTT_FARM_DATA = [
+  { name: "Philippe Daoust", number: 92, pos: "C", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Eskild Bakke Olsen", number: 67, pos: "C", age: 25, nationality: "NO", contract: { years: 1, salary: 910 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Kasper Halttunen", number: 68, pos: "RW", age: 21, nationality: "FI", contract: { years: 2, salary: 899 }, attrs: { strength: 62, shotAccuracy: 60 } },
+  { name: "Oskar Pettersson", number: 63, pos: "RW", age: 23, nationality: "SE", contract: { years: 1, salary: 910 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Lucas Ellinas", number: 91, pos: "C", age: 21, nationality: "CA", contract: { years: 2, salary: 958 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Blake Montgomery", number: 55, pos: "LW", age: 21, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Philip Tomasino", number: 62, pos: "C", age: 25, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { offensiveRead: 60, speed: 62 } },
+  { name: "Sammy Blais", number: 79, pos: "LW", age: 30, nationality: "CA", contract: { years: 1, salary: 925 }, attrs: { strength: 62, hitting: 60 } },
+  { name: "Tyler Boucher", number: 54, pos: "RW", age: 24, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Xavier Bourgault", number: 53, pos: "RW", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Ryan Suzuki", number: 16, pos: "C", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Hoyt Stanley", number: 73, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 1075 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Samuel Bolduc", number: 58, pos: "LD", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 62, positioning: 58 } },
+  { name: "Djibril Toure", number: 76, pos: "RD", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Matthew Andonovski", number: 82, pos: "LD", age: 22, nationality: "CA", contract: { years: 2, salary: 924 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Christian Kyrou", number: 15, pos: "RD", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 60 } },
+  { name: "Gabriel Eliasson", number: 78, pos: "LD", age: 20, nationality: "SE", contract: { years: 2, salary: 1008 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Tomas Hamara", number: 98, pos: "LD", age: 23, nationality: "CZ", contract: { years: 1, salary: 878 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Jonas Johansson", number: 1, pos: "G", age: 31, nationality: "SE", contract: { years: 1, salary: 1250 }, attrs: { reflexes: 65, positioning: 65 } },
+  { name: "Jackson Parsons", number: 31, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 929 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Kevin Reidler", number: 39, pos: "G", age: 22, nationality: "SE", contract: { years: 2, salary: 946 }, attrs: { reflexes: 58, positioning: 56 } },
+];

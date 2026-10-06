@@ -106,7 +106,7 @@ export const LAK_ROSTER_DATA = [
 
 export const SJS_ROSTER_DATA = [
   { name: "Macklin Celebrini", number: 71, pos: "C", age: 19, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { offensiveRead: 79, puckhandling: 79, shotAccuracy: 73, speed: 75 } },
-  { name: "William Eklund", number: 72, pos: "LW", age: 23, nationality: "SE", contract: { years: 3, salary: 2200 }, attrs: { offensiveRead: 71, speed: 73, puckhandling: 69 } },
+  { name: "Danil Gushchin", number: 72, pos: "LW", age: 23, nationality: "RU", contract: { years: 2, salary: 900 }, attrs: { shotAccuracy: 63, speed: 65, offensiveRead: 59 } },
   { name: "Tyler Toffoli", number: 73, pos: "RW", age: 33, nationality: "CA", contract: { years: 2, salary: 4000 }, attrs: { shotAccuracy: 75, shotRange: 73, offensiveRead: 63 } },
   { name: "Fabian Zetterlund", number: 20, pos: "LW", age: 26, nationality: "SE", contract: { years: 3, salary: 3350 }, attrs: { shotAccuracy: 67, hitting: 59, checking: 57 } },
   { name: "Ty Dellandrea", number: 10, pos: "C", age: 25, nationality: "CA", contract: { years: 2, salary: 1700 }, attrs: { checking: 63, faceoffs: 57, speed: 65 } },
@@ -126,7 +126,7 @@ export const SEA_ROSTER_DATA = [
   { name: "Matty Beniers", number: 10, pos: "C", age: 22, nationality: "US", contract: { years: 7, salary: 7141 }, attrs: { offensiveRead: 73, faceoffs: 61, defensiveRead: 61, shotAccuracy: 69 } },
   { name: "Jared McCann", number: 19, pos: "LW", age: 29, nationality: "CA", contract: { years: 5, salary: 5000 }, attrs: { shotAccuracy: 77, speed: 73, offensiveRead: 71 } },
   { name: "Chandler Stephenson", number: 21, pos: "C", age: 31, nationality: "CA", contract: { years: 7, salary: 6250 }, attrs: { speed: 77, offensiveRead: 67, checking: 59 } },
-  { name: "Andre Burakovsky", number: 92, pos: "LW", age: 30, nationality: "SE", contract: { years: 5, salary: 5500 }, attrs: { shotAccuracy: 71, offensiveRead: 67, puckhandling: 67 } },
+  { name: "Daniel Sprong", number: 92, pos: "RW", age: 29, nationality: "NL", contract: { years: 2, salary: 2500 }, attrs: { shotAccuracy: 71, offensiveRead: 61, speed: 65 } },
   { name: "Jordan Eberle", number: 7, pos: "RW", age: 35, nationality: "CA", contract: { years: 3, salary: 6000 }, attrs: { shotAccuracy: 73, offensiveRead: 69, professionalism: 75 } },
   { name: "Jani Nyman", number: 22, pos: "RW", age: 21, nationality: "FI", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 69, strength: 67, offensiveRead: 61 } },
   { name: "Kaapo Kakko", number: 56, pos: "LW", age: 24, nationality: "FI", contract: { years: 2, salary: 2400 }, attrs: { shotAccuracy: 70, strength: 74, hitting: 60, offensiveRead: 62 } },

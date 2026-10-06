@@ -117,7 +117,7 @@ export const PHI_ROSTER_DATA = [
   { name: "Rasmus Ristolainen", number: 55, pos: "RD", age: 30, nationality: "FI", contract: { years: 5, salary: 5100 }, attrs: { hitting: 76, checking: 72, strength: 80, positioning: 64 } },
   { name: "Nick Seeler", number: 24, pos: "LD", age: 32, nationality: "US", contract: { years: 3, salary: 2100 }, attrs: { hitting: 74, checking: 70, positioning: 65 } },
   { name: "Egor Zamula", number: 27, pos: "RD", age: 24, nationality: "RU", contract: { years: 2, salary: 900 }, attrs: { positioning: 62, puckhandling: 64 } },
-  { name: "Samuel Ersson", number: 33, pos: "G", age: 26, nationality: "SE", contract: { years: 3, salary: 3600 }, attrs: { reflexes: 78, positioning: 78, reboundControl: 74 } },
+  { name: "Aleksei Kolosov", number: 33, pos: "G", age: 23, nationality: "BY", contract: { years: 3, salary: 950 }, attrs: { reflexes: 69, positioning: 69 } },
   { name: "Ivan Fedotov", number: 82, pos: "G", age: 29, nationality: "RU", contract: { years: 2, salary: 2400 }, attrs: { reflexes: 74, positioning: 76, reboundControl: 70 } },
 ];
 
