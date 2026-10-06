@@ -48,6 +48,35 @@ export const EDM_FARM_DATA = [
   { name: "Nathaniel Day", number: 40, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
 
+// Club-école réel (LAH, Firebirds de Coachella Valley) de Seattle — même disclaimer que ci-dessus.
+export const SEA_FARM_DATA = [
+  { name: "Carson Rehkopf", number: 74, pos: "C", age: 22, nationality: "CA", contract: { years: 3, salary: 914 }, attrs: { strength: 62, offensiveRead: 58, speed: 58 } },
+  { name: "Devin Kaplan", number: 23, pos: "RW", age: 23, nationality: "US", contract: { years: 2, salary: 947 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Nathan Villeneuve", number: 90, pos: "C", age: 21, nationality: "CA", contract: { years: 3, salary: 965 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Andrei Loshko", number: 70, pos: "RW", age: 22, nationality: "BY", contract: { years: 2, salary: 970 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Ryden Evers", number: 91, pos: "C", age: 21, nationality: "CA", contract: { years: 3, salary: 1075 }, attrs: { offensiveRead: 62, strength: 58, speed: 58 } },
+  { name: "Lleyton Roed", number: 85, pos: "LW", age: 24, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Jake O'Brien", number: 44, pos: "C", age: 19, nationality: "CA", contract: { years: 3, salary: 974 }, attrs: { offensiveRead: 60, passing: 58, speed: 58 } },
+  { name: "John Hayden", number: 15, pos: "C", age: 32, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 64, checking: 58 } },
+  { name: "Logan Morrison", number: 96, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 56, speed: 56 } },
+  { name: "Jon-Randall Avon", number: 16, pos: "C", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 56, speed: 58 } },
+  { name: "Eduard Sale", number: 82, pos: "RW", age: 22, nationality: "CZ", contract: { years: 2, salary: 909 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Jagger Firkus", number: 57, pos: "RW", age: 22, nationality: "CA", contract: { years: 2, salary: 891 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Julius Miettinen", number: 49, pos: "C", age: 21, nationality: "FI", contract: { years: 2, salary: 965 }, attrs: { strength: 62, offensiveRead: 58, speed: 58 } },
+  { name: "Jani Nyman", number: 38, pos: "RW", age: 22, nationality: "FI", contract: { years: 3, salary: 892 }, attrs: { shotAccuracy: 60, strength: 60, offensiveRead: 58 } },
+  { name: "Oscar Fisker Molgaard", number: 78, pos: "C", age: 22, nationality: "DK", contract: { years: 2, salary: 914 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Lukas Dragicevic", number: 92, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 914 }, attrs: { offensiveRead: 58, passing: 58, speed: 58 } },
+  { name: "Ty Nelson", number: 79, pos: "RD", age: 23, nationality: "CA", contract: { years: 2, salary: 912 }, attrs: { positioning: 56, strength: 58 } },
+  { name: "Alexis Bernier", number: 43, pos: "RD", age: 20, nationality: "CA", contract: { years: 3, salary: 1003 }, attrs: { positioning: 58, strength: 56 } },
+  { name: "Caden Price", number: 48, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 936 }, attrs: { offensiveRead: 60, passing: 58, speed: 58 } },
+  { name: "Tyson Jugnauth", number: 83, pos: "LD", age: 23, nationality: "CA", contract: { years: 2, salary: 973 }, attrs: { positioning: 56, strength: 58 } },
+  { name: "Kaden Hammell", number: 47, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 966 }, attrs: { positioning: 58, strength: 56 } },
+  { name: "Niklas Kokko", number: 39, pos: "G", age: 23, nationality: "FI", contract: { years: 2, salary: 892 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Victor Ostman", number: 1, pos: "G", age: 26, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Kim Saarinen", number: 50, pos: "G", age: 20, nationality: "FI", contract: { years: 2, salary: 933 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Dolan Gilbert", number: 0, pos: "G", age: 26, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
+];
+
 // Club-école réel (LAH, Reign d'Ontario) de Los Angeles — même disclaimer que ci-dessus.
 export const LAK_FARM_DATA = [
   { name: "Taylor Ward", number: 17, pos: "RW", age: 29, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { shotAccuracy: 58, speed: 58 } },
