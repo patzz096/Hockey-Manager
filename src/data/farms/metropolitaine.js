@@ -101,3 +101,30 @@ export const NYI_FARM_DATA = [
   { name: "Joshua Kotai", number: 60, pos: "G", age: 24, nationality: "CA", contract: { years: 2, salary: 965 }, attrs: { reflexes: 60, positioning: 58 } },
   { name: "Henrik Tikkanen", number: 70, pos: "G", age: 26, nationality: "FI", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Wolf Pack de Hartford) des Rangers de New York — même disclaimer.
+export const NYR_FARM_DATA = [
+  { name: "Taylor Raddysh", number: 14, pos: "RW", age: 29, nationality: "CA", contract: { years: 1, salary: 1500 }, attrs: { shotAccuracy: 63, speed: 61 } },
+  { name: "Anton Blidh", number: 25, pos: "LW", age: 32, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { checking: 60, speed: 58 } },
+  { name: "Glenn Gawdin", number: 15, pos: "C", age: 30, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Cole Beaudoin", number: 53, pos: "C", age: 21, nationality: "CA", contract: { years: 2, salary: 942 }, attrs: { strength: 62, offensiveRead: 58 } },
+  { name: "Liam Greentree", number: 85, pos: "RW", age: 21, nationality: "CA", contract: { years: 2, salary: 942 }, attrs: { shotAccuracy: 60, strength: 60 } },
+  { name: "Carey Terrance", number: 62, pos: "C", age: 21, nationality: "US", contract: { years: 2, salary: 961 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Nathan Aspinall", number: 95, pos: "LW", age: 21, nationality: "CA", contract: { years: 2, salary: 956 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Jacob Battaglia", number: 57, pos: "RW", age: 21, nationality: "CA", contract: { years: 2, salary: 965 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Brody Lamb", number: 46, pos: "RW", age: 23, nationality: "US", contract: { years: 2, salary: 980 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Dylan Roobroeck", number: 54, pos: "C", age: 22, nationality: "CA", contract: { years: 2, salary: 925 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Juuso Parssinen", number: 71, pos: "C", age: 26, nationality: "FI", contract: { years: 1, salary: 1250 }, attrs: { strength: 63, offensiveRead: 59 } },
+  { name: "Justin Dowling", number: 37, pos: "C", age: 36, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Bryce McConnell-Barker", number: 47, pos: "C", age: 22, nationality: "CA", contract: { years: 2, salary: 913 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Adam Sykora", number: 38, pos: "LW", age: 22, nationality: "SK", contract: { years: 2, salary: 882 }, attrs: { shotAccuracy: 60, speed: 60 } },
+  { name: "Aidan Thompson", number: 75, pos: "C", age: 25, nationality: "US", contract: { years: 2, salary: 920 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Vince Iorio", number: 6, pos: "RD", age: 24, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Marc Del Gaizo", number: 27, pos: "LD", age: 27, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Drew Fortescue", number: 45, pos: "LD", age: 21, nationality: "US", contract: { years: 2, salary: 946 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Jackson Dorrington", number: 83, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 952 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Urho Vaakanainen", number: 18, pos: "LD", age: 28, nationality: "FI", contract: { years: 1, salary: 1550 }, attrs: { positioning: 61, strength: 63 } },
+  { name: "Dennis Cholowski", number: 21, pos: "LD", age: 29, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { puckhandling: 60, offensiveRead: 58 } },
+  { name: "Spencer Martin", number: 41, pos: "G", age: 31, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Callum Tung", number: 98, pos: "G", age: 23, nationality: "CA", contract: { years: 2, salary: 973 }, attrs: { reflexes: 58, positioning: 56 } },
+];

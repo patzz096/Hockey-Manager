@@ -157,7 +157,7 @@ export const UTA_ROSTER_DATA = [
   { name: "Josh Doan", number: 18, pos: "RW", age: 23, nationality: "US", contract: { years: 2, salary: 950 }, attrs: { hitting: 65, shotAccuracy: 63, speed: 67 } },
   { name: "Jack McBain", number: 19, pos: "C", age: 27, nationality: "CA", contract: { years: 2, salary: 3300 }, attrs: { faceoffs: 63, defensiveRead: 63, offensiveRead: 61, strength: 71 } },
   { name: "Kevin Stenlund", number: 82, pos: "C", age: 28, nationality: "SE", contract: { years: 3, salary: 2500 }, attrs: { strength: 73, checking: 65, faceoffs: 59 } },
-  { name: "Sean Durzi", number: 5, pos: "RD", age: 26, nationality: "CA", contract: { years: 4, salary: 4400 }, attrs: { offensiveRead: 69, passing: 69, speed: 69 } },
+  { name: "J.J. Moser", number: 90, pos: "LD", age: 25, nationality: "CH", contract: { years: 4, salary: 4400 }, attrs: { offensiveRead: 65, speed: 71, positioning: 59 } },
   { name: "Mikhail Sergachev", number: 98, pos: "LD", age: 27, nationality: "RU", contract: { years: 8, salary: 8500 }, attrs: { strength: 77, offensiveRead: 75, positioning: 73, shotAccuracy: 67 } },
   { name: "Robert Bortuzzo", number: 4, pos: "LD", age: 36, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { positioning: 63, strength: 69, hitting: 61 } },
   { name: "Michael Kesselring", number: 2, pos: "RD", age: 24, nationality: "US", contract: { years: 3, salary: 2200 }, attrs: { strength: 73, hitting: 63, speed: 65 } },

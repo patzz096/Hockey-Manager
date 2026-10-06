@@ -41,8 +41,6 @@ export const REAL_FREE_AGENTS = [
   { name: "Brendan Smith", pos: "LD", age: 36, nationality: "CA", attrs: { hitting: 62, positioning: 58, strength: 68 } },
   { name: "Travis Hamonic", pos: "RD", age: 35, nationality: "CA", attrs: { positioning: 64, defensiveRead: 62, hitting: 58 } },
   { name: "Colin Miller", pos: "RD", age: 33, nationality: "CA", attrs: { shotAccuracy: 58, offensiveRead: 54, positioning: 52 } },
-  { name: "Jake Bean", pos: "LD", age: 27, nationality: "CA", attrs: { offensiveRead: 62, passing: 62, speed: 64 } },
-  { name: "Derek Forbort", pos: "LD", age: 34, nationality: "US", attrs: { positioning: 60, strength: 70, defensiveRead: 58 } },
   { name: "Kevin Gravel", pos: "LD", age: 33, nationality: "US", attrs: { positioning: 54, strength: 64 } },
   { name: "Jacob Moverare", pos: "LD", age: 27, nationality: "SE", attrs: { positioning: 54, speed: 58 } },
 
