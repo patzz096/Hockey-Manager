@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, Mail, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone } from "lucide-react";
+import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, MessageCircle, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone } from "lucide-react";
 import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
@@ -111,13 +111,14 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const [tradeRequested, setTradeRequested] = useState({});
   const [messages, setMessages] = useState([]);
   function addMessage(msg) {
-    setMessages((prev) => [{ id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, read: false, ...msg }, ...prev]);
-  }
-  function markRead(id) {
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, read: true } : m)));
+    setMessages((prev) => [{ id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, read: false, day: currentDay, ...msg }, ...prev]);
   }
   function markAllRead() {
     setMessages((prev) => prev.map((m) => (m.read ? m : { ...m, read: true })));
+  }
+  // Marque lus tous les messages d'un fil (un expéditeur, voir InboxPanel) d'un coup à l'ouverture.
+  function markThreadRead(from) {
+    setMessages((prev) => prev.map((m) => (m.from === from && !m.read ? { ...m, read: true } : m)));
   }
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
   const [schedule, setSchedule] = useState(() => [...buildPreseasonSchedule(teams, FIRST_SEASON), ...buildSchedule(teams)]);
@@ -818,7 +819,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const delay = 1 + Math.floor(Math.random() * 3); // 1-3 jours : le temps que l'agent consulte son client
     const dueDay = currentDay + delay;
     setPendingOffers((prev) => [...prev, { id: `OFFER-${Date.now()}-${player.id}`, playerId: player.id, playerName: player.name, offer, isRenewal, dueDay }]);
-    addMessage({ from: "Agent du joueur", subject: `Offre envoyée : ${player.name}`, category: "transaction", playerIds: [player.id], body: `${offerSummaryText(offer)}\n\nL'agent doit consulter son client — réponse attendue vers le ${formatDay(dueDay)}.` });
+    addMessage({ from: `Agent de ${player.name}`, subject: `Offre envoyée : ${player.name}`, category: "transaction", playerIds: [player.id], body: `${offerSummaryText(offer)}\n\nL'agent doit consulter son client — réponse attendue vers le ${formatDay(dueDay)}.` });
     setOfferTarget(null);
   }
   // Réponse de l'agent, une fois le délai écoulé (voir queueOffer). Réévalue avec l'état courant
@@ -828,7 +829,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   function resolveOffer(pending) {
     const { playerId, playerName, offer, isRenewal } = pending;
     const rawPlayer = isRenewal ? teamsById[myTeamId].roster.find((p) => p.id === playerId) : freeAgents.find((p) => p.id === playerId);
-    if (!rawPlayer) { addMessage({ from: "Agent du joueur", subject: `Offre annulée : ${playerName}`, category: "transaction", body: `${playerName} n'est plus disponible ; l'offre a été annulée.` }); return; }
+    if (!rawPlayer) { addMessage({ from: `Agent de ${playerName}`, subject: `Offre annulée : ${playerName}`, category: "transaction", body: `${playerName} n'est plus disponible ; l'offre a été annulée.` }); return; }
     const player = rawPlayer;
     const rejections = negotiations[player.id]?.rejections || 0;
     const { ctx, year, perf } = offerContext(realPlayer(player), isRenewal);
@@ -845,7 +846,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       // Prime à la signature (k$) payée tout de suite, en dollars dans la caisse.
       if (offer.signingBonus > 0) setBusiness((prev) => ({ ...prev, cash: prev.cash - offer.signingBonus * 1000 }));
       setNegotiations((prev) => { const next = { ...prev }; delete next[player.id]; return next; });
-      addMessage({ from: "Agent du joueur", subject: `${player.name} a accepté l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\n${player.name} a signé.` });
+      addMessage({ from: `Agent de ${player.name}`, subject: `${player.name} a accepté l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\n${player.name} a signé.` });
     } else {
       const newRejections = rejections + 1;
       const stonewalled = newRejections >= MAX_OFFER_ATTEMPTS;
@@ -863,7 +864,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
       const reasonText = reasons.length ? ` Raison du refus : ${reasons.join(" ; ")}.` : "";
       const frustration = newRejections > 1 && !stonewalled ? " Mon client trouve que tu le fais lanterner — ses attentes ont grimpé." : "";
       const closed = stonewalled ? ` Mon client en a assez de tes offres : il refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
-      addMessage({ from: "Agent du joueur", subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${reasonText}${frustration}${closed}` });
+      addMessage({ from: `Agent de ${player.name}`, subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${reasonText}${frustration}${closed}` });
     }
   }
   function findPlayer(playerId) {
@@ -1748,7 +1749,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           <TeamCrest team={myTeam} size={34} />
           <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 16, color: myTeam.color, lineHeight: 1.15, flex: 1 }}>{myTeam.name}</div>
           <button title="Messagerie" onClick={() => setTab("inbox")} style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, padding: 0, borderRadius: 6, border: "none", background: tab === "inbox" ? "rgba(92,200,255,0.20)" : "transparent", color: tab === "inbox" ? "var(--accent)" : "var(--iceMuted)", cursor: "pointer", flexShrink: 0 }}>
-            <Mail size={17} />
+            <MessageCircle size={17} />
             {messages.filter((m) => !m.read).length > 0 && (
               <span style={{ position: "absolute", top: -3, right: -3, background: "var(--red)", color: "#fff", borderRadius: 10, fontSize: 9, minWidth: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, padding: "0 3px" }}>{messages.filter((m) => !m.read).length}</span>
             )}
@@ -1873,7 +1874,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
 
         {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
 
-        {tab === "inbox" && <InboxPanel messages={messages} onMarkRead={markRead} onMarkAllRead={markAllRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
+        {tab === "inbox" && <InboxPanel messages={messages} onMarkAllRead={markAllRead} onMarkThreadRead={markThreadRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 
         {tab === "finances" && <FinancesPanel business={business} teamCapacity={myTeam.capacity} winPct={myStanding && myStanding.gp > 0 ? myStanding.w / myStanding.gp : 0.5} onSetTierPrice={setTierPrice} onSetParkingPrice={setParkingPrice} onSetItemPrice={setItemPrice} onSetMerchPrice={setMerchPrice} onUpgrade={upgradeFacility} />}
 
