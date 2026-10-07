@@ -153,3 +153,31 @@ export const STL_FARM_DATA = [
   { name: "Will Cranley", number: 31, pos: "G", age: 25, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
   { name: "Milton Gästrin", number: 25, pos: "C", age: 19, nationality: "SE", contract: { years: 2, salary: 974 }, attrs: { offensiveRead: 60, speed: 58 } },
 ];
+
+// Club-école réel (LAH, Roadrunners de Tucson) de l'Utah — même disclaimer que ci-dessus.
+export const UTA_FARM_DATA = [
+  { name: "Sam Lipkin", number: 71, pos: "LW", age: 24, nationality: "US", contract: { years: 1, salary: 927 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Ben McCartney", number: 62, pos: "LW", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Brandon Tanev", number: 13, pos: "LW", age: 35, nationality: "CA", contract: { years: 2, salary: 2500 }, attrs: { speed: 68, hitting: 60, checking: 58 } },
+  { name: "Caleb Desnoyers", number: 18, pos: "C", age: 20, nationality: "CA", contract: { years: 3, salary: 1075 }, attrs: { offensiveRead: 62, speed: 60 } },
+  { name: "Tij Iginla", number: 77, pos: "LW", age: 20, nationality: "CA", contract: { years: 2, salary: 942 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Joshua Roy", number: 86, pos: "LW", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Gabe Smith", number: 93, pos: "C", age: 20, nationality: "CA", contract: { years: 2, salary: 963 }, attrs: { strength: 62, offensiveRead: 56 } },
+  { name: "Yegor Borikov", number: 65, pos: "RW", age: 21, nationality: "BY", contract: { years: 2, salary: 995 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Cameron Hebig", number: 78, pos: "C", age: 30, nationality: "CA", contract: { years: 1, salary: 813 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Vadim Moroz", number: 76, pos: "RW", age: 23, nationality: "BY", contract: { years: 2, salary: 1014 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Julian Lutz", number: 43, pos: "C", age: 23, nationality: "DE", contract: { years: 2, salary: 923 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Miko Matikka", number: 49, pos: "RW", age: 23, nationality: "FI", contract: { years: 2, salary: 945 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Noel Nordh", number: 45, pos: "LW", age: 22, nationality: "SE", contract: { years: 2, salary: 935 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Owen Allard", number: 37, pos: "C", age: 23, nationality: "CA", contract: { years: 2, salary: 944 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Artyom Duda", number: 84, pos: "LD", age: 23, nationality: "RU", contract: { years: 2, salary: 950 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Terrell Goldsmith", number: 54, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 936 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Tomas Lavoie", number: 75, pos: "RD", age: 21, nationality: "CA", contract: { years: 2, salary: 965 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Zachary Jones", number: 15, pos: "LD", age: 26, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Montana Onyebuchi", number: 79, pos: "RD", age: 27, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Gregor Biber", number: 94, pos: "LD", age: 20, nationality: "AT", contract: { years: 2, salary: 1003 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Maveric Lamoureux", number: 10, pos: "RD", age: 23, nationality: "CA", contract: { years: 1, salary: 887 }, attrs: { strength: 60, positioning: 58 } },
+  { name: "Michael Hrabal", number: 30, pos: "G", age: 22, nationality: "CZ", contract: { years: 1, salary: 1075 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Jaxson Stauber", number: 35, pos: "G", age: 27, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Max Psenicka", number: 47, pos: "LD", age: 20, nationality: "CZ", contract: { years: 1, salary: 998 }, attrs: { positioning: 58, strength: 58 } },
+];

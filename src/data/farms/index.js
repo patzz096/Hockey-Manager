@@ -1,7 +1,7 @@
 import { BOS_FARM_DATA, BUF_FARM_DATA, DET_FARM_DATA, FLA_FARM_DATA, MTL_FARM_DATA, OTT_FARM_DATA, TBL_FARM_DATA, TOR_FARM_DATA } from "./atlantique";
 import { CAR_FARM_DATA, CBJ_FARM_DATA, NJD_FARM_DATA, NYI_FARM_DATA, NYR_FARM_DATA, PHI_FARM_DATA, PIT_FARM_DATA } from "./metropolitaine";
 import { CGY_FARM_DATA, EDM_FARM_DATA, LAK_FARM_DATA, SEA_FARM_DATA, SJS_FARM_DATA } from "./pacifique";
-import { CHI_FARM_DATA, COL_FARM_DATA, DAL_FARM_DATA, MIN_FARM_DATA, NSH_FARM_DATA, STL_FARM_DATA } from "./centrale";
+import { CHI_FARM_DATA, COL_FARM_DATA, DAL_FARM_DATA, MIN_FARM_DATA, NSH_FARM_DATA, STL_FARM_DATA, UTA_FARM_DATA } from "./centrale";
 
 // Clubs-écoles réels (LAH) par équipe — alimente engine/league.js initLeague (buildRealFarmRoster)
 // à la place du club-école généré par défaut. Les équipes absentes d'ici gardent un club-école
@@ -33,4 +33,5 @@ export const REAL_FARMS = {
   MIN: MIN_FARM_DATA,
   NSH: NSH_FARM_DATA,
   STL: STL_FARM_DATA,
+  UTA: UTA_FARM_DATA,
 };

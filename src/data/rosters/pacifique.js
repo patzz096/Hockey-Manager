@@ -37,7 +37,7 @@ export const CGY_ROSTER_DATA = [
   { name: "Joel Farabee", number: 86, pos: "RW", age: 27, nationality: "US", contract: { years: 4, salary: 5000 }, attrs: { shotAccuracy: 72, speed: 72, offensiveRead: 66 } },
   { name: "Ryan Strome", number: 22, pos: "C", age: 33, nationality: "CA", contract: { years: 2, salary: 5000 }, attrs: { faceoffs: 66, offensiveRead: 66, passing: 66 } },
   { name: "Rasmus Andersson", number: 4, pos: "RD", age: 29, nationality: "SE", contract: { years: 6, salary: 4550 }, attrs: { offensiveRead: 69, positioning: 69, shotAccuracy: 63, passing: 67 } },
-  { name: "MacKenzie Weegar", number: 52, pos: "RD", age: 31, nationality: "CA", contract: { years: 8, salary: 6250 }, attrs: { hitting: 71, positioning: 71, offensiveRead: 63, strength: 71 } },
+  { name: "Will Butcher", number: 52, pos: "RD", age: 31, nationality: "US", contract: { years: 8, salary: 6250 }, attrs: { hitting: 71, positioning: 71, offensiveRead: 63, strength: 71 } },
   { name: "Jake Bean", number: 22, pos: "LD", age: 27, nationality: "CA", contract: { years: 2, salary: 2500 }, attrs: { offensiveRead: 63, passing: 63, speed: 65 } },
   { name: "Kevin Bahl", number: 7, pos: "LD", age: 26, nationality: "CA", contract: { years: 4, salary: 5350 }, attrs: { strength: 76, positioning: 68, hitting: 62 } },
   { name: "Jacob Middleton", number: 55, pos: "LD", age: 31, nationality: "CA", contract: { years: 3, salary: 4350 }, attrs: { positioning: 66, hitting: 62, strength: 74 } },
