@@ -147,7 +147,7 @@ export const OTT_FARM_DATA = [
 
 // Club-école réel (LAH, Crunch de Syracuse) de Tampa Bay — même disclaimer que ci-dessus.
 export const TBL_FARM_DATA = [
-  { name: "Cole Koepke", number: 11, pos: "LW", age: 26, nationality: "US", contract: { years: 2, salary: 875 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Egor Sokolov", number: 11, pos: "LW", age: 25, nationality: "RU", contract: { years: 2, salary: 875 }, attrs: { strength: 62, shotAccuracy: 58 } },
   { name: "Nicholas Abruzzese", number: 80, pos: "C", age: 27, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
   { name: "Sam O'Reilly", number: 23, pos: "C", age: 21, nationality: "CA", contract: { years: 2, salary: 936 }, attrs: { offensiveRead: 60, speed: 58 } },
   { name: "Dylan Duke", number: 53, pos: "LW", age: 24, nationality: "US", contract: { years: 2, salary: 920 }, attrs: { shotAccuracy: 60, speed: 58 } },

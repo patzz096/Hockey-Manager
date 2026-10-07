@@ -155,6 +155,30 @@ export const STL_FARM_DATA = [
 ];
 
 // Club-école réel (LAH, Roadrunners de Tucson) de l'Utah — même disclaimer que ci-dessus.
+// Club-école réel (LAH, Moose du Manitoba) des Jets de Winnipeg — même disclaimer que ci-dessus.
+export const WPG_FARM_DATA = [
+  { name: "Brayden Yager", number: 29, pos: "C", age: 21, nationality: "CA", contract: { years: 3, salary: 941 }, attrs: { offensiveRead: 65, shotAccuracy: 63, speed: 61 } },
+  { name: "Danny Zhilkin", number: 53, pos: "C", age: 22, nationality: "CA", contract: { years: 2, salary: 878 }, attrs: { offensiveRead: 61, speed: 61, strength: 59 } },
+  { name: "Noah Gregor", number: 73, pos: "LW", age: 28, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { speed: 63, checking: 59 } },
+  { name: "Nikita Chibrikov", number: 90, pos: "RW", age: 23, nationality: "RU", contract: { years: 2, salary: 875 }, attrs: { shotAccuracy: 61, speed: 63 } },
+  { name: "Parker Ford", number: 25, pos: "C", age: 26, nationality: "US", contract: { years: 1, salary: 812 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Colby Barlow", number: 39, pos: "LW", age: 21, nationality: "CA", contract: { years: 3, salary: 909 }, attrs: { shotAccuracy: 63, speed: 59 } },
+  { name: "Kevin He", number: 46, pos: "LW", age: 20, nationality: "CN", contract: { years: 3, salary: 933 }, attrs: { speed: 61, shotAccuracy: 59 } },
+  { name: "Jacob Julien", number: 67, pos: "C", age: 22, nationality: "CA", contract: { years: 2, salary: 958 }, attrs: { strength: 61, offensiveRead: 59 } },
+  { name: "Fabian Wagner", number: 58, pos: "RW", age: 22, nationality: "SE", contract: { years: 2, salary: 906 }, attrs: { shotAccuracy: 59, speed: 59 } },
+  { name: "Kieron Walton", number: 76, pos: "LW", age: 20, nationality: "CA", contract: { years: 2, salary: 956 }, attrs: { strength: 63, offensiveRead: 57 } },
+  { name: "Lucas Wahlin", number: 49, pos: "RW", age: 25, nationality: "US", contract: { years: 1, salary: 910 }, attrs: { speed: 60, shotAccuracy: 58 } },
+  { name: "Walker Duehr", number: 71, pos: "RW", age: 29, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { strength: 61, hitting: 59 } },
+  { name: "Henry Thrun", number: 8, pos: "LD", age: 26, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Isaak Phillips", number: 3, pos: "LD", age: 25, nationality: "CA", contract: { years: 1, salary: 813 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Alfons Freij", number: 48, pos: "LD", age: 21, nationality: "SE", contract: { years: 2, salary: 965 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Garrett Brown", number: 68, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 1050 }, attrs: { strength: 60, positioning: 58 } },
+  { name: "Elias Salomonsson", number: 57, pos: "RD", age: 22, nationality: "SE", contract: { years: 1, salary: 865 }, attrs: { speed: 60, positioning: 58 } },
+  { name: "Domenic DiVincentiis", number: 50, pos: "G", age: 23, nationality: "CA", contract: { years: 2, salary: 906 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Thomas Milic", number: 32, pos: "G", age: 24, nationality: "CA", contract: { years: 2, salary: 917 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Isaac Poulter", number: 30, pos: "G", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
+];
+
 export const UTA_FARM_DATA = [
   { name: "Sam Lipkin", number: 71, pos: "LW", age: 24, nationality: "US", contract: { years: 1, salary: 927 }, attrs: { shotAccuracy: 60, speed: 58 } },
   { name: "Ben McCartney", number: 62, pos: "LW", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
