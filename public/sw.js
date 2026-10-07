@@ -1,12 +1,28 @@
-// Service worker : réseau d'abord pour le document HTML (toujours la dernière version quand il y
-// a internet — sinon la page ouvre une ancienne version qui pointe vers des fichiers JS/CSS
-// renommés, qui n'existent plus sur GitHub Pages après un nouveau déploiement, et l'app reste
-// blanche), cache d'abord pour le reste (JS/CSS/images : noms hachés par le build, donc leur
-// contenu ne change jamais pour un nom donné — sûr à garder tel quel). Permet le mode hors ligne
-// ("Ajouter à l'écran d'accueil") : après un premier chargement en ligne, tout reste jouable.
-const CACHE = "hockey-gm-v2";
+// Service worker PWA ("Ajouter à l'écran d'accueil") — précache complet et atomique par version.
+//
+// Bug corrigé ici : l'ancienne version mettait en cache le document HTML dès qu'il arrivait du
+// réseau (stratégie « réseau d'abord »), AVANT que les fichiers JS/CSS qu'il référence (noms
+// hachés, différents à chaque déploiement) soient eux-mêmes en cache. Si la connexion tombait
+// entre les deux (cas réel : ouverture rapide de l'app juste avant de passer en mode avion), le
+// document mis en cache pointait vers un bundle jamais mis en cache — page blanche hors ligne,
+// même si une version précédente, elle, était complète en cache.
+//
+// Ici, CACHE_VERSION et PRECACHE_URLS sont injectés par scripts/sw-manifest.mjs après le build
+// (voir build:pages) : la liste exacte des fichiers d'UNE build donnée. `install` les met tous en
+// cache en une seule opération atomique (`cache.addAll`) — soit tout réussit et cette version
+// devient active, soit un seul fichier échoue (coupure réseau en plein téléchargement) et
+// l'installation entière échoue sans toucher au service worker/cache déjà actif, qui reste donc
+// pleinement fonctionnel hors ligne. Le nom du cache inclut la version : chaque déploiement vit
+// dans son propre cache, jamais de mélange partiel entre deux versions.
+const CACHE_VERSION = "__CACHE_VERSION__";
+const PRECACHE_URLS = __PRECACHE_URLS__;
+const CACHE = `hockey-gm-${CACHE_VERSION}`;
 
-self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting())
+  );
+});
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
@@ -21,11 +37,9 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const { request } = event;
   if (isDocument(request)) {
-    event.respondWith(
-      fetch(request)
-        .then((res) => { caches.open(CACHE).then((cache) => cache.put(request, res.clone())); return res; })
-        .catch(() => caches.open(CACHE).then((cache) => cache.match(request)))
-    );
+    // Réseau d'abord (dernière version quand il y a internet) ; repli sur le précache, complet
+    // et cohérent par construction, donc toujours jouable hors ligne.
+    event.respondWith(fetch(request).catch(() => caches.open(CACHE).then((cache) => cache.match(request))));
     return;
   }
   event.respondWith(
