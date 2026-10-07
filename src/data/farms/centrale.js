@@ -127,3 +127,29 @@ export const NSH_FARM_DATA = [
   { name: "Matthew Murray", number: 32, pos: "G", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Isak Posch", number: 30, pos: "G", age: 25, nationality: "SE", contract: { years: 2, salary: 948 }, attrs: { reflexes: 58, positioning: 58 } },
 ];
+
+// Club-école réel (LAH, Thunderbirds de Springfield) de St. Louis — même disclaimer que ci-dessus.
+export const STL_FARM_DATA = [
+  { name: "Nathan Walker", number: 26, pos: "LW", age: 33, nationality: "AU", contract: { years: 2, salary: 888 }, attrs: { checking: 60, speed: 58 } },
+  { name: "Oskar Sundqvist", number: 70, pos: "C", age: 33, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { faceoffs: 58, checking: 58 } },
+  { name: "Jack Finley", number: 37, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { strength: 62, offensiveRead: 56 } },
+  { name: "Aleksanteri Kaskimäki", number: 41, pos: "C", age: 23, nationality: "FI", contract: { years: 2, salary: 945 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Otto Stenberg", number: 28, pos: "C", age: 21, nationality: "SE", contract: { years: 2, salary: 941 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Dylan Peterson", number: 32, pos: "C", age: 25, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 60, offensiveRead: 56 } },
+  { name: "Justin Carbonneau", number: 68, pos: "RW", age: 20, nationality: "CA", contract: { years: 2, salary: 974 }, attrs: { shotAccuracy: 62, speed: 62 } },
+  { name: "Nikita Susuyev", number: 53, pos: "LW", age: 22, nationality: "RU", contract: { years: 2, salary: 955 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Félix Trudeau", number: 46, pos: "LW", age: 24, nationality: "CA", contract: { years: 2, salary: 1014 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Simon Robertsson", number: 80, pos: "RW", age: 24, nationality: "SE", contract: { years: 2, salary: 943 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Juraj Pekarcik", number: 85, pos: "C", age: 21, nationality: "SK", contract: { years: 2, salary: 938 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Adam Jecho", number: 84, pos: "C", age: 21, nationality: "CZ", contract: { years: 2, salary: 965 }, attrs: { strength: 62, offensiveRead: 56 } },
+  { name: "Jakub Stancl", number: 93, pos: "LW", age: 22, nationality: "CZ", contract: { years: 2, salary: 936 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Colin Ralph", number: 51, pos: "LD", age: 21, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { strength: 62, positioning: 56 } },
+  { name: "Quinton Burns", number: 42, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 938 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Arseni Koromyslov", number: 48, pos: "LD", age: 23, nationality: "RU", contract: { years: 2, salary: 1014 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Marc-Andre Gaudet", number: 45, pos: "RD", age: 23, nationality: "CA", contract: { years: 2, salary: 878 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Lukas Fischer", number: 94, pos: "LD", age: 20, nationality: "US", contract: { years: 2, salary: 965 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Michael Buchinger", number: 62, pos: "RD", age: 23, nationality: "CA", contract: { years: 2, salary: 913 }, attrs: { positioning: 58, speed: 56 } },
+  { name: "Georgii Romanov", number: 35, pos: "G", age: 27, nationality: "RU", contract: { years: 1, salary: 875 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Will Cranley", number: 31, pos: "G", age: 25, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Milton Gästrin", number: 25, pos: "C", age: 19, nationality: "SE", contract: { years: 2, salary: 974 }, attrs: { offensiveRead: 60, speed: 58 } },
+];

@@ -43,7 +43,7 @@ export const TOR_ROSTER_DATA = [
   { name: "Steven Lorentz", number: 18, pos: "RW", age: 30, nationality: "CA", contract: { years: 2, salary: 1300 }, attrs: { hitting: 66, checking: 63, strength: 73, speed: 58 } },
   { name: "Morgan Rielly", number: 44, pos: "LD", age: 32, nationality: "CA", contract: { years: 4, salary: 7500 }, attrs: { passing: 78, offensiveRead: 76, puckhandling: 73, speed: 73, leadership: 78 } },
   { name: "Jake McCabe", number: 22, pos: "RD", age: 32, nationality: "US", contract: { years: 3, salary: 6250 }, attrs: { positioning: 78, defensiveRead: 78, hitting: 73, checking: 73, strength: 76 } },
-  { name: "Brandon Carlo", number: 25, pos: "LD", age: 29, nationality: "US", contract: { years: 6, salary: 4100 }, attrs: { positioning: 80, defensiveRead: 78, hitting: 76, checking: 74, strength: 80, shotBlocking: 78 } },
+  { name: "Parker Wotherspoon", number: 25, pos: "LD", age: 27, nationality: "CA", contract: { years: 6, salary: 4100 }, attrs: { positioning: 80, defensiveRead: 78, hitting: 76, checking: 74, strength: 80, shotBlocking: 78 } },
   { name: "Oliver Ekman-Larsson", number: 95, pos: "RD", age: 34, nationality: "SE", contract: { years: 1, salary: 3500 }, attrs: { passing: 72, offensiveRead: 70, positioning: 66, speed: 66, professionalism: 78 } },
   { name: "Philippe Myers", number: 2, pos: "RD", age: 28, nationality: "CA", contract: { years: 1, salary: 1150 }, attrs: { positioning: 61, strength: 71, hitting: 63 } },
   { name: "Chris Tanev", number: 8, pos: "RD", age: 36, nationality: "CA", contract: { years: 3, salary: 4500 }, attrs: { positioning: 86, defensiveRead: 84, shotBlocking: 83, stickchecking: 80, strength: 70, professionalism: 83 } },

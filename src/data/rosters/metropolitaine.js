@@ -164,7 +164,7 @@ export const WSH_ROSTER_DATA = [
   { name: "Dylan Strome", number: 17, pos: "C", age: 28, nationality: "CA", contract: { years: 7, salary: 5166 }, attrs: { passing: 82, offensiveRead: 80, shotAccuracy: 74, faceoffs: 68 } },
   { name: "Tom Wilson", number: 43, pos: "RW", age: 31, nationality: "CA", contract: { years: 5, salary: 6500 }, attrs: { hitting: 85, checking: 78, strength: 84, aggressiveness: 80, fighting: 75, shotAccuracy: 68 } },
   { name: "Aliaksei Protas", number: 21, pos: "LW", age: 24, nationality: "BY", contract: { years: 8, salary: 4550 }, attrs: { strength: 78, shotAccuracy: 74, offensiveRead: 70, speed: 72 } },
-  { name: "Connor McMichael", number: 24, pos: "C", age: 24, nationality: "CA", contract: { years: 2, salary: 2150 }, attrs: { shotAccuracy: 74, speed: 76, offensiveRead: 68 } },
+  { name: "Jakub Vrana", number: 24, pos: "C", age: 30, nationality: "CZ", contract: { years: 2, salary: 2150 }, attrs: { shotAccuracy: 74, speed: 76, offensiveRead: 68 } },
   { name: "Pierre-Luc Dubois", number: 80, pos: "C", age: 27, nationality: "CA", contract: { years: 6, salary: 6000 }, attrs: { strength: 80, faceoffs: 72, checking: 68, shotAccuracy: 70 } },
   { name: "Sonny Milano", number: 21, pos: "LW", age: 29, nationality: "US", contract: { years: 3, salary: 3750 }, attrs: { speed: 76, shotAccuracy: 74, puckhandling: 70 } },
   { name: "Anthony Beauvillier", number: 72, pos: "LW", age: 28, nationality: "CA", contract: { years: 1, salary: 1200 }, attrs: { speed: 76, shotAccuracy: 68 } },

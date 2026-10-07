@@ -163,7 +163,7 @@ export const VAN_ROSTER_DATA = [
   { name: "Conor Garland", number: 8, pos: "RW", age: 29, nationality: "US", contract: { years: 5, salary: 4950 }, attrs: { speed: 73, checking: 63, offensiveRead: 65 } },
   { name: "Jake DeBrusk", number: 74, pos: "LW", age: 29, nationality: "CA", contract: { years: 7, salary: 5500 }, attrs: { speed: 75, shotAccuracy: 71, offensiveRead: 63 } },
   { name: "Filip Chytil", number: 72, pos: "C", age: 26, nationality: "CZ", contract: { years: 4, salary: 4750 }, attrs: { speed: 75, offensiveRead: 67, shotAccuracy: 65 } },
-  { name: "Pius Suter", number: 24, pos: "RW", age: 29, nationality: "CH", contract: { years: 4, salary: 1500 }, attrs: { shotAccuracy: 67, speed: 69, offensiveRead: 61 } },
+  { name: "Nino Niederreiter", number: 24, pos: "RW", age: 33, nationality: "CH", contract: { years: 4, salary: 1500 }, attrs: { shotAccuracy: 67, speed: 69, offensiveRead: 61 } },
   { name: "Aatu Räty", number: 71, pos: "C", age: 22, nationality: "FI", contract: { years: 2, salary: 850 }, attrs: { offensiveRead: 59, faceoffs: 55, speed: 63 } },
   { name: "Quinn Hughes", number: 43, pos: "LD", age: 26, nationality: "US", contract: { years: 8, salary: 7850 }, attrs: { speed: 87, offensiveRead: 85, passing: 83, puckhandling: 81, leadership: 75 } },
   { name: "Filip Hronek", number: 17, pos: "RD", age: 27, nationality: "CZ", contract: { years: 8, salary: 7250 }, attrs: { offensiveRead: 71, passing: 69, positioning: 63 } },
