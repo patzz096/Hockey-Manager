@@ -51,6 +51,8 @@ export const CBJ_FARM_DATA = [
   { name: "Nolan Lalonde", number: 31, pos: "G", age: 23, nationality: "CA", contract: { years: 1, salary: 861 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Evan Gardner", number: 35, pos: "G", age: 21, nationality: "CA", contract: { years: 1, salary: 963 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Sergei Ivanov", number: 1, pos: "G", age: 23, nationality: "RU", contract: { years: 1, salary: 970 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Oscar Hemming", number: 3, pos: "LW", age: 19, nationality: "SE", contract: { years: 2, salary: 900 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Jackson Smith", number: 11, pos: "LD", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, strength: 58 } },
 ];
 
 // Club-école réel (LAH, Comets d'Utica) du New Jersey — même disclaimer que ci-dessus.
@@ -75,6 +77,7 @@ export const NJD_FARM_DATA = [
   { name: "Seamus Casey", number: 24, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 950 }, attrs: { offensiveRead: 60, speed: 62 } },
   { name: "David Rittich", number: 33, pos: "G", age: 34, nationality: "CZ", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
   { name: "Jakub Málek", number: 31, pos: "G", age: 25, nationality: "CZ", contract: { years: 2, salary: 875 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Alexander Command", number: 2, pos: "C", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { offensiveRead: 58, speed: 58 } },
 ];
 
 // Club-école réel (LAH, Islanders de Bridgeport) des Islanders de New York — même disclaimer.
@@ -100,6 +103,7 @@ export const NYI_FARM_DATA = [
   { name: "Vitek Vanecek", number: 41, pos: "G", age: 31, nationality: "CZ", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
   { name: "Joshua Kotai", number: 60, pos: "G", age: 24, nationality: "CA", contract: { years: 2, salary: 965 }, attrs: { reflexes: 60, positioning: 58 } },
   { name: "Henrik Tikkanen", number: 70, pos: "G", age: 26, nationality: "FI", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Malte Gustafsson", number: 2, pos: "LD", age: 19, nationality: "SE", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, speed: 58 } },
 ];
 
 // Club-école réel (LAH, Wolf Pack de Hartford) des Rangers de New York — même disclaimer.
@@ -151,6 +155,7 @@ export const PHI_FARM_DATA = [
   { name: "Jackson Edward", number: 92, pos: "LD", age: 23, nationality: "CA", contract: { years: 2, salary: 907 }, attrs: { positioning: 58, speed: 58 } },
   { name: "Alexei Kolosov", number: 35, pos: "G", age: 25, nationality: "BY", contract: { years: 3, salary: 850 }, attrs: { reflexes: 65, positioning: 65 } },
   { name: "Carson Bjarnason", number: 64, pos: "G", age: 21, nationality: "CA", contract: { years: 2, salary: 885 }, attrs: { reflexes: 60, positioning: 58 } },
+  { name: "Jack Nesbitt", number: 16, pos: "C", age: 19, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { offensiveRead: 60, faceoffs: 58, speed: 58 } },
 ];
 
 // Club-école réel (LAH, Penguins de Wilkes-Barre/Scranton) de Pittsburgh — même disclaimer.
@@ -175,6 +180,7 @@ export const PIT_FARM_DATA = [
   { name: "Daniel Laatsch", number: 5, pos: "LD", age: 25, nationality: "US", contract: { years: 1, salary: 935 }, attrs: { positioning: 58, strength: 58 } },
   { name: "Joel Blomqvist", number: 30, pos: "G", age: 25, nationality: "FI", contract: { years: 1, salary: 875 }, attrs: { reflexes: 62, positioning: 60 } },
   { name: "Taylor Gauthier", number: 33, pos: "G", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "William Horcoff", number: 3, pos: "C", age: 20, nationality: "US", contract: { years: 2, salary: 900 }, attrs: { offensiveRead: 58, faceoffs: 56 } },
 ];
 
 // Club-école réel (LAH, Bears de Hershey) de Washington — même disclaimer que ci-dessus.

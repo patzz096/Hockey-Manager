@@ -24,6 +24,10 @@ export const CGY_FARM_DATA = [
   { name: "Samuel Honzek", number: 29, pos: "LW", age: 22, nationality: "SK", contract: { years: 3, salary: 909 }, attrs: { strength: 64, offensiveRead: 58, speed: 60 } },
   { name: "Matvei Gridin", number: 92, pos: "LW", age: 21, nationality: "RU", contract: { years: 3, salary: 954 }, attrs: { shotAccuracy: 62, offensiveRead: 58, speed: 60 } },
   { name: "Zayne Parekh", number: 19, pos: "RD", age: 21, nationality: "CA", contract: { years: 3, salary: 954 }, attrs: { offensiveRead: 64, shotAccuracy: 60, speed: 62 } },
+  { name: "Cullen Potter", number: 2, pos: "C", age: 19, nationality: "US", contract: { years: 3, salary: 950 }, attrs: { speed: 64, offensiveRead: 58 } },
+  { name: "Ethan Wyttenbach", number: 3, pos: "LW", age: 20, nationality: "US", contract: { years: 2, salary: 900 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Cole Reschny", number: 5, pos: "C", age: 19, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { offensiveRead: 62, passing: 58 } },
+  { name: "Carson Carels", number: 8, pos: "LD", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, strength: 58 } },
 ];
 
 // Club-école réel (LAH, Condors de Bakersfield) d'Edmonton — même disclaimer que ci-dessus.
@@ -75,6 +79,7 @@ export const SEA_FARM_DATA = [
   { name: "Victor Ostman", number: 1, pos: "G", age: 26, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Kim Saarinen", number: 50, pos: "G", age: 20, nationality: "FI", contract: { years: 2, salary: 933 }, attrs: { reflexes: 56, positioning: 56 } },
   { name: "Dolan Gilbert", number: 0, pos: "G", age: 26, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
+  { name: "Chase Reid", number: 2, pos: "RD", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, strength: 58 } },
 ];
 
 // Club-école réel (LAH, Barracuda de San Jose) — même disclaimer que ci-dessus.
@@ -98,6 +103,7 @@ export const SJS_FARM_DATA = [
   { name: "Eric Comrie", number: 1, pos: "G", age: 31, nationality: "CA", contract: { years: 2, salary: 1150 }, attrs: { reflexes: 56, positioning: 56 } },
   { name: "Kyle Keyser", number: 36, pos: "G", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
   { name: "Nathan Airey", number: 0, pos: "G", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 54, positioning: 54 } },
+  { name: "Keaton Verhoeff", number: 3, pos: "RD", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, strength: 58 } },
 ];
 
 // Club-école réel (LAH, Reign d'Ontario) de Los Angeles — même disclaimer que ci-dessus.
@@ -126,6 +132,7 @@ export const LAK_FARM_DATA = [
   { name: "Erik Portillo", number: 1, pos: "G", age: 26, nationality: "SE", contract: { years: 2, salary: 833 }, attrs: { reflexes: 60, positioning: 58 } },
   { name: "Carter George", number: 70, pos: "G", age: 20, nationality: "CA", contract: { years: 2, salary: 929 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Hampton Slukynsky", number: 50, pos: "G", age: 21, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Elton Hermansson", number: 3, pos: "RW", age: 20, nationality: "SE", contract: { years: 2, salary: 900 }, attrs: { shotAccuracy: 58, speed: 58 } },
 ];
 
 // Club-école réel (LAH, Canucks d'Abbotsford) de Vancouver — même disclaimer que ci-dessus.
@@ -150,4 +157,5 @@ export const VAN_FARM_DATA = [
   { name: "Aku Koskenvuo", number: 36, pos: "G", age: 24, nationality: "FI", contract: { years: 1, salary: 925 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Ty Young", number: 85, pos: "G", age: 22, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Adam Novotný", number: 15, pos: "LW", age: 19, nationality: "CZ", contract: { years: 2, salary: 1075 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Caleb Malhotra", number: 3, pos: "C", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { offensiveRead: 58, speed: 58 } },
 ];

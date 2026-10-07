@@ -24,6 +24,9 @@ export const CHI_FARM_DATA = [
   { name: "Stanislav Berezhnoy", number: 31, pos: "G", age: 23, nationality: "RU", contract: { years: 2, salary: 975 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Drew Commesso", number: 33, pos: "G", age: 24, nationality: "US", contract: { years: 2, salary: 875 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Jackson Bernard", number: 1, pos: "G", age: 26, nationality: "US", contract: { years: 1, salary: 850, generated: true }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Xavier Villeneuve", number: 2, pos: "LD", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Vaclav Nestrasil", number: 3, pos: "RW", age: 20, nationality: "CZ", contract: { years: 2, salary: 900 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Roman Kantserov", number: 6, pos: "RW", age: 19, nationality: "RU", contract: { years: 2, salary: 900 }, attrs: { speed: 60, shotAccuracy: 58 } },
 ];
 
 // Club-école réel (LAH, Eagles de Colorado) de l'Avalanche — même disclaimer que ci-dessus.
@@ -75,6 +78,7 @@ export const DAL_FARM_DATA = [
   { name: "Jack Anderson", number: 40, pos: "LD", age: 24, nationality: "US", contract: { years: 2, salary: 1050 }, attrs: { strength: 60, positioning: 58 } },
   { name: "Brandon Halverson", number: 33, pos: "G", age: 31, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 58 } },
   { name: "Arno Tiefensee", number: 50, pos: "G", age: 24, nationality: "DE", contract: { years: 1, salary: 925 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Cameron Schmidt", number: 2, pos: "C", age: 19, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 62, speed: 64, offensiveRead: 58 } },
 ];
 
 // Club-école réel (LAH, Wild de l'Iowa) du Minnesota — même disclaimer que ci-dessus.
@@ -126,6 +130,9 @@ export const NSH_FARM_DATA = [
   { name: "Viggo Gustafsson", number: 40, pos: "LD", age: 20, nationality: "SE", contract: { years: 2, salary: 990 }, attrs: { positioning: 58, speed: 58 } },
   { name: "Matthew Murray", number: 32, pos: "G", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Isak Posch", number: 30, pos: "G", age: 25, nationality: "SE", contract: { years: 2, salary: 948 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Cameron Reid", number: 3, pos: "LD", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, speed: 60 } },
+  { name: "Yegor Surin", number: 4, pos: "C", age: 19, nationality: "RU", contract: { years: 2, salary: 900 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Wyatt Cullen", number: 5, pos: "LW", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { strength: 60, shotAccuracy: 58 } },
 ];
 
 // Club-école réel (LAH, Thunderbirds de Springfield) de St. Louis — même disclaimer que ci-dessus.
@@ -152,6 +159,7 @@ export const STL_FARM_DATA = [
   { name: "Georgii Romanov", number: 35, pos: "G", age: 27, nationality: "RU", contract: { years: 1, salary: 875 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Will Cranley", number: 31, pos: "G", age: 25, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
   { name: "Milton Gästrin", number: 25, pos: "C", age: 19, nationality: "SE", contract: { years: 2, salary: 974 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Tynan Lawrence", number: 2, pos: "C", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { speed: 60, offensiveRead: 58 } },
 ];
 
 // Club-école réel (LAH, Roadrunners de Tucson) de l'Utah — même disclaimer que ci-dessus.
@@ -204,4 +212,5 @@ export const UTA_FARM_DATA = [
   { name: "Michael Hrabal", number: 30, pos: "G", age: 22, nationality: "CZ", contract: { years: 1, salary: 1075 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Jaxson Stauber", number: 35, pos: "G", age: 27, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
   { name: "Max Psenicka", number: 47, pos: "LD", age: 20, nationality: "CZ", contract: { years: 1, salary: 998 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Ethan Belchetz", number: 2, pos: "LW", age: 19, nationality: "CA", contract: { years: 2, salary: 900 }, attrs: { strength: 58, shotAccuracy: 58 } },
 ];

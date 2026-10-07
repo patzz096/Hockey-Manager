@@ -23,6 +23,8 @@ export const BOS_FARM_DATA = [
   { name: "Vit Zajicek", number: 31, pos: "G", age: 23, nationality: "CZ", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
   { name: "Leo Cavallin", number: 32, pos: "G", age: 23, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
   { name: "Erik Lundgren", number: 33, pos: "G", age: 24, nationality: "US", contract: { years: 1, salary: 953 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Dean Letourneau", number: 13, pos: "C", age: 19, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { strength: 64, shotAccuracy: 58, faceoffs: 56 } },
+  { name: "James Hagens", number: 12, pos: "C", age: 19, nationality: "US", contract: { years: 3, salary: 950 }, attrs: { offensiveRead: 66, passing: 64, shotAccuracy: 62 } },
 ];
 
 export const BUF_FARM_DATA = [
@@ -45,6 +47,8 @@ export const BUF_FARM_DATA = [
   { name: "Scott Villalta", number: 31, pos: "G", age: 23, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
   { name: "Dylan Ratzlaff", number: 35, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 935 }, attrs: { reflexes: 58, positioning: 56 } },
   { name: "Topias Leinonen", number: 71, pos: "G", age: 22, nationality: "FI", contract: { years: 2, salary: 962 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Konsta Helenius", number: 2, pos: "C", age: 19, nationality: "FI", contract: { years: 3, salary: 950 }, attrs: { offensiveRead: 62, passing: 60 } },
+  { name: "Daxon Rudolph", number: 4, pos: "RD", age: 19, nationality: "CA", contract: { years: 3, salary: 900 }, attrs: { positioning: 58, strength: 58 } },
 ];
 
 // Club-école réel (LAH, Griffins de Grand Rapids) de Detroit — même disclaimer que ci-dessus.
@@ -69,6 +73,9 @@ export const DET_FARM_DATA = [
   { name: "Carter Gylander", number: 32, pos: "G", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 58 } },
   { name: "Trey Augustine", number: 31, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { reflexes: 60, positioning: 58 } },
   { name: "Michal Postava", number: 35, pos: "G", age: 25, nationality: "CZ", contract: { years: 1, salary: 975 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Eddie Genborg", number: 2, pos: "LW", age: 20, nationality: "SE", contract: { years: 2, salary: 900 }, attrs: { speed: 60, shotAccuracy: 58 } },
+  { name: "Max Plante", number: 3, pos: "C", age: 20, nationality: "US", contract: { years: 2, salary: 900 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "JP Hurlbert", number: 4, pos: "LW", age: 19, nationality: "US", contract: { years: 2, salary: 875 }, attrs: { speed: 58, shotAccuracy: 58 } },
 ];
 
 // Club-école réel (LAH, Checkers de Charlotte) de Floride — même disclaimer que ci-dessus.
@@ -118,6 +125,8 @@ export const MTL_FARM_DATA = [
   { name: "Bryce Pickford", number: 94, pos: "RD", age: 21, nationality: "CA", contract: { years: 2, salary: 964 }, attrs: { positioning: 56, speed: 58 } },
   { name: "Jacob Fowler", number: 32, pos: "G", age: 22, nationality: "US", contract: { years: 2, salary: 946 }, attrs: { reflexes: 60, positioning: 58 } },
   { name: "Kaapo Kahkonen", number: 34, pos: "G", age: 30, nationality: "FI", contract: { years: 1, salary: 1000 }, attrs: { reflexes: 65, positioning: 65 } },
+  { name: "Alexander Zharovsky", number: 3, pos: "RW", age: 20, nationality: "RU", contract: { years: 2, salary: 900 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Michael Hage", number: 5, pos: "C", age: 19, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { offensiveRead: 64, passing: 60 } },
 ];
 
 // Club-école réel (LAH, Sénateurs de Belleville) d'Ottawa — même disclaimer que ci-dessus.
