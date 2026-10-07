@@ -4,35 +4,38 @@ export const DEFAULT_FACILITIES = { concessions: 1, boutique: 1, parking: 1, mar
 
 export const FACILITY_LABELS = { concessions: "Concessions (cuisine)", boutique: "Boutique / marchandise", parking: "Stationnement (capacité)", marketing: "Marketing / publicité" };
 
+// Prix calés sur les moyennes réelles de la LNH (Team Marketing Report / Fan Cost Index) plutôt
+// que des prix symboliques : essentiel pour que les revenus de match couvrent une masse salariale
+// de plusieurs dizaines de millions (voir computeGameFinance plus bas, et HOME_GAMES_PER_SEASON).
 export const DEFAULT_TICKET_TIERS = [
-  { key: "general", label: "Général", price: 28, basePrice: 28, share: 0.75 },
-  { key: "passerelle", label: "Passerelle (mezzanine)", price: 45, basePrice: 45, share: 0.15 },
-  { key: "loge", label: "Loges privées", price: 85, basePrice: 85, share: 0.10 },
+  { key: "general", label: "Général", price: 85, basePrice: 85, share: 0.75 },
+  { key: "passerelle", label: "Passerelle (mezzanine)", price: 130, basePrice: 130, share: 0.15 },
+  { key: "loge", label: "Loges privées", price: 240, basePrice: 240, share: 0.10 },
 ];
 
 export const DEFAULT_CONCESSION_ITEMS = [
-  { key: "hotdog", label: "Hot-dog", price: 5, basePrice: 5, avgPerFan: 0.35 },
-  { key: "burger", label: "Hamburger", price: 8, basePrice: 8, avgPerFan: 0.20 },
-  { key: "frites", label: "Frites", price: 4.5, basePrice: 4.5, avgPerFan: 0.35 },
-  { key: "poutine", label: "Poutine", price: 7, basePrice: 7, avgPerFan: 0.30 },
-  { key: "popcorn", label: "Pop-corn", price: 4.5, basePrice: 4.5, avgPerFan: 0.25 },
-  { key: "bonbon", label: "Bonbons", price: 3.5, basePrice: 3.5, avgPerFan: 0.20 },
-  { key: "chocolat", label: "Chocolat", price: 3, basePrice: 3, avgPerFan: 0.18 },
-  { key: "slush", label: "Slush", price: 4, basePrice: 4, avgPerFan: 0.22 },
-  { key: "boisson", label: "Boisson gazeuse", price: 4, basePrice: 4, avgPerFan: 0.55 },
-  { key: "biere", label: "Bière", price: 8.5, basePrice: 8.5, avgPerFan: 0.30 },
+  { key: "hotdog", label: "Hot-dog", price: 8, basePrice: 8, avgPerFan: 0.35 },
+  { key: "burger", label: "Hamburger", price: 14, basePrice: 14, avgPerFan: 0.20 },
+  { key: "frites", label: "Frites", price: 8, basePrice: 8, avgPerFan: 0.35 },
+  { key: "poutine", label: "Poutine", price: 13, basePrice: 13, avgPerFan: 0.30 },
+  { key: "popcorn", label: "Pop-corn", price: 9, basePrice: 9, avgPerFan: 0.25 },
+  { key: "bonbon", label: "Bonbons", price: 6, basePrice: 6, avgPerFan: 0.20 },
+  { key: "chocolat", label: "Chocolat", price: 6, basePrice: 6, avgPerFan: 0.18 },
+  { key: "slush", label: "Slush", price: 7, basePrice: 7, avgPerFan: 0.22 },
+  { key: "boisson", label: "Boisson gazeuse", price: 7, basePrice: 7, avgPerFan: 0.55 },
+  { key: "biere", label: "Bière", price: 13, basePrice: 13, avgPerFan: 0.30 },
 ];
 
-export const DEFAULT_PARKING = { price: 12, basePrice: 12, rate: 0.35 };
+export const DEFAULT_PARKING = { price: 30, basePrice: 30, rate: 0.35 };
 
 // Marchandise (boutique) : chandails, casquettes... vendus les soirs de match, comme les
 // concessions (même mécanique de prix/élasticité), en plus du multiplicateur du niveau de la
 // boutique et de la note d'engagement des partisans (plus les partisans sont engagés, plus ils achètent).
 export const DEFAULT_MERCH_ITEMS = [
-  { key: "jersey", label: "Chandail", price: 180, basePrice: 180, avgPerFan: 0.035 },
-  { key: "casquette", label: "Casquette", price: 32, basePrice: 32, avgPerFan: 0.07 },
-  { key: "tshirt", label: "T-shirt", price: 38, basePrice: 38, avgPerFan: 0.06 },
-  { key: "souvenir", label: "Mini-bâton / rondelle souvenir", price: 15, basePrice: 15, avgPerFan: 0.05 },
+  { key: "jersey", label: "Chandail", price: 190, basePrice: 190, avgPerFan: 0.035 },
+  { key: "casquette", label: "Casquette", price: 35, basePrice: 35, avgPerFan: 0.07 },
+  { key: "tshirt", label: "T-shirt", price: 40, basePrice: 40, avgPerFan: 0.06 },
+  { key: "souvenir", label: "Mini-bâton / rondelle souvenir", price: 20, basePrice: 20, avgPerFan: 0.05 },
 ];
 
 export function facilityUpgradeCost(level) { return 4000 + level * 3500; }
@@ -82,7 +85,9 @@ export function engagementColor(score) { return score >= 80 ? "var(--win)" : sco
 // Revenu fixe par saison (payé par match local, comme le reste), renégocié tous les
 // TV_DEAL_TERM ans (voir App.jsx startNewSeason) selon l'engagement des partisans et le dossier
 // de l'équipe — une équipe populaire et gagnante décroche un bien meilleur contrat.
-export const TV_DEAL_BASE = 1_800_000;
+// Revenu de diffusion (national + local/régional combinés) : du même ordre que la réalité, où
+// même une équipe de marché moyen touche des dizaines de millions par saison de ses ententes TV.
+export const TV_DEAL_BASE = 25_000_000;
 export const TV_DEAL_TERM = 4;
 export function tvDealValue(engagement, winPct, broadcastRating = null) {
   const engagementMult = 0.5 + clamp(engagement, 0, 100) / 100; // 0.5..1.5
@@ -112,6 +117,13 @@ export function autoTuneFinances(biz, lastFin) {
 }
 
 export function priceElasticity(price, basePrice) { return Math.max(0.4, Math.min(1.4, 1.3 - (price / basePrice - 1) * 0.6)); }
+
+// Nombre de matchs locaux par saison régulière (32 équipes, calendrier en 2 manches façon
+// round-robin — voir engine/league.js buildSchedule) : chaque équipe affronte les 31 autres une
+// fois à domicile. La masse salariale et le contrat de diffusion ne sont encaissés/déboursés que
+// les soirs de match local (voir App.jsx processFinance) : diviser par ce nombre, plutôt qu'un
+// chiffre arbitraire, répartit correctement le coût/revenu annuel sur la saison.
+export const HOME_GAMES_PER_SEASON = 31;
 
 // extraPayroll : salaires versés hors alignement (rachats, salaires retenus), en k$ par saison.
 export function computeGameFinance(team, business, winPct, extraPayroll = 0) {
@@ -159,12 +171,12 @@ export function computeGameFinance(team, business, winPct, extraPayroll = 0) {
 
   // Contrat de diffusion : revenu fixe par saison, versé au prorata de chaque match local
   // (voir TV_DEAL_TERM/negotiateTvDeal — renégocié en saison morte selon l'engagement et le dossier).
-  const tvRevenue = Math.round((business.tvDeal?.value || 0) / 56);
+  const tvRevenue = Math.round((business.tvDeal?.value || 0) / HOME_GAMES_PER_SEASON);
 
   const revenue = ticketRevenue + concessionsRevenue + parkingRevenue + merchRevenue + tvRevenue;
-  const payroll = Math.round(((team.roster.reduce((a, p) => a + (p.contract?.salary || 0), 0) + extraPayroll) * 1000) / 56);
+  const payroll = Math.round(((team.roster.reduce((a, p) => a + (p.contract?.salary || 0), 0) + extraPayroll) * 1000) / HOME_GAMES_PER_SEASON);
   // Personnel, plus les dépisteurs engagés en renfort (onglet Dépistage).
-  const staffPayroll = Math.round(([...Object.values(business.staff || {}), ...(business.scoutTeam || [])].reduce((a, s) => a + (s?.salary || 0), 0) * 1000) / 56);
+  const staffPayroll = Math.round(([...Object.values(business.staff || {}), ...(business.scoutTeam || [])].reduce((a, s) => a + (s?.salary || 0), 0) * 1000) / HOME_GAMES_PER_SEASON);
   const maintenance = Object.values(business.facilities).reduce((a, l) => a + l * 250, 0);
   const arenaBase = 3500;
   const expenses = payroll + staffPayroll + maintenance + arenaBase;

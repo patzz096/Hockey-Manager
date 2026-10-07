@@ -46,7 +46,12 @@ export function buildRealFarmRoster(data, teamIndex, rng) {
     allAttrs.forEach((a) => { attrs[a] = (d.attrs && d.attrs[a] != null) ? d.attrs[a] : 54; });
     const ovr = computeOvr(d.pos, attrs);
     const potential = d.potential != null ? Math.max(ovr, Math.min(99, d.potential)) : Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
-    const contract = d.contract ? { type: "one", ...d.contract } : { ...randomContract(rng, { age: d.age, ovr, potential, pos: d.pos, level: "LAH" }), generated: true };
+    // Par défaut à deux volets (LAH) : un joueur du club-école réel qui ne joue pas dans la LNH
+    // coûte son petit salaire LAH (ahlSalary), pas le plein salaire indiqué (celui-ci reste le
+    // volet LNH du contrat, payé seulement s'il est rappelé — voir engine/contracts.js isTwoWay,
+    // App.jsx farmPay/buried). Un contrat à un volet (stash rare d'un vétéran) peut toujours être
+    // précisé explicitement dans les données (`contract: { type: "one", ... }`).
+    const contract = d.contract ? { type: "two", ahlSalary: 80, ...d.contract } : { ...randomContract(rng, { age: d.age, ovr, potential, pos: d.pos, level: "LAH" }), generated: true };
     return { id: `FARM-real-${teamIndex}-${i}`, name: d.name, number: d.number, pos: d.pos, age: d.age, nationality: d.nationality, attrs, ovr, potential, contract, level: "LAH", condition: d.condition ?? randomCondition(rng) };
   }).sort((a, b) => b.ovr - a.ovr);
 }
