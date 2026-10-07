@@ -1,4 +1,26 @@
 import { normalizeStrategy, STRATEGY_PHASES } from "./strategy";
+import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr } from "./attributes";
+
+// Développement mensuel d'un joueur (voir App.jsx monthlyTick, qui l'applique à la fois à
+// l'alignement et au club-école — le club-école est là où le développement des jeunes se voit le
+// plus). L'ampleur dépend de l'écart au potentiel (plus il reste de marge, plus ça peut bouger,
+// jusqu'à un plafond) et de l'âge : les jeunes progressent, les joueurs en milieu de carrière
+// stagnent la plupart du temps (comme dans la réalité), les vétérans déclinent plus ils
+// vieillissent. `devBonus`/`scoutBonus` (voir App.jsx) viennent d'un bon entraîneur physique/DG
+// et d'un bon dépisteur pro, qui accélèrent la progression (ou freinent le déclin). Retourne le
+// même objet si rien ne bouge ce mois-ci (comparaison par référence, voir monthlyTick).
+export function developPlayer(p0, { devBonus = 0, scoutBonus = 0 } = {}, rng = Math.random) {
+  const growthRoom = p0.potential - p0.ovr;
+  const ageFactor = p0.age <= 19 ? 1.1 : p0.age <= 22 ? 0.7 : p0.age <= 25 ? 0.25 : p0.age <= 29 ? 0.08 : p0.age <= 32 ? -0.35 : p0.age <= 35 ? -0.7 : -1.1;
+  const magnitude = growthRoom > 0 ? Math.min(4, 1 + growthRoom / 12) : 1.8;
+  let delta = Math.round(magnitude * ageFactor * (1 + devBonus + scoutBonus) * (0.5 + rng()));
+  delta = Math.max(-3, Math.min(4, delta));
+  if (delta === 0) return p0;
+  const attrKeys = p0.pos === "G" ? [...GOALIE_TECH, ...MENTAL, ...GOALIE_PHYSICAL] : [...OFFENSIVE, ...DEFENSIVE, ...MENTAL, ...PHYSICAL];
+  const newAttrs = { ...p0.attrs };
+  [...attrKeys].sort(() => rng() - 0.5).slice(0, 3).forEach((k) => { newAttrs[k] = Math.max(20, Math.min(99, newAttrs[k] + delta)); });
+  return { ...p0, attrs: newAttrs, ovr: computeOvr(p0.pos, newAttrs) };
+}
 
 // ---------------------------------------------------------------------------------------
 // Entraînement (façon FM24) : condition physique et cohésion tactique.

@@ -8,7 +8,7 @@ import { SortTh, StarRating, PlayerLink } from "./common";
 import { money } from "../ui/format";
 import { formatDay } from "../engine/calendar";
 
-export function StaffCenter({ business, staffMarket, myTeam, month, progressionReport, onOffer, pendingStaffOffers = [], staffNegotiations = {}, onFire, onRefresh, onSetDelegation, onSelectPlayer, onSelectStaff }) {
+export function StaffCenter({ business, staffMarket, myTeam, farmRoster = [], month, progressionReport, onOffer, pendingStaffOffers = [], staffNegotiations = {}, onFire, onRefresh, onSetDelegation, onSelectPlayer, onSelectStaff }) {
   const [pok, pod, poToggle] = useSort("role");
   const poAcc = (row, key) => (key === "role" ? STAFF_ROLES[row.role] : key === "nationality" ? (row.hired?.nationality || "") : row.hired ? row.hired[key] : -1);
   const staffRows = Object.keys(STAFF_ROLES).map((role) => ({ role, hired: business.staff[role] }));
@@ -139,7 +139,10 @@ export function StaffCenter({ business, staffMarket, myTeam, month, progressionR
         <tbody>
           {progressionReport.map((r) => (
             <tr key={r.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-              <td style={{ padding: "7px 10px" }}><PlayerLink player={myTeam.roster.find((p) => p.id === r.id)} team={myTeam} onSelect={onSelectPlayer}>{r.name}</PlayerLink></td>
+              <td style={{ padding: "7px 10px" }}>
+                <PlayerLink player={(r.level === "LAH" ? farmRoster : myTeam.roster).find((p) => p.id === r.id)} team={myTeam} onSelect={onSelectPlayer}>{r.name}</PlayerLink>
+                {r.level === "LAH" && <span style={{ fontSize: 10, color: "var(--iceMuted)", marginLeft: 6 }}>(club-école)</span>}
+              </td>
               <td style={{ padding: "7px 10px" }}>{r.before}</td>
               <td style={{ padding: "7px 10px" }}>{r.after}</td>
               <td style={{ padding: "7px 10px", color: r.delta >= 0 ? "var(--win)" : "var(--loss)", fontWeight: 600 }}>{r.delta >= 0 ? "+" : ""}{r.delta}</td>

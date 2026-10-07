@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, MessageCircle, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone } from "lucide-react";
-import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, computeOvr, emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
+import { emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
@@ -23,7 +23,7 @@ import { seededRandom } from "./engine/random";
 import { teamStrength, simulateStretch, nextStoppage, emptyLiveAccum, mergeLivePeriod, simulateGame, resolveOvertime, applyOvertime, aiPickShift, computeTOI } from "./engine/simulation";
 import { STAFF_ROLES, buildStaffMarketRT, evaluateStaffOffer, MAX_STAFF_OFFER_ATTEMPTS } from "./engine/staff";
 import { scoutOptions, scoutingDelay, createScoutReport, staffViewPlayer, getScoutInfo } from "./engine/scouting";
-import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue } from "./engine/training";
+import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue, developPlayer } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
 import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
 import { money } from "./ui/format";
@@ -1375,26 +1375,27 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const scoutProRating = business.staff.scoutPro?.rating || 50;
     const devBonus = ((coachDev - 50) / 50) * 0.5;
     const scoutBonus = ((scoutProRating - 50) / 50) * 0.2;
-    const reportEntries = [];
-    const updates = {};
-    (teamsById[myTeamId]?.roster || []).forEach((p0) => {
-      let p = p0;
-      for (let m = 0; m < months; m++) {
-        const growthRoom = p.potential - p.ovr;
-        const ageFactor = p.age <= 19 ? 1.0 : p.age <= 22 ? 0.7 : p.age <= 26 ? 0.3 : -0.15;
-        const magnitude = growthRoom > 0 ? growthRoom : 6;
-        let delta = Math.round(magnitude * 0.05 * ageFactor * (1 + devBonus + scoutBonus) * (0.4 + Math.random() * 0.8));
-        delta = Math.max(-4, Math.min(5, delta));
-        if (delta === 0) continue;
-        const attrKeys = p.pos === "G" ? [...GOALIE_TECH, ...MENTAL, ...GOALIE_PHYSICAL] : [...OFFENSIVE, ...DEFENSIVE, ...MENTAL, ...PHYSICAL];
-        const newAttrs = { ...p.attrs };
-        [...attrKeys].sort(() => Math.random() - 0.5).slice(0, 3).forEach((k) => { newAttrs[k] = Math.max(20, Math.min(99, newAttrs[k] + delta)); });
-        p = { ...p, attrs: newAttrs, ovr: computeOvr(p.pos, newAttrs) };
-      }
-      if (p !== p0) { updates[p.id] = p; reportEntries.push({ id: p.id, name: p.name, before: p0.ovr, after: p.ovr, delta: p.ovr - p0.ovr }); }
-    });
-    setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: t.roster.map((p) => (updates[p.id] ? { ...p, attrs: updates[p.id].attrs, ovr: updates[p.id].ovr } : p)).sort((a, b) => b.ovr - a.ovr) })));
-    const sorted = reportEntries.sort((a, b) => b.delta - a.delta);
+    // Applique developPlayer (engine/training.js) `months` fois à un effectif donné (alignement
+    // ou club-école — c'est là que le développement des jeunes se voit le plus) ; retourne la
+    // nouvelle liste et les entrées de rapport (avant/après) pour ceux qui ont vraiment bougé.
+    function developRoster(roster, levelTag) {
+      const entries = [];
+      const next = roster.map((p0) => {
+        let p = p0;
+        for (let m = 0; m < months; m++) p = developPlayer(p, { devBonus, scoutBonus });
+        // Les attributs peuvent bouger sans que la cote générale arrondie change (plusieurs
+        // petits ajustements qui s'annulent) : seuls les changements de cote visibles comptent
+        // pour le rapport, même si les attributs mis à jour sont conservés (next).
+        if (p !== p0 && p.ovr !== p0.ovr) entries.push({ id: p.id, name: p.name, before: p0.ovr, after: p.ovr, delta: p.ovr - p0.ovr, level: levelTag });
+        return p;
+      });
+      return { next, entries };
+    }
+    const { next: nextRoster, entries: rosterEntries } = developRoster(teamsById[myTeamId]?.roster || [], "LNH");
+    const { next: nextFarm, entries: farmEntries } = developRoster(farmByTeam[myTeamId] || [], "LAH");
+    setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: [...nextRoster].sort((a, b) => b.ovr - a.ovr) })));
+    setFarmByTeam((prev) => ({ ...prev, [myTeamId]: [...nextFarm].sort((a, b) => b.ovr - a.ovr) }));
+    const sorted = [...rosterEntries, ...farmEntries].sort((a, b) => b.delta - a.delta);
     setProgressionReport(sorted);
     const coachName = business.staff.headCoach?.name || "Département de développement";
     const gainers = sorted.filter((r) => r.delta > 0).slice(0, 5);
@@ -1861,7 +1862,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
-        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} month={monthLabel(currentDay)} progressionReport={progressionReport} onOffer={offerStaff} pendingStaffOffers={pendingStaffOffers} staffNegotiations={staffNegotiations} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} onSelectStaff={(staff, role, isHired) => setSelectedStaff({ staff, role, isHired })} />}
+        {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} farmRoster={myFarmView} month={monthLabel(currentDay)} progressionReport={progressionReport} onOffer={offerStaff} pendingStaffOffers={pendingStaffOffers} staffNegotiations={staffNegotiations} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} onSelectStaff={(staff, role, isHired) => setSelectedStaff({ staff, role, isHired })} />}
 
         {tab === "training" && (
           <TrainingCenter
