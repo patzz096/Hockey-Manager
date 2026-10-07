@@ -1,24 +1,13 @@
-import { gameDay, formatDay } from "../engine/calendar";
+import { gameDay } from "../engine/calendar";
 import { h2Style, btnStyle } from "../ui/theme";
 import { TeamCrest, PlayerLink } from "./common";
+import { NewsFeed } from "./NewsFeed";
+import { TeamOfTheWeek } from "./TeamOfTheWeek";
 
-const RESULT_COLOR = { V: "var(--win)", D: "var(--loss)", P: "var(--gold)" };
-const RESULT_LABEL = { V: "V", D: "D", P: "DP" };
-
-// Résultat d'un match joué, du point de vue de `myTeamId` : victoire, défaite, ou défaite en
-// prolongation/tirs de barrage (P, comme dans le tableau de classement).
-function resultFor(game, myTeamId) {
-  const mine = game.home === myTeamId ? game.homeScore : game.awayScore;
-  const theirs = game.home === myTeamId ? game.awayScore : game.homeScore;
-  const extra = game.decidedIn === "OT" || game.decidedIn === "SO";
-  if (mine > theirs) return "V";
-  return extra ? "P" : "D";
-}
-
-// Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, ses derniers résultats
-// (au fil de la simulation) et les meneurs au pointage de la ligue, avec des raccourcis vers les
-// onglets complets (Classement, Statistiques).
-export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, onSelectPlayer, onGoTo }) {
+// Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, le fil de nouvelles de ses
+// derniers matchs (articles — voir NewsFeed), l'équipe de la semaine et les meneurs au pointage
+// de la ligue, avec des raccourcis vers les onglets complets (Classement, Statistiques).
+export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, onSelectPlayer, onGoTo }) {
   const myRankIdx = standings.findIndex((s) => s.id === myTeamId);
   const my = standings[myRankIdx];
   const myTeam = teamsById[myTeamId];
@@ -45,6 +34,7 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
           </div>
         </div>
       )}
+      <TeamOfTheWeek tow={weeklyTeam} onSelectPlayer={onSelectPlayer} />
       <div style={{ display: "grid", gridTemplateColumns: "1.15fr 1fr", gap: 20 }}>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -76,25 +66,8 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
             </tbody>
           </table>
 
-          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, marginBottom: 8 }}>Résultats récents</div>
-          {recent.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucun match joué pour l'instant.</div>}
-          {recent.map((g) => {
-            const opponentId = g.home === myTeamId ? g.away : g.home;
-            const home = g.home === myTeamId;
-            const mine = home ? g.homeScore : g.awayScore;
-            const theirs = home ? g.awayScore : g.homeScore;
-            const res = resultFor(g, myTeamId);
-            return (
-              <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 4px", borderBottom: "1px solid #ffffff11", fontSize: 13 }}>
-                <span style={{ width: 22, textAlign: "center", fontWeight: 700, color: RESULT_COLOR[res] }}>{RESULT_LABEL[res]}</span>
-                <span style={{ width: 20, color: "var(--iceMuted)", fontSize: 11 }}>{home ? "vs" : "@"}</span>
-                <TeamCrest team={teamsById[opponentId]} size={20} />
-                <span style={{ flex: 1 }}>{teamsById[opponentId]?.name}</span>
-                <span style={{ color: "var(--iceMuted)" }}>{formatDay(gameDay(seasonYear, g))}</span>
-                <span style={{ fontWeight: 600, width: 50, textAlign: "right" }}>{mine}–{theirs}</span>
-              </div>
-            );
-          })}
+          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, marginBottom: 8 }}>Le journal</div>
+          <NewsFeed games={recent} seasonYear={seasonYear} teamsById={teamsById} onSelectPlayer={onSelectPlayer} />
         </div>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

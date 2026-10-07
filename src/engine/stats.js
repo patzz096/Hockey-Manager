@@ -118,3 +118,63 @@ export function teamOfTheWeek(schedule, seasonYear, currentDay, teamsById, every
   if (forwards.length < 3 || defense.length < 2 || !goalie) return null;
   return { forwards, defense, goalie, weekStart, weekEnd: currentDay };
 }
+
+// Étoile du match (voir HomeDashboard/NewsFeed) : le mieux coté des deux équipes sur ce match
+// précis, patineur (skaterRating, statistiques du match) ou gardien (goalieRatingFromSavePct,
+// % d'arrêts) — même barème que les cotes affichées dans la feuille de match (BoxscoreView).
+export function gameStar(game, teamsById) {
+  if (!game.box) return null;
+  const { box } = game;
+  const candidates = [];
+  [["home", teamsById[game.home]], ["away", teamsById[game.away]]].forEach(([side, team]) => {
+    if (!team) return;
+    const b = box[side] || {};
+    const ids = new Set([...Object.keys(b.goalsBy || {}), ...Object.keys(b.assistsBy || {}), ...Object.keys(b.shotsBy || {}), ...Object.keys(b.toiBy || {})]);
+    ids.forEach((id) => {
+      const player = team.roster.find((p) => p.id === id);
+      if (!player || player.pos === "G") return;
+      const g = b.goalsBy?.[id] || 0, a = b.assistsBy?.[id] || 0;
+      const r = skaterRating({ g, a, shots: b.shotsBy?.[id] || 0, plusMinus: (b.plusMinusBy || {})[id] || 0, hits: (b.hitsBy || {})[id] || 0, blocks: (b.blocksBy || {})[id] || 0, pim: (b.pimBy || {})[id] || 0 });
+      candidates.push({ player, team, rating: r.overall, kind: "skater", line: `${g} but${g > 1 ? "s" : ""}, ${a} passe${a > 1 ? "s" : ""}` });
+    });
+  });
+  const goalieCandidate = (goalieBox, team) => {
+    if (!goalieBox?.playerId || !team || !goalieBox.shotsAgainst) return null;
+    const player = team.roster.find((p) => p.id === goalieBox.playerId);
+    if (!player) return null;
+    const savePct = goalieBox.saves / goalieBox.shotsAgainst;
+    const r = goalieRatingFromSavePct(savePct);
+    return { player, team, rating: r.overall, kind: "goalie", line: `${goalieBox.saves}/${goalieBox.shotsAgainst} arrêts (${Math.round(savePct * 1000) / 10} %)` };
+  };
+  [goalieCandidate(box.homeGoalie, teamsById[game.home]), goalieCandidate(box.awayGoalie, teamsById[game.away])].forEach((c) => { if (c) candidates.push(c); });
+  if (!candidates.length) return null;
+  return candidates.sort((a, b) => b.rating - a.rating)[0];
+}
+
+// Article façon journal sportif pour un match joué (voir HomeDashboard/NewsFeed) : manchette,
+// paragraphe de résumé, fait saillant (but victorieux) et étoile du match (gameStar ci-dessus).
+export function gameArticle(game, seasonYear, teamsById) {
+  if (!game.played || !game.box) return null;
+  const home = teamsById[game.home], away = teamsById[game.away];
+  if (!home || !away) return null;
+  const homeWin = game.homeScore > game.awayScore;
+  const winner = homeWin ? home : away, loser = homeWin ? away : home;
+  const winnerScore = homeWin ? game.homeScore : game.awayScore;
+  const loserScore = homeWin ? game.awayScore : game.homeScore;
+  const extra = game.decidedIn === "OT" ? " en prolongation" : game.decidedIn === "SO" ? " en tirs de barrage" : "";
+  const headline = `${winner.name} l'emporte ${winnerScore}-${loserScore}${extra} contre ${loser.name}`;
+
+  const winSide = homeWin ? "home" : "away";
+  const loserGoals = Math.min(game.homeScore, game.awayScore);
+  const goals = (game.box.goalLog || []).filter((e) => e.side === winSide && e.type !== "SO");
+  const gwg = goals[loserGoals];
+  const scorer = gwg?.scorerId ? winner.roster.find((p) => p.id === gwg.scorerId) : null;
+
+  const star = gameStar(game, teamsById);
+  const shotsHome = game.box.home?.shots ?? 0, shotsAway = game.box.away?.shots ?? 0;
+  const paragraph = `${winner.name} a défait ${loser.name} par la marque de ${winnerScore} à ${loserScore}${extra}, avec un avantage de ${homeWin ? shotsHome : shotsAway}-${homeWin ? shotsAway : shotsHome} aux tirs au but.`
+    + (scorer ? ` ${scorer.name} a inscrit le but victorieux.` : "");
+  const highlight = star ? `${star.player.name} (${star.team.name}) — ${star.line}` : null;
+
+  return { id: game.id, day: gameDay(seasonYear, game), headline, paragraph, highlight, star, winner, loser, winnerScore, loserScore, home, away, game };
+}

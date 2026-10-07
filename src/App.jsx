@@ -1805,7 +1805,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           </div>
         </div>
 
-        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} onSelectPlayer={selectPlayer} onGoTo={setTab} />}
+        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} onSelectPlayer={selectPlayer} onGoTo={setTab} />}
 
         {tab === "roster" && (
           <div>
