@@ -147,7 +147,7 @@ export const STL_ROSTER_DATA = [
   { name: "Theo Lindstein", number: 4, pos: "LD", age: 22, nationality: "SE", contract: { years: 2, salary: 941 }, attrs: { positioning: 59, speed: 63, offensiveRead: 57 } },
   { name: "Colton Parayko", number: 55, pos: "RD", age: 33, nationality: "CA", contract: { years: 8, salary: 6500 }, attrs: { strength: 81, positioning: 75, shotAccuracy: 65, hitting: 67 } },
   { name: "Cam Fowler", number: 17, pos: "LD", age: 35, nationality: "US", contract: { years: 1, salary: 6100 }, attrs: { speed: 71, offensiveRead: 65, positioning: 61 } },
-  { name: "Parker Wotherspoon", number: 25, pos: "RD", age: 29, nationality: "US", contract: { years: 2, salary: 3485 }, attrs: { positioning: 65, strength: 69, hitting: 61 } },
+  { name: "Brandon Carlo", number: 25, pos: "RD", age: 29, nationality: "US", contract: { years: 2, salary: 3485 }, attrs: { positioning: 65, strength: 69, hitting: 61 } },
   { name: "Joel Hofer", number: 30, pos: "G", age: 26, nationality: "CA", contract: { years: 3, salary: 3400 }, attrs: { reflexes: 71, positioning: 69 } },
   { name: "Jordan Binnington", number: 50, pos: "G", age: 33, nationality: "CA", contract: { years: 6, salary: 6000 }, attrs: { reflexes: 77, positioning: 75, reboundControl: 71 } },
   { name: "Zach Dean", number: 52, pos: "LW", age: 24, nationality: "CA", contract: { years: 2, salary: 850 }, attrs: { speed: 65, offensiveRead: 59, checking: 55 } },

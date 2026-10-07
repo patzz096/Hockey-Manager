@@ -144,3 +144,29 @@ export const OTT_FARM_DATA = [
   { name: "Jackson Parsons", number: 31, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 929 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Kevin Reidler", number: 39, pos: "G", age: 22, nationality: "SE", contract: { years: 2, salary: 946 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Crunch de Syracuse) de Tampa Bay — même disclaimer que ci-dessus.
+export const TBL_FARM_DATA = [
+  { name: "Cole Koepke", number: 11, pos: "LW", age: 26, nationality: "US", contract: { years: 2, salary: 875 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Nicholas Abruzzese", number: 80, pos: "C", age: 27, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Sam O'Reilly", number: 23, pos: "C", age: 21, nationality: "CA", contract: { years: 2, salary: 936 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Dylan Duke", number: 53, pos: "LW", age: 24, nationality: "US", contract: { years: 2, salary: 920 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Lucas Mercuri", number: 75, pos: "C", age: 25, nationality: "CA", contract: { years: 2, salary: 916 }, attrs: { strength: 62, offensiveRead: 56 } },
+  { name: "Noah Steen", number: 67, pos: "LW", age: 22, nationality: "NO", contract: { years: 2, salary: 973 }, attrs: { shotAccuracy: 58, speed: 60 } },
+  { name: "Ethan Gauthier", number: 89, pos: "RW", age: 22, nationality: "CA", contract: { years: 2, salary: 893 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Connor Kurth", number: 68, pos: "RW", age: 23, nationality: "US", contract: { years: 2, salary: 945 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Robert Flinton", number: 50, pos: "LW", age: 23, nationality: "US", contract: { years: 1, salary: 943 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Tristan Allard", number: 13, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 948 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Milo Roelens", number: 36, pos: "C", age: 24, nationality: "FR", contract: { years: 1, salary: 945 }, attrs: { strength: 64, offensiveRead: 56 } },
+  { name: "Gabriel Szturc", number: 96, pos: "LW", age: 23, nationality: "CZ", contract: { years: 1, salary: 950 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Maxim Groshev", number: 52, pos: "LD", age: 25, nationality: "RU", contract: { years: 1, salary: 875 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Steven Santini", number: 16, pos: "RD", age: 32, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Simon Lundmark", number: 7, pos: "RD", age: 26, nationality: "SE", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Tomas Kralovic", number: 82, pos: "RD", age: 21, nationality: "SK", contract: { years: 2, salary: 1008 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Dyllan Gill", number: 57, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 945 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Mads Sogaard", number: 30, pos: "G", age: 26, nationality: "DK", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Olivier Rodrigue", number: 32, pos: "G", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Harrison Meneghin", number: 1, pos: "G", age: 22, nationality: "CA", contract: { years: 2, salary: 973 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Benjamin Rautiainen", number: 41, pos: "C", age: 21, nationality: "FI", contract: { years: 2, salary: 1000 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Ethan Czata", number: 45, pos: "C", age: 19, nationality: "CA", contract: { years: 2, salary: 965 }, attrs: { offensiveRead: 58, speed: 56 } },
+];

@@ -169,7 +169,7 @@ export const WSH_ROSTER_DATA = [
   { name: "Sonny Milano", number: 21, pos: "LW", age: 29, nationality: "US", contract: { years: 3, salary: 3750 }, attrs: { speed: 76, shotAccuracy: 74, puckhandling: 70 } },
   { name: "Anthony Beauvillier", number: 72, pos: "LW", age: 28, nationality: "CA", contract: { years: 1, salary: 1200 }, attrs: { speed: 76, shotAccuracy: 68 } },
   { name: "Nic Dowd", number: 26, pos: "C", age: 35, nationality: "US", contract: { years: 2, salary: 1600 }, attrs: { faceoffs: 74, checking: 68, defensiveRead: 70 } },
-  { name: "John Carlson", number: 74, pos: "LD", age: 35, nationality: "US", contract: { years: 5, salary: 8000 }, attrs: { passing: 82, offensiveRead: 80, shotAccuracy: 76, puckhandling: 74, leadership: 78 } },
+  { name: "Marc-Edouard Vlasic", number: 74, pos: "LD", age: 38, nationality: "CA", contract: { years: 5, salary: 8000 }, attrs: { passing: 82, offensiveRead: 80, shotAccuracy: 76, puckhandling: 74, leadership: 78 } },
   { name: "Jakob Chychrun", number: 6, pos: "RD", age: 27, nationality: "CA", contract: { years: 5, salary: 4600 }, attrs: { shotAccuracy: 78, hitting: 72, strength: 78, puckhandling: 70 } },
   { name: "Rasmus Sandin", number: 38, pos: "LD", age: 25, nationality: "SE", contract: { years: 4, salary: 4000 }, attrs: { puckhandling: 74, offensiveRead: 72, passing: 72, speed: 74 } },
   { name: "Matt Roy", number: 3, pos: "RD", age: 30, nationality: "CA", contract: { years: 6, salary: 4166 }, attrs: { positioning: 78, defensiveRead: 76, shotBlocking: 76, hitting: 68 } },
