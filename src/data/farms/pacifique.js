@@ -127,3 +127,27 @@ export const LAK_FARM_DATA = [
   { name: "Carter George", number: 70, pos: "G", age: 20, nationality: "CA", contract: { years: 2, salary: 929 }, attrs: { reflexes: 58, positioning: 58 } },
   { name: "Hampton Slukynsky", number: 50, pos: "G", age: 21, nationality: "US", contract: { years: 2, salary: 1075 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Canucks d'Abbotsford) de Vancouver — même disclaimer que ci-dessus.
+export const VAN_FARM_DATA = [
+  { name: "Braeden Cootes", number: 86, pos: "C", age: 20, nationality: "CA", contract: { years: 2, salary: 974 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Matthew Stienburg", number: 83, pos: "C", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Trey Fix-Wolansky", number: 64, pos: "RW", age: 27, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Ty Mueller", number: 39, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 945 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Riley Patterson", number: 68, pos: "C", age: 21, nationality: "CA", contract: { years: 2, salary: 957 }, attrs: { offensiveRead: 60, speed: 60 } },
+  { name: "Ilya Safonov", number: 24, pos: "C", age: 25, nationality: "RU", contract: { years: 1, salary: 950 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Chase Wouters", number: 21, pos: "C", age: 27, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 60, offensiveRead: 56 } },
+  { name: "Vilmer Alriksson", number: 46, pos: "LW", age: 22, nationality: "SE", contract: { years: 2, salary: 932 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Gabe Chiarot", number: 65, pos: "RW", age: 20, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "MacKenzie MacEachern", number: 20, pos: "LW", age: 33, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 60, checking: 58 } },
+  { name: "Akil Thomas", number: 44, pos: "C", age: 27, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Cole Clayton", number: 34, pos: "RD", age: 27, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, strength: 58 } },
+  { name: "Jimmy Schuldt", number: 48, pos: "LD", age: 31, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 56 } },
+  { name: "Kirill Kudryavtsev", number: 59, pos: "LD", age: 23, nationality: "RU", contract: { years: 2, salary: 900 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Sawyer Mynio", number: 45, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 907 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Jack Thompson", number: 29, pos: "RD", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Nikita Tolopilo", number: 60, pos: "G", age: 27, nationality: "BY", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Aku Koskenvuo", number: 36, pos: "G", age: 24, nationality: "FI", contract: { years: 1, salary: 925 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Ty Young", number: 85, pos: "G", age: 22, nationality: "CA", contract: { years: 1, salary: 900 }, attrs: { reflexes: 58, positioning: 56 } },
+  { name: "Adam Novotný", number: 15, pos: "LW", age: 19, nationality: "CZ", contract: { years: 2, salary: 1075 }, attrs: { shotAccuracy: 60, speed: 58 } },
+];

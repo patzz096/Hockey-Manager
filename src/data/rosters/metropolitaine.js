@@ -180,7 +180,7 @@ export const WSH_ROSTER_DATA = [
 
 export const CBJ_ROSTER_DATA = [
   { name: "Adam Fantilli", number: 19, pos: "C", age: 21, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 78, offensiveRead: 76, speed: 80, strength: 74 } },
-  { name: "Paul Cotter", number: 86, pos: "LW", age: 26, nationality: "US", contract: { years: 8, salary: 6250 }, attrs: { shotAccuracy: 80, offensiveRead: 76, speed: 76, puckhandling: 74 } },
+  { name: "Jordan Oesterle", number: 86, pos: "LW", age: 33, nationality: "US", contract: { years: 8, salary: 6250 }, attrs: { shotAccuracy: 80, offensiveRead: 76, speed: 76, puckhandling: 74 } },
   { name: "Boone Jenner", number: 38, pos: "C", age: 32, nationality: "CA", contract: { years: 4, salary: 5000 }, attrs: { hitting: 76, checking: 74, faceoffs: 70, leadership: 78, shotAccuracy: 68 } },
   { name: "Dmitri Voronkov", number: 10, pos: "RW", age: 26, nationality: "RU", contract: { years: 2, salary: 4175 }, attrs: { strength: 82, hitting: 70, shotAccuracy: 72 } },
   { name: "Yegor Chinakhov", number: 59, pos: "LW", age: 24, nationality: "RU", contract: { years: 2, salary: 2100 }, attrs: { shotAccuracy: 76, speed: 74, offensiveRead: 68 } },
