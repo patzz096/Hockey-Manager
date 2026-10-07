@@ -188,7 +188,7 @@ export const VGK_ROSTER_DATA = [
   { name: "William Karlsson", number: 71, pos: "C", age: 32, nationality: "SE", contract: { years: 8, salary: 5900 }, attrs: { faceoffs: 69, offensiveRead: 69, defensiveRead: 63 } },
   { name: "Tomas Hertl", number: 48, pos: "C", age: 32, nationality: "CZ", contract: { years: 4, salary: 8137 }, attrs: { shotAccuracy: 73, strength: 77, offensiveRead: 71 } },
   { name: "Ivan Barbashev", number: 49, pos: "LW", age: 30, nationality: "RU", contract: { years: 5, salary: 5000 }, attrs: { hitting: 65, shotAccuracy: 67, checking: 61 } },
-  { name: "Alex Tuch", number: 16, pos: "LW", age: 29, nationality: "US", contract: { years: 2, salary: 950 }, attrs: { shotAccuracy: 71, speed: 69, offensiveRead: 61 } },
+  { name: "Jonas Rondbjerg", number: 16, pos: "LW", age: 29, nationality: "DK", contract: { years: 2, salary: 950 }, attrs: { shotAccuracy: 71, speed: 69, offensiveRead: 61 } },
   { name: "Brett Howden", number: 21, pos: "C", age: 27, nationality: "CA", contract: { years: 4, salary: 3100 }, attrs: { checking: 63, faceoffs: 57, defensiveRead: 59 } },
   { name: "Victor Olofsson", number: 68, pos: "LW", age: 30, nationality: "SE", contract: { years: 2, salary: 2500 }, attrs: { shotAccuracy: 77, shotRange: 75, speed: 61 } },
   { name: "Shea Theodore", number: 27, pos: "LD", age: 29, nationality: "CA", contract: { years: 7, salary: 5200 }, attrs: { offensiveRead: 75, passing: 73, speed: 73 } },

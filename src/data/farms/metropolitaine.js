@@ -176,3 +176,30 @@ export const PIT_FARM_DATA = [
   { name: "Joel Blomqvist", number: 30, pos: "G", age: 25, nationality: "FI", contract: { years: 1, salary: 875 }, attrs: { reflexes: 62, positioning: 60 } },
   { name: "Taylor Gauthier", number: 33, pos: "G", age: 26, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 58, positioning: 56 } },
 ];
+
+// Club-école réel (LAH, Bears de Hershey) de Washington — même disclaimer que ci-dessus.
+export const WSH_FARM_DATA = [
+  { name: "Joshua Dunne", number: 40, pos: "C", age: 28, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { strength: 61, offensiveRead: 57 } },
+  { name: "Bogdan Trineyev", number: 87, pos: "LW", age: 25, nationality: "RU", contract: { years: 1, salary: 900 }, attrs: { shotAccuracy: 59, speed: 59 } },
+  { name: "Ludwig Persson", number: 85, pos: "C", age: 23, nationality: "SE", contract: { years: 2, salary: 865 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Patrick Thomas", number: 49, pos: "C", age: 22, nationality: "CA", contract: { years: 2, salary: 966 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Lynden Lakovic", number: 14, pos: "LW", age: 20, nationality: "CA", contract: { years: 3, salary: 974 }, attrs: { shotAccuracy: 61, speed: 59 } },
+  { name: "Eriks Mateiko", number: 58, pos: "RW", age: 21, nationality: "LV", contract: { years: 2, salary: 933 }, attrs: { strength: 63, shotAccuracy: 59 } },
+  { name: "Spencer Smallman", number: 81, pos: "RW", age: 30, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 56, speed: 58 } },
+  { name: "Theodor Niederbach", number: 23, pos: "RW", age: 25, nationality: "SE", contract: { years: 2, salary: 1025 }, attrs: { offensiveRead: 60, passing: 58 } },
+  { name: "Alexander Suzdalev", number: 91, pos: "LW", age: 23, nationality: "SE", contract: { years: 2, salary: 864 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Petr Sikora", number: 66, pos: "C", age: 21, nationality: "CZ", contract: { years: 2, salary: 995 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Tyler Kopff", number: 71, pos: "LW", age: 24, nationality: "US", contract: { years: 1, salary: 975 }, attrs: { strength: 62, shotAccuracy: 58 } },
+  { name: "Jonny Brodzinski", number: 76, pos: "RW", age: 33, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, strength: 58 } },
+  { name: "Andrew Cristall", number: 28, pos: "LW", age: 22, nationality: "CA", contract: { years: 2, salary: 889 }, attrs: { offensiveRead: 61, shotAccuracy: 59 } },
+  { name: "Terik Parascak", number: 18, pos: "RW", age: 20, nationality: "CA", contract: { years: 3, salary: 942 }, attrs: { shotAccuracy: 61, offensiveRead: 59 } },
+  { name: "Oliver Suvanto", number: 15, pos: "C", age: 18, nationality: "FI", contract: { years: 3, salary: 1075 }, attrs: { offensiveRead: 59, speed: 59 } },
+  { name: "Ryan Chesley", number: 41, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 945 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Leon Muggli", number: 45, pos: "LD", age: 20, nationality: "CH", contract: { years: 2, salary: 932 }, attrs: { positioning: 58, speed: 58 } },
+  { name: "Louie Belpedio", number: 50, pos: "RD", age: 30, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Cam Allen", number: 54, pos: "RD", age: 22, nationality: "CA", contract: { years: 2, salary: 930 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "David Gucciardi", number: 93, pos: "LD", age: 24, nationality: "CA", contract: { years: 2, salary: 930 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Jacob MacDonald", number: 2, pos: "LD", age: 34, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 56, speed: 56 } },
+  { name: "Justin Holl", number: 4, pos: "RD", age: 35, nationality: "US", contract: { years: 1, salary: 900 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Mitchell Gibson", number: 78, pos: "G", age: 27, nationality: "US", contract: { years: 1, salary: 812 }, attrs: { reflexes: 58, positioning: 56 } },
+];
