@@ -8,7 +8,7 @@ export const CAR_ROSTER_DATA = [
   { name: "Logan Stankoven", number: 13, pos: "RW", age: 22, nationality: "CA", contract: { years: 2, salary: 950 }, attrs: { speed: 80, shotAccuracy: 74, offensiveRead: 70 } },
   { name: "Jesperi Kotkaniemi", number: 82, pos: "C", age: 25, nationality: "FI", contract: { years: 4, salary: 4820 }, attrs: { offensiveRead: 68, checking: 62, defensiveRead: 65 } },
   { name: "William Carrier", number: 28, pos: "LW", age: 29, nationality: "CA", contract: { years: 3, salary: 1650 }, attrs: { hitting: 75, checking: 70, strength: 78, fighting: 60 } },
-  { name: "Jack Roslovic", number: 96, pos: "C", age: 28, nationality: "US", contract: { years: 2, salary: 1500 }, attrs: { offensiveRead: 65, speed: 74, shotAccuracy: 65 } },
+  { name: "Jordan Martinook", number: 96, pos: "C", age: 33, nationality: "CA", contract: { years: 2, salary: 1500 }, attrs: { offensiveRead: 65, speed: 74, shotAccuracy: 65 } },
   { name: "Jaccob Slavin", number: 74, pos: "LD", age: 31, nationality: "US", contract: { years: 7, salary: 6396 }, attrs: { positioning: 88, defensiveRead: 86, shotBlocking: 82, speed: 80, puckhandling: 70, leadership: 78 } },
   { name: "K'Andre Miller", number: 6, pos: "RD", age: 25, nationality: "US", contract: { years: 8, salary: 7500 }, attrs: { puckhandling: 76, offensiveRead: 74, speed: 76, positioning: 70, passing: 70 } },
   { name: "Sean Walker", number: 26, pos: "LD", age: 31, nationality: "CA", contract: { years: 4, salary: 3600 }, attrs: { positioning: 70, hitting: 68, defensiveRead: 68, speed: 72 } },
@@ -180,7 +180,7 @@ export const WSH_ROSTER_DATA = [
 
 export const CBJ_ROSTER_DATA = [
   { name: "Adam Fantilli", number: 19, pos: "C", age: 21, nationality: "CA", contract: { years: 3, salary: 950 }, attrs: { shotAccuracy: 78, offensiveRead: 76, speed: 80, strength: 74 } },
-  { name: "Kirill Marchenko", number: 86, pos: "LW", age: 24, nationality: "RU", contract: { years: 8, salary: 6250 }, attrs: { shotAccuracy: 80, offensiveRead: 76, speed: 76, puckhandling: 74 } },
+  { name: "Paul Cotter", number: 86, pos: "LW", age: 26, nationality: "US", contract: { years: 8, salary: 6250 }, attrs: { shotAccuracy: 80, offensiveRead: 76, speed: 76, puckhandling: 74 } },
   { name: "Boone Jenner", number: 38, pos: "C", age: 32, nationality: "CA", contract: { years: 4, salary: 5000 }, attrs: { hitting: 76, checking: 74, faceoffs: 70, leadership: 78, shotAccuracy: 68 } },
   { name: "Dmitri Voronkov", number: 10, pos: "RW", age: 26, nationality: "RU", contract: { years: 2, salary: 4175 }, attrs: { strength: 82, hitting: 70, shotAccuracy: 72 } },
   { name: "Yegor Chinakhov", number: 59, pos: "LW", age: 24, nationality: "RU", contract: { years: 2, salary: 2100 }, attrs: { shotAccuracy: 76, speed: 74, offensiveRead: 68 } },

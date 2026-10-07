@@ -170,3 +170,33 @@ export const TBL_FARM_DATA = [
   { name: "Benjamin Rautiainen", number: 41, pos: "C", age: 21, nationality: "FI", contract: { years: 2, salary: 1000 }, attrs: { offensiveRead: 58, speed: 58 } },
   { name: "Ethan Czata", number: 45, pos: "C", age: 19, nationality: "CA", contract: { years: 2, salary: 965 }, attrs: { offensiveRead: 58, speed: 56 } },
 ];
+
+// Club-école réel (LAH, Marlies de Toronto) — même disclaimer que ci-dessus.
+export const TOR_FARM_DATA = [
+  { name: "Miles Wood", number: 99, pos: "LW", age: 31, nationality: "US", contract: { years: 1, salary: 2500 }, attrs: { speed: 68, checking: 58 } },
+  { name: "Michael Pezzetta", number: 61, pos: "LW", age: 29, nationality: "CA", contract: { years: 1, salary: 813 }, attrs: { strength: 62, hitting: 60 } },
+  { name: "Brendan Brisson", number: 90, pos: "LW", age: 25, nationality: "US", contract: { years: 2, salary: 850 }, attrs: { shotAccuracy: 60, speed: 58 } },
+  { name: "Jacob Quillan", number: 26, pos: "C", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Henrik Rybinski", number: 58, pos: "C", age: 25, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 58, speed: 58 } },
+  { name: "Ryan Tverberg", number: 77, pos: "RW", age: 25, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { shotAccuracy: 58, speed: 58 } },
+  { name: "Vinni Lettieri", number: 71, pos: "C", age: 32, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { offensiveRead: 56, speed: 58 } },
+  { name: "Luke Haymes", number: 37, pos: "C", age: 23, nationality: "CA", contract: { years: 1, salary: 938 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Landon Sim", number: 14, pos: "C", age: 22, nationality: "CA", contract: { years: 2, salary: 955 }, attrs: { offensiveRead: 60, speed: 58 } },
+  { name: "Miroslav Holinka", number: 98, pos: "C", age: 21, nationality: "CZ", contract: { years: 2, salary: 918 }, attrs: { offensiveRead: 58, speed: 60 } },
+  { name: "Brandon Buhr", number: 64, pos: "C", age: 24, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { strength: 60, offensiveRead: 56 } },
+  { name: "Borya Valis", number: 39, pos: "RW", age: 23, nationality: "US", contract: { years: 1, salary: 972 }, attrs: { strength: 60, shotAccuracy: 58 } },
+  { name: "Philippe Myers", number: 51, pos: "RD", age: 30, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 61, strength: 71 } },
+  { name: "Marshall Rifai", number: 83, pos: "LD", age: 29, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Ben Danford", number: 38, pos: "RD", age: 21, nationality: "CA", contract: { years: 2, salary: 936 }, attrs: { positioning: 58, strength: 58 } },
+  { name: "Noah Chadwick", number: 6, pos: "LD", age: 21, nationality: "CA", contract: { years: 2, salary: 901 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Blake Smith", number: 59, pos: "LD", age: 22, nationality: "CA", contract: { years: 2, salary: 963 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "Dakota Mermis", number: 36, pos: "LD", age: 33, nationality: "US", contract: { years: 1, salary: 850 }, attrs: { positioning: 58, strength: 60 } },
+  { name: "Cole McWard", number: 4, pos: "RD", age: 25, nationality: "US", contract: { years: 1, salary: 875 }, attrs: { offensiveRead: 58, passing: 56 } },
+  { name: "Vinny Borgesi", number: 25, pos: "RD", age: 23, nationality: "US", contract: { years: 2, salary: 988 }, attrs: { positioning: 56, speed: 60 } },
+  { name: "Hayes Hundley", number: 62, pos: "RD", age: 22, nationality: "US", contract: { years: 2, salary: 1010 }, attrs: { strength: 60, positioning: 56 } },
+  { name: "William Villeneuve", number: 76, pos: "RD", age: 25, nationality: "CA", contract: { years: 1, salary: 875 }, attrs: { positioning: 56, speed: 58 } },
+  { name: "Artur Akhtyamov", number: 70, pos: "G", age: 25, nationality: "RU", contract: { years: 1, salary: 900 }, attrs: { reflexes: 58, positioning: 58 } },
+  { name: "Samuel Hlavaj", number: 31, pos: "G", age: 25, nationality: "SK", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 56 } },
+  { name: "Brendan Bonello", number: 0, pos: "G", age: 28, nationality: "CA", contract: { years: 1, salary: 850 }, attrs: { reflexes: 56, positioning: 54 } },
+  { name: "Tim Koblar", number: 33, pos: "RW", age: 29, nationality: "US", contract: { years: 1, salary: 1028 }, attrs: { shotAccuracy: 58, speed: 56 } },
+];
