@@ -5,15 +5,20 @@ import { randAttr, seededRandom } from "./random";
 import { assignJuniorLeague } from "./minorLeagues";
 import { entryLevelContract } from "./contracts";
 import { DRAFT_2027_PROSPECTS } from "../data/draft2027";
+import { DRAFT_2028_PROSPECTS } from "../data/draft2028";
 
 export const DRAFT_ROUNDS = 7;
 // Contrat d'entrée : voir entryLevelContract (durée selon l'âge, salaire selon le rang).
 const POSITIONS = ["C", "C", "LW", "RW", "LD", "RD", "C", "LW", "RW", "LD", "RD", "G"];
 
-// Année moteur (= saison de départ, voir calendar.js FIRST_SEASON) dont la cuvée tombe sur le
-// repêchage réel 2027 (draftYear = year + 1) : seule cuvée alimentée par de vrais espoirs classés
-// (src/data/draft2027.js) plutôt que générée entièrement au hasard — voir buildProspect ci-dessous.
-const REAL_DRAFT_ENGINE_YEAR = 2026;
+// Année moteur (= saison de départ, voir calendar.js FIRST_SEASON) → liste de vrais espoirs
+// classés pour la cuvée dont le repêchage (draftYear = year + 1) tombe cette année-là ; le reste
+// du bassin (jusqu'à DRAFT_CLASS_SIZE) est toujours généré — voir buildProspect ci-dessous. Une
+// année absente de cette table (pas de classement réel disponible) est entièrement générée.
+const REAL_DRAFT_CLASSES = {
+  2026: DRAFT_2027_PROSPECTS, // repêchage de mai 2027
+  2027: DRAFT_2028_PROSPECTS, // repêchage de mai 2028
+};
 
 // Position principale d'un espoir réel : certaines entrées listent plusieurs postes ("C/LW") ou
 // restent génériques ("D", "F") faute de détail dans le classement source — désambiguïsé ici par
@@ -43,7 +48,7 @@ function buildProspect(id, pos, nationality, age, talent, rng) {
 export function generateDraftClass(year, count) {
   const rng = seededRandom(1000 + year * 7);
   const list = [];
-  const real = year === REAL_DRAFT_ENGINE_YEAR ? DRAFT_2027_PROSPECTS : [];
+  const real = REAL_DRAFT_CLASSES[year] || [];
   for (let i = 0; i < count; i++) {
     if (i < real.length) {
       const r = real[i];
