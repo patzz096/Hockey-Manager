@@ -12,10 +12,10 @@ export function starsText(value) {
   return "★".repeat(full) + (half ? "⯨" : "") + "☆".repeat(Math.max(0, 5 - full - (half ? 1 : 0)));
 }
 
-// Montant en milliers de $ (unité des contrats) affiché comme dans la LNH : 7,875 M$ ou 850 000 $.
+// Montant en milliers de $ (unité des contrats) affiché en chiffre complet : 7 875 000 $,
+// 850 000 $ (plutôt que l'abréviation "7,875 M$", moins lisible pour comparer des offres).
 export function money(k) {
   if (k == null || isNaN(k)) return "—";
-  if (Math.abs(k) >= 1000) return `${(k / 1000).toLocaleString("fr-CA", { minimumFractionDigits: 1, maximumFractionDigits: 3 })} M$`;
   return `${Math.round(k * 1000).toLocaleString("fr-CA")} $`;
 }
 
