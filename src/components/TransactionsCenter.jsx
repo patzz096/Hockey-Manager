@@ -4,7 +4,7 @@ import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { gmSpread } from "../engine/contracts";
 import { tradeValue, pickValue } from "../engine/trades";
-import { ownedPicks } from "../engine/draft";
+import { ownedPicksByYear } from "../engine/draft";
 import { capStatus } from "../engine/cap";
 import { h2Style, btnStyle, inputStyle, scoutQualityColor } from "../ui/theme";
 import { StarRating, PlayerLink, TeamCrest } from "./common";
@@ -37,8 +37,11 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
   const [theirFilter, setTheirFilter] = useState(null);
   const partner = teams.find((t) => t.id === partnerId) || otherTeams[0];
   const teamIds = useMemo(() => teams.map((t) => t.id), [teams]);
-  const myOwnedPicks = useMemo(() => ownedPicks(myTeamId, teamIds, pickTrades), [myTeamId, teamIds, pickTrades]);
-  const theirOwnedPicks = useMemo(() => (partner ? ownedPicks(partner.id, teamIds, pickTrades) : []), [partner, teamIds, pickTrades]);
+  // Choix de l'année en cours + les 2 suivantes (3 repêchages à l'avance), voir ownedPicksByYear.
+  const myOwnedByYear = useMemo(() => ownedPicksByYear(myTeamId, teamIds, pickTrades, seasonYear, 3), [myTeamId, teamIds, pickTrades, seasonYear]);
+  const theirOwnedByYear = useMemo(() => (partner ? ownedPicksByYear(partner.id, teamIds, pickTrades, seasonYear, 3) : []), [partner, teamIds, pickTrades, seasonYear]);
+  const myOwnedPicks = useMemo(() => myOwnedByYear.flatMap((g) => g.picks), [myOwnedByYear]);
+  const theirOwnedPicks = useMemo(() => theirOwnedByYear.flatMap((g) => g.picks), [theirOwnedByYear]);
 
   function toggle(setFn, list, id) { setFn(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]); }
   function changePartner(id) { setPartnerId(id); setMyIds([]); setTheirIds([]); setMyPickKeys([]); setTheirPickKeys([]); setTheirFilter(null); }
@@ -50,16 +53,21 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
     setMyIds([]); setTheirIds([]); setRetention({}); setMyPickKeys([]); setTheirPickKeys([]);
   }
 
-  function PickPicker({ picks, selected, onToggle, ownerId, teamsById }) {
+  function PickPicker({ byYear, selected, onToggle, ownerId, teamsById }) {
+    const total = byYear.reduce((a, g) => a + g.picks.length, 0);
     return (
-      <div style={{ marginTop: 8, border: "1px solid #ffffff1a", borderRadius: 4, maxHeight: 140, overflow: "auto" }}>
-        {picks.length === 0 && <div style={{ padding: 10, fontSize: 12, color: "var(--iceMuted)" }}>Aucun choix de repêchage disponible.</div>}
-        {picks.map((k) => (
-          <label key={k.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", fontSize: 12, borderBottom: "1px solid #ffffff11", cursor: "pointer", background: selected.includes(k.key) ? "#ffffff14" : "transparent" }}>
-            <input type="checkbox" checked={selected.includes(k.key)} onChange={() => onToggle(k.key)} />
-            <span style={{ flex: 1 }}>Ronde {k.round}{k.origTeamId !== ownerId ? ` (choix de ${teamsById[k.origTeamId]?.name || k.origTeamId})` : ""}</span>
-            <span style={{ color: "var(--iceMuted)" }}>{pickValue(k.round).toFixed(0)}</span>
-          </label>
+      <div style={{ marginTop: 8, border: "1px solid #ffffff1a", borderRadius: 4, maxHeight: 180, overflow: "auto" }}>
+        {total === 0 && <div style={{ padding: 10, fontSize: 12, color: "var(--iceMuted)" }}>Aucun choix de repêchage disponible.</div>}
+        {byYear.map(({ year, picks }) => picks.length > 0 && (
+          <div key={year}>
+            <div style={{ padding: "4px 10px", fontSize: 10, letterSpacing: 0.5, color: "var(--iceMuted)", background: "#ffffff08" }}>REPÊCHAGE {year + 1}</div>
+            {picks.map((k) => (
+              <label key={k.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", fontSize: 12, borderBottom: "1px solid #ffffff11", cursor: "pointer", background: selected.includes(k.key) ? "#ffffff14" : "transparent" }}>
+                <input type="checkbox" checked={selected.includes(k.key)} onChange={() => onToggle(k.key)} />
+                <span style={{ flex: 1 }}>Ronde {k.round}{k.origTeamId !== ownerId ? ` (choix de ${teamsById[k.origTeamId]?.name || k.origTeamId})` : ""}</span>
+              </label>
+            ))}
+          </div>
         ))}
       </div>
     );
@@ -158,12 +166,12 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
         <div>
           <div style={{ fontSize: 12, color: myTeam.color, fontWeight: 600, marginBottom: 6 }}>Tu envoies ({myTeam.name})</div>
           <RosterPicker team={myTeam} selected={myIds} onToggle={(id) => toggle(setMyIds, myIds, id)} posFilter={myFilter} onFilter={setMyFilter} />
-          <PickPicker picks={myOwnedPicks} selected={myPickKeys} onToggle={(key) => toggle(setMyPickKeys, myPickKeys, key)} ownerId={myTeamId} teamsById={teamsById} />
+          <PickPicker byYear={myOwnedByYear} selected={myPickKeys} onToggle={(key) => toggle(setMyPickKeys, myPickKeys, key)} ownerId={myTeamId} teamsById={teamsById} />
         </div>
         <div>
           <div style={{ fontSize: 12, color: partner?.color || "var(--iceMuted)", fontWeight: 600, marginBottom: 6 }}>Tu reçois ({partner?.name})</div>
           {partner && <RosterPicker team={partner} selected={theirIds} onToggle={(id) => toggle(setTheirIds, theirIds, id)} posFilter={theirFilter} onFilter={setTheirFilter} />}
-          {partner && <PickPicker picks={theirOwnedPicks} selected={theirPickKeys} onToggle={(key) => toggle(setTheirPickKeys, theirPickKeys, key)} ownerId={partner.id} teamsById={teamsById} />}
+          {partner && <PickPicker byYear={theirOwnedByYear} selected={theirPickKeys} onToggle={(key) => toggle(setTheirPickKeys, theirPickKeys, key)} ownerId={partner.id} teamsById={teamsById} />}
         </div>
       </div>
       {myIds.length > 0 && (
@@ -183,8 +191,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
         <div style={{ background: "var(--navy2)", border: "1px solid #ffffff1a", borderRadius: 6, padding: 10, marginBottom: 12, fontSize: 12 }}>
           <strong>Évaluation du DG</strong> {gmRating == null && <span style={{ color: "var(--iceMuted)" }}>(aucun DG en poste : très approximative)</span>}
           <div style={{ marginTop: 4, color: "var(--iceMuted)" }}>
-            Valeur envoyée : <strong style={{ color: "var(--ice)" }}>{evalResult.mine.toFixed(0)}</strong> · valeur reçue : <strong style={{ color: "var(--ice)" }}>{evalResult.theirs.toFixed(0)}</strong>
-            {" · "}Échange <strong style={{ color: leanColor }}>{evalResult.lean}</strong> pour toi {gmRating != null && <span>(marge d'erreur ± {Math.round(evalResult.spread * 100)} %)</span>}
+            Échange <strong style={{ color: leanColor }}>{evalResult.lean}</strong> pour toi {gmRating != null && <span>(marge d'erreur ± {Math.round(evalResult.spread * 100)} %)</span>}
           </div>
         </div>
       )}

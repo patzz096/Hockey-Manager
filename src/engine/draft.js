@@ -78,8 +78,10 @@ export function upcomingDraftClass(year) {
   return classCache.get(year);
 }
 
-// Clé d'un choix pour le suivi des échanges (ronde + équipe d'origine, avant tout échange).
-export function pickKey(round, origTeamId) { return `${round}-${origTeamId}`; }
+// Clé d'un choix pour le suivi des échanges (année moteur + ronde + équipe d'origine, avant tout
+// échange) — l'année distingue les choix de plusieurs repêchages futurs entre eux (voir
+// ownedPicks : on échange jusqu'à 3 ans à l'avance, pas seulement le prochain repêchage).
+export function pickKey(round, origTeamId, year) { return `${year}-${round}-${origTeamId}`; }
 
 // `pickTrades` : { [pickKey]: équipe qui détient actuellement ce choix } — construit au fil des
 // échanges de la saison (voir App.jsx), vide par défaut (aucun choix échangé).
@@ -87,9 +89,9 @@ export function createDraft(year, order, pickTrades = {}) {
   const picks = [];
   for (let r = 0; r < DRAFT_ROUNDS; r++) {
     order.forEach((origTeamId, i) => {
-      const key = pickKey(r + 1, origTeamId);
+      const key = pickKey(r + 1, origTeamId, year);
       const teamId = pickTrades[key] || origTeamId;
-      picks.push({ overall: r * order.length + i + 1, round: r + 1, teamId, origTeamId, playerId: null });
+      picks.push({ overall: r * order.length + i + 1, round: r + 1, teamId, origTeamId, playerId: null, year });
     });
   }
   return { year, picks, pool: picks.length + 32 === DRAFT_CLASS_SIZE ? upcomingDraftClass(year) : generateDraftClass(year, picks.length + 32), current: 0 };
@@ -120,16 +122,24 @@ export function makePick(draft, playerId) {
 
 export function draftDone(draft) { return !draft || draft.current >= draft.picks.length; }
 
-// Choix de repêchage (ronde + équipe d'origine) actuellement détenus par `teamId`, en tenant
-// compte des échanges déjà conclus (`pickTrades`) — utilisé avant même que le repêchage existe
-// (createDraft), pour l'onglet Transactions et l'évaluation IA d'un échange.
-export function ownedPicks(teamId, teamIds, pickTrades = {}) {
+// Choix de repêchage (ronde + équipe d'origine) d'UNE année (`year`, année moteur) actuellement
+// détenus par `teamId`, en tenant compte des échanges déjà conclus (`pickTrades`) — utilisé avant
+// même que le repêchage existe (createDraft), pour l'onglet Transactions et l'évaluation IA d'un
+// échange. `year` par défaut = le prochain repêchage (compatibilité des appels existants).
+export function ownedPicks(teamId, teamIds, pickTrades = {}, year = null) {
   const list = [];
   for (let r = 1; r <= DRAFT_ROUNDS; r++) {
     teamIds.forEach((origTeamId) => {
-      const key = pickKey(r, origTeamId);
-      if ((pickTrades[key] || origTeamId) === teamId) list.push({ round: r, origTeamId, key });
+      const key = pickKey(r, origTeamId, year);
+      if ((pickTrades[key] || origTeamId) === teamId) list.push({ round: r, origTeamId, key, year });
     });
   }
   return list.sort((a, b) => a.round - b.round);
+}
+
+// Choix détenus par `teamId` pour les `n` prochaines années de repêchage (ex. l'année en cours et
+// les deux suivantes), regroupés par année — ce que propose l'onglet Transactions pour échanger
+// des choix futurs, pas seulement ceux du prochain repêchage.
+export function ownedPicksByYear(teamId, teamIds, pickTrades = {}, fromYear, n = 3) {
+  return Array.from({ length: n }, (_, i) => fromYear + i).map((year) => ({ year, picks: ownedPicks(teamId, teamIds, pickTrades, year) }));
 }

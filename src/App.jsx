@@ -741,7 +741,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     // L'IA refuse une offre trop défavorable pour elle (engine/trades.js evaluateTradeForCpu) :
     // toujours sur les vraies valeurs (une équipe connaît son propre effectif et celui qu'on lui
     // propose, sans le flou du dépistage qui s'applique à toi).
-    const pickLabel = (k) => `Choix de ronde ${k.round} (${teamsById[k.origTeamId]?.name || k.origTeamId})`;
+    const pickLabel = (k) => `Choix de ronde ${k.round}, repêchage ${(k.year ?? seasonYear) + 1} (${teamsById[k.origTeamId]?.name || k.origTeamId})`;
     const cpuEval = evaluateTradeForCpu(theirT.roster.filter((p) => theirIds.includes(p.id)), myT.roster.filter((p) => myIds.includes(p.id)), Math.random, theirPicks, myPicks, gmNegotiationRating);
     const theirTeamName = teamsById[otherTeamId]?.name || "l'autre équipe";
     if (!cpuEval.accept) {
