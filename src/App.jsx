@@ -6,13 +6,13 @@ import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
 import { initLeague, buildSchedule, buildPreseasonSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
-import { FIRST_SEASON, seasonDates, gameDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths } from "./engine/calendar";
+import { FIRST_SEASON, FRANCHISE_YEARS, seasonDates, gameDay, formatDay, monthLabel, monthIndex, transactionWindow, monthStartDay, addMonths } from "./engine/calendar";
 import { createPlayoffs, recordPlayoffGame, activeSeries, seriesOfTeam, nextGameOf, draftOrder, runDraftLottery, lotteryIneligible, ROUND_NAMES } from "./engine/playoffs";
 import { createDraft, aiPick, makePick, draftDone, upcomingDraftClass } from "./engine/draft";
 import { SCOUT_REGIONS, minorSeasonStats, minorSeasonFraction, leagueOf, promoteFromJunior } from "./engine/minorLeagues";
 import { DEFAULT_MISSIONS, DEFAULT_COVERAGE, MAX_EXTRA_SCOUTS, weeklyScouting, regionLabel, scoutRoster, buildScoutMarket, missionSummary } from "./engine/scoutingZones";
 import { ScoutingCenter } from "./components/ScoutingCenter";
-import { expireContracts, aiFreeAgency, agePlayers, aiSignFreeAgentsInSeason, aiTradesAmongCpu } from "./engine/offseason";
+import { expireContracts, aiFreeAgency, agePlayers, retirePlayers, aiSignFreeAgentsInSeason, aiTradesAmongCpu } from "./engine/offseason";
 import { aggregateStats, leadersOf, ratingsOf, teamOfTheWeek } from "./engine/stats";
 import { TeamOfTheWeek } from "./components/TeamOfTheWeek";
 import { capStatus, fitsUnderCap, ROSTER_MAX, formatMoney, deadCapFor, buyoutTerms, retentionEntry, MAX_RETAINED_CONTRACTS } from "./engine/cap";
@@ -61,6 +61,7 @@ import { DraftPanel } from "./components/DraftPanel";
 import { CapSummary } from "./components/CapSummary";
 import { WaiversPanel } from "./components/WaiversPanel";
 import { TeamRosterModal } from "./components/TeamRosterModal";
+import { FranchiseSummaryPanel } from "./components/FranchiseSummaryPanel";
 import { persistGame, exportSaveFile, parseSaveFile } from "./engine/gameSave";
 
 const PHASE_LABEL = { preseason: "Matchs préparatoires", regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
@@ -89,6 +90,14 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   const [freeAgencyDone, setFreeAgencyDone] = useState(() => savedGame?.freeAgencyDone ?? false);
   const [history, setHistory] = useState(() => savedGame?.history ?? []);
   const [careerStats, setCareerStats] = useState(() => savedGame?.careerStats ?? {});
+  // Joueurs retraités (voir engine/offseason.js retirePlayers) : nom/poste/dernière équipe au
+  // moment de la retraite, pour le Temple de la renommée du bilan de franchise (30 ans, voir
+  // FRANCHISE_YEARS) — leurs statistiques de carrière restent dans careerStats, gardé par id.
+  const [retiredPlayers, setRetiredPlayers] = useState(() => savedGame?.retiredPlayers ?? []);
+  // Bilan de franchise affiché une fois FRANCHISE_YEARS atteintes (voir startNewSeason) : pas
+  // persisté (une célébration ponctuelle, pas un état de jeu) — "Continuer la dynastie" la
+  // referme sans rien bloquer, la saison suivante est déjà en cours.
+  const [franchiseComplete, setFranchiseComplete] = useState(false);
   const [waivers, setWaivers] = useState(() => savedGame?.waivers ?? []);
   const [injuries, setInjuries] = useState(() => savedGame?.injuries ?? {});
   const [deadCap, setDeadCap] = useState(() => savedGame?.deadCap ?? []); // cap mort de ton équipe (rachats, salaires retenus)
@@ -667,8 +676,8 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   // volée). `notice`/`ctxMenu`/etc. et tout ce qui reste purement visuel (onglet actif, fenêtres
   // ouvertes) ne sont pas inclus : les perdre au rechargement est normal.
   const saveBundle = useMemo(
-    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines }),
-    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines]
+    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines }),
+    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines]
   );
   useEffect(() => {
     const t = setTimeout(() => { persistGame(saveBundle); }, 800);
@@ -1659,16 +1668,39 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
       Object.values(playoffStats).filter((st) => st.gp > 0).forEach((st) => { next[st.player.id] = [...(next[st.player.id] || []), { season: seasonYear, team: st.team.name, playoffs: true, gp: st.gp, g: st.g, a: st.a, pts: st.pts, plusMinus: st.plusMinus, pim: st.pim }]; });
       return next;
     });
-    const aged = aiPlaceWaivers(teams.map((t) => ({ ...t, roster: agePlayers(t.roster).sort((a, b) => b.ovr - a.ovr) })), seasonDates(seasonYear + 1).start - 1);
+    // Retraite des vétérans (voir engine/offseason.js retirePlayers) : sans elle, une franchise
+    // jouée plusieurs décennies accumule des joueurs de 50-60 ans encore sur les rôles d'effectif.
+    // Graines différentes par bassin (LNH/LAH/agents libres) pour ne pas faire retraiter les mêmes
+    // profils d'âge partout la même saison.
+    const retiredThisYear = [];
+    const recordRetirees = (list, teamId) => list.forEach((p) => retiredThisYear.push({ id: p.id, name: p.name, pos: p.pos, nationality: p.nationality, teamId, retiredYear: seasonYear + 1, finalOvr: p.ovr }));
+    const agedTeams = teams.map((t) => {
+      const { active, retired } = retirePlayers(agePlayers(t.roster), seasonYear);
+      recordRetirees(retired, t.id);
+      return { ...t, roster: active.sort((a, b) => b.ovr - a.ovr) };
+    });
+    const aged = aiPlaceWaivers(agedTeams, seasonDates(seasonYear + 1).start - 1);
     setTeams(aged);
     // Club-école : la saison dans la ligue mineure entre dans l'historique ; à 21 ans, un espoir
     // quitte le junior pour la LAH.
-    setFarmByTeam((prev) => Object.fromEntries(Object.entries(prev).map(([id, list]) => [id, agePlayers(list.map((p) => {
-      const lg = leagueOf(p, teamsById[id]?.name);
-      const line = lg && minorSeasonStats(p, lg.league, seasonYear, 1);
-      return line ? { ...p, minorHistory: [...(p.minorHistory || []), { season: seasonYear, club: lg.club, ...line }] } : p;
-    })).map(promoteFromJunior)])));
-    setFreeAgents((prev) => agePlayers(prev));
+    setFarmByTeam(Object.fromEntries(Object.entries(farmByTeam).map(([id, list]) => {
+      const withHistory = list.map((p) => {
+        const lg = leagueOf(p, teamsById[id]?.name);
+        const line = lg && minorSeasonStats(p, lg.league, seasonYear, 1);
+        return line ? { ...p, minorHistory: [...(p.minorHistory || []), { season: seasonYear, club: lg.club, ...line }] } : p;
+      });
+      const { active, retired } = retirePlayers(agePlayers(withHistory), seasonYear + 500);
+      recordRetirees(retired, id);
+      return [id, active.map(promoteFromJunior)];
+    })));
+    const { active: activeFA, retired: retiredFA } = retirePlayers(agePlayers(freeAgents), seasonYear + 999);
+    recordRetirees(retiredFA, null);
+    setFreeAgents(activeFA);
+    if (retiredThisYear.length) {
+      setRetiredPlayers((prev) => [...prev, ...retiredThisYear]);
+      const notable = retiredThisYear.filter((p) => p.finalOvr >= 58).sort((a, b) => b.finalOvr - a.finalOvr).slice(0, 8);
+      addMessage({ from: "Ligue", subject: "Prises de retraite", category: "general", body: `${retiredThisYear.length} joueur${retiredThisYear.length > 1 ? "s" : ""} prennent leur retraite cette intersaison.${notable.length ? `\n\nPlus notables :\n${notable.map((p) => `- ${p.name} (${p.pos})`).join("\n")}` : ""}` });
+    }
     setSchedule([...buildPreseasonSchedule(aged, seasonYear + 1), ...buildSchedule(aged)]);
     setLinesByTeam((prev) => Object.fromEntries(aged.map((t) => [t.id, t.id === myTeamId ? prev[t.id] : { ...buildLines(t.roster), strategy: prev[t.id].strategy, mentality: prev[t.id].mentality }])));
     setPlayoffs(null);
@@ -1692,6 +1724,10 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     advanceTo(seasonDates(seasonYear + 1).preseason - 1);
     addMessage({ from: "Ligue", subject: `Saison ${seasonYear + 1}-${seasonYear + 2}`, category: "general", body: `Matchs préparatoires à partir du ${formatDay(seasonDates(seasonYear + 1).preseason)}, premier match qui compte le ${formatDay(seasonDates(seasonYear + 1).start)}. Date limite des échanges : ${formatDay(seasonDates(seasonYear + 1).tradeDeadline)}.` });
     setTab("roster");
+    // Bilan de franchise (voir FranchiseSummaryPanel) : célébré une fois, à la fin de la saison
+    // qui porte le compteur à FRANCHISE_YEARS — `seasonYear` ici est encore la saison qui vient de
+    // se terminer (pas encore incrémentée dans cette closure, malgré le setSeasonYear ci-dessus).
+    if (seasonYear - FIRST_SEASON + 1 >= FRANCHISE_YEARS) setFranchiseComplete(true);
   }
 
   if (!myTeamId) {
@@ -1762,6 +1798,15 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     { key: "draft", label: "Repêchage", icon: ListOrdered },
     { key: "custom", label: "Personnalisation", icon: Palette },
   ];
+
+  if (franchiseComplete) {
+    return (
+      <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", padding: "40px 24px" }}>
+        <style>{FONT_IMPORT}</style>
+        <FranchiseSummaryPanel teamName={teamsById[myTeamId]?.name || ""} history={history} retiredPlayers={retiredPlayers} careerStats={careerStats} onContinue={() => setFranchiseComplete(false)} onNewGame={onNewGame} />
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell" style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>

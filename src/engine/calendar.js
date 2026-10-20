@@ -3,6 +3,10 @@
 export const EPOCH = Date.UTC(2026, 9, 1);
 const DAY_MS = 86400000;
 export const FIRST_SEASON = 2026;
+// Durée d'une franchise : après cette saison, un bilan complet (Temple de la renommée, palmarès)
+// s'affiche — voir App.jsx startNewSeason / FranchiseSummaryPanel. Rien n'empêche de continuer
+// ensuite ("Continuer la dynastie") : c'est une célébration, pas une fin forcée.
+export const FRANCHISE_YEARS = 30;
 
 export function dayToDate(day) { return new Date(EPOCH + day * DAY_MS); }
 export function dateToDay(y, m, d) { return Math.round((Date.UTC(y, m, d) - EPOCH) / DAY_MS); }

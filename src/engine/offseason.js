@@ -125,6 +125,23 @@ export function aiFreeAgency(teams, freeAgents, myTeamId, year = 2027, maxPerTea
   return { teams: nextTeams, freeAgents: pool, signings };
 }
 
+// Retraite des vétérans en fin de saison — sans elle, une franchise jouée sur plusieurs décennies
+// accumule des joueurs de 50, 60 ans encore sur les rôles d'effectif. Jamais avant 33 ans, quasi
+// certaine (100 %) à partir de 45 ; un peu plus tôt pour un joueur nettement en déclin (cote
+// basse). Déterministe (graine = saison), comme le reste du moteur hors-saison.
+export function retirePlayers(list, year) {
+  const rng = seededRandom(year * 17 + 11);
+  const active = [], retired = [];
+  list.forEach((p) => {
+    if (p.age < 33) { active.push(p); return; }
+    const ageFactor = Math.min(1, (p.age - 32) / 13); // 0 à 32 ans, 1 (retraite forcée) à 45 ans
+    const declinePenalty = Math.max(0, 55 - p.ovr) * 0.012;
+    const chance = Math.min(1, Math.pow(ageFactor, 1.6) + declinePenalty);
+    if (rng() < chance) retired.push(p); else active.push(p);
+  });
+  return { active, retired };
+}
+
 // Passage à la saison suivante : tout le monde vieillit d'un an. Les vétérans perdent un peu,
 // les jeunes se rapprochent de leur potentiel (le développement mensuel continue en saison).
 export function agePlayers(list) {
