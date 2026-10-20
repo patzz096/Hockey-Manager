@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, MessageCircle, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone } from "lucide-react";
 import { emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
-import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS } from "./engine/contracts";
-import { evaluateTradeForCpu, tradeResponseLine } from "./engine/trades";
+import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS, agentLine } from "./engine/contracts";
+import { evaluateTradeForCpu, tradeResponseLine, generateAiTradeOffer, tradePitchLine } from "./engine/trades";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
 import { initLeague, buildSchedule, buildPreseasonSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
@@ -198,6 +198,10 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   // Marché des échanges : joueurs de ton effectif que tu signales disponibles (purement
   // organisationnel — n'affecte pas les décisions de l'IA), visible dans l'onglet Transactions.
   const [tradeBlockIds, setTradeBlockIds] = useState(() => savedGame?.tradeBlockIds ?? []);
+  // Offres d'échange reçues des équipes de l'ordinateur (voir generateAiTradeOffer, monthlyTick) :
+  // { id, fromTeamId, theirPlayerIds, myPlayerIds, pitch, createdDay }. Acceptée/refusée depuis
+  // l'onglet Transactions (voir acceptIncomingOffer/declineIncomingOffer plus bas).
+  const [incomingTradeOffers, setIncomingTradeOffers] = useState(() => savedGame?.incomingTradeOffers ?? []);
   // Menu contextuel (clic droit sur un joueur) et comparaison de deux joueurs.
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, player }
   const [compareBase, setCompareBase] = useState(null); // joueur en attente d'un second choix
@@ -687,8 +691,8 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   // volée). `notice`/`ctxMenu`/etc. et tout ce qui reste purement visuel (onglet actif, fenêtres
   // ouvertes) ne sont pas inclus : les perdre au rechargement est normal.
   const saveBundle = useMemo(
-    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak }),
-    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak]
+    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, incomingTradeOffers, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak }),
+    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, incomingTradeOffers, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak]
   );
   useEffect(() => {
     const t = setTimeout(() => { persistGame(saveBundle); }, 800);
@@ -832,6 +836,48 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     const body = `Tu envoies: ${myOutNames.join(", ") || "rien"}\nTu reçois: ${theirOutNames.join(", ") || "rien"}${retained.length ? `\nSalaire retenu : ${retained.map((e) => `${e.label.replace("Salaire retenu — ", "")} ${formatMoney(e.amount)}/saison`).join(", ")}` : ""}\n\n« ${tradeResponseLine(cpuEval)} » — Directeur général, ${theirTeamName}`;
     addMessage({ from: "Directeur général adjoint", subject: `Échange conclu avec ${theirTeamName}`, category: "transaction", playerIds: [...myIds, ...theirIds], body });
   }
+  // Offre reçue d'une équipe de l'ordinateur (voir incomingTradeOffers, monthlyTick) : déjà
+  // évaluée équitable de son côté au moment de sa création (generateAiTradeOffer), donc acceptée
+  // directement si elle tient toujours — rosters/plafond revalidés ici au cas où quelque chose a
+  // changé depuis (joueur échangé ailleurs, blessé, etc.).
+  function acceptIncomingOffer(offerId) {
+    if (!txWindow.open) { setNotice(txWindow.reason); return; }
+    const offer = incomingTradeOffers.find((o) => o.id === offerId);
+    if (!offer) return;
+    setIncomingTradeOffers((prev) => prev.filter((o) => o.id !== offerId));
+    const myT = teamsById[myTeamId], theirT = teamsById[offer.fromTeamId];
+    if (!theirT) { setNotice("Cette offre n'est plus valide."); return; }
+    const myIds = offer.myPlayerIds.filter((id) => myT.roster.some((p) => p.id === id));
+    const theirIds = offer.theirPlayerIds.filter((id) => theirT.roster.some((p) => p.id === id));
+    if (myIds.length !== offer.myPlayerIds.length || theirIds.length !== offer.theirPlayerIds.length) { setNotice("Cette offre n'est plus valide — un des joueurs concernés a quitté son équipe."); return; }
+    const sal = (t, ids) => t.roster.filter((p) => ids.includes(p.id)).reduce((a, p) => a + (p.contract?.salary || 0), 0);
+    const myOut = sal(myT, myIds), myIn = sal(theirT, theirIds);
+    if (!fitsUnderCap(myT.roster, seasonYear, myIn, myOut, myCapOpts)) { setNotice(`Offre refusée : ta masse salariale dépasserait le plafond de ${formatMoney(capStatus(myT.roster, seasonYear).cap)}.`); return; }
+    if (rosterCount(myT.roster) - myIds.length + theirIds.length > ROSTER_MAX) { setNotice(`Offre refusée : ton alignement dépasserait ${ROSTER_MAX} joueurs.`); return; }
+    const myOutNames = myT.roster.filter((p) => myIds.includes(p.id)).map((p) => p.name);
+    const theirOutNames = theirT.roster.filter((p) => theirIds.includes(p.id)).map((p) => p.name);
+    setTeams((prev) => {
+      const myT2 = prev.find((t) => t.id === myTeamId), theirT2 = prev.find((t) => t.id === offer.fromTeamId);
+      const myOutP = myT2.roster.filter((p) => myIds.includes(p.id));
+      const theirOutP = theirT2.roster.filter((p) => theirIds.includes(p.id));
+      return prev.map((t) => {
+        if (t.id === myTeamId) return { ...t, roster: [...t.roster.filter((p) => !myIds.includes(p.id)), ...theirOutP].sort((a, b) => b.ovr - a.ovr) };
+        if (t.id === offer.fromTeamId) return { ...t, roster: [...t.roster.filter((p) => !theirIds.includes(p.id)), ...myOutP].sort((a, b) => b.ovr - a.ovr) };
+        return t;
+      });
+    });
+    setLinesByTeam((prev) => {
+      const updated = { ...prev };
+      myIds.forEach((id) => { updated[myTeamId] = cleanLinesOfPlayer(updated[myTeamId], id); });
+      return updated;
+    });
+    addMessage({ from: `Directeur général — ${theirT.name}`, subject: `Échange conclu avec ${theirT.name}`, category: "transaction", playerIds: [...myIds, ...theirIds], body: `Tu envoies : ${myOutNames.join(", ")}\nTu reçois : ${theirOutNames.join(", ")}\n\n« Merci, on est ravis de cet échange. » — Directeur général, ${theirT.name}` });
+  }
+  function declineIncomingOffer(offerId) {
+    const offer = incomingTradeOffers.find((o) => o.id === offerId);
+    setIncomingTradeOffers((prev) => prev.filter((o) => o.id !== offerId));
+    if (offer) addMessage({ from: `Directeur général — ${teamsById[offer.fromTeamId]?.name || ""}`, subject: "Offre déclinée", category: "transaction", body: "« Dommage, on retente notre chance ailleurs. »" });
+  }
   function openOffer(player, isRenewal = false) {
     const neg = negotiations[player.id];
     if (neg?.stonewalled) { setNotice(`${player.name} refuse toute négociation pour le reste de la saison — trop d'offres refusées.`); return; }
@@ -894,7 +940,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
       // Prime à la signature (k$) payée tout de suite, en dollars dans la caisse.
       if (offer.signingBonus > 0) setBusiness((prev) => ({ ...prev, cash: prev.cash - offer.signingBonus * 1000 }));
       setNegotiations((prev) => { const next = { ...prev }; delete next[player.id]; return next; });
-      addMessage({ from: `Agent de ${player.name}`, subject: `${player.name} a accepté l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\n${player.name} a signé.` });
+      addMessage({ from: `Agent de ${player.name}`, subject: `${player.name} a accepté l'offre`, category: "transaction", playerIds: [player.id], body: `« ${agentLine(true)} »\n\n${offerSummary}\n\n${player.name} a signé.` });
     } else {
       const newRejections = rejections + 1;
       const stonewalled = newRejections >= MAX_OFFER_ATTEMPTS;
@@ -912,7 +958,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
       const reasonText = reasons.length ? ` Raison du refus : ${reasons.join(" ; ")}.` : "";
       const frustration = newRejections > 1 && !stonewalled ? " Mon client trouve que tu le fais lanterner — ses attentes ont grimpé." : "";
       const closed = stonewalled ? ` Mon client en a assez de tes offres : il refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
-      addMessage({ from: `Agent de ${player.name}`, subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${reasonText}${frustration}${closed}` });
+      addMessage({ from: `Agent de ${player.name}`, subject: `${player.name} a refusé l'offre`, category: "transaction", playerIds: [player.id], body: `« ${agentLine(false)} »\n\n${offerSummary}\n\nContre-offre de l'agent : ${money(result.counter.salary)} par saison sur ${result.counter.years} an${result.counter.years > 1 ? "s" : ""}, contrat à un volet.${reasonText}${frustration}${closed}` });
     }
   }
   function findPlayer(playerId) {
@@ -1493,7 +1539,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     // effectif déjà appliquée plus haut dans ce même appel.
     if (phase === "regular" && txWindow.open) {
       let workingTeams = teams;
-      const signResult = aiSignFreeAgentsInSeason(workingTeams, freeAgents, myTeamId, seasonYear, Math.random, 3);
+      const signResult = aiSignFreeAgentsInSeason(workingTeams, freeAgents, myTeamId, seasonYear, Math.random, 6);
       if (signResult) { workingTeams = signResult.teams; setFreeAgents(signResult.freeAgents); }
       const tradeResult = aiTradesAmongCpu(workingTeams, myTeamId, seasonYear, Math.random, 2);
       if (tradeResult) workingTeams = tradeResult.teams;
@@ -1505,6 +1551,24 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
         if (tradeResult) marketLines.push(...tradeResult.trades.map((t) => `${teamsById[t.teamAId].name} envoie ${t.playerFromA.name} à ${teamsById[t.teamBId].name} contre ${t.playerFromB.name}.`));
         addMessage({ from: "Ligue", subject: `Mouvements autour de la ligue — ${label}`, category: "transaction", body: marketLines.join("\n") });
       }
+      // Offres d'échange reçues des équipes de l'ordinateur (voir engine/trades.js
+      // generateAiTradeOffer) : jusqu'à 2 par mois, jamais une 2e offre de la même équipe tant
+      // que la première est encore en attente — à accepter/refuser depuis l'onglet Transactions.
+      const myT = teamsById[myTeamId];
+      const pitchCandidates = teams.filter((t) => t.id !== myTeamId && !incomingTradeOffers.some((o) => o.fromTeamId === t.id)).sort(() => Math.random() - 0.5);
+      const newOffers = [];
+      for (const cpu of pitchCandidates) {
+        if (newOffers.length >= 2) break;
+        if (Math.random() > 0.25) continue;
+        const offer = generateAiTradeOffer(cpu, myT, seasonYear, Math.random);
+        if (!offer) continue;
+        const theirNames = offer.theirPlayerIds.map((id) => cpu.roster.find((p) => p.id === id)?.name).filter(Boolean);
+        const myNames = offer.myPlayerIds.map((id) => myT.roster.find((p) => p.id === id)?.name).filter(Boolean);
+        const pitch = tradePitchLine(Math.random);
+        newOffers.push({ id: `OFFER-${currentDay}-${cpu.id}`, fromTeamId: cpu.id, theirPlayerIds: offer.theirPlayerIds, myPlayerIds: offer.myPlayerIds, pitch, createdDay: currentDay });
+        addMessage({ from: `Directeur général — ${cpu.name}`, subject: `Proposition d'échange : ${myNames.join(", ")}`, category: "transaction", playerIds: offer.myPlayerIds, body: `« ${pitch} »\n\nOn t'offre ${theirNames.join(", ") || "(pièces)"} contre ${myNames.join(", ")}.\n\nVa dans l'onglet Transactions pour accepter ou refuser.` });
+      }
+      if (newOffers.length) setIncomingTradeOffers((prev) => [...prev, ...newOffers]);
     }
     // Mécontentement prolongé (engine/contracts.js playerHappiness) : au-delà de
     // UNHAPPY_MONTHS_LIMIT mois consécutifs sous le seuil, le joueur demande à être échangé — un
@@ -1717,6 +1781,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     setPlayoffs(null);
     setDraft(null);
     setPickTrades({});
+    setIncomingTradeOffers([]);
     setScoutingSpend(0);
     setFreeAgencyDone(false);
     setNegotiations({});
@@ -1976,7 +2041,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={gmNegotiationRating} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={gmNegotiationRating} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} incomingOffers={incomingTradeOffers} onAcceptIncoming={acceptIncomingOffer} onDeclineIncoming={declineIncomingOffer} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
         {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
 

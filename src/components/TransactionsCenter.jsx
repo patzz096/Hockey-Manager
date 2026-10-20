@@ -26,7 +26,7 @@ function CapBadge({ label, team, seasonYear, opts }) {
   );
 }
 
-export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock, seasonYear, myCapOpts = {}, standings = [], pickTrades = {} }) {
+export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock, seasonYear, myCapOpts = {}, standings = [], pickTrades = {}, incomingOffers = [], onAcceptIncoming, onDeclineIncoming }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);
   const [partnerId, setPartnerId] = useState(otherTeams[0]?.id);
   const [myIds, setMyIds] = useState([]);
@@ -148,6 +148,32 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
           </div>
         )}
       </div>
+      {incomingOffers.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: "var(--gold)", letterSpacing: 0.5, marginBottom: 6 }}>OFFRES D'ÉCHANGE REÇUES</div>
+          {incomingOffers.map((o) => {
+            const fromTeam = teamsById[o.fromTeamId];
+            const theirNames = o.theirPlayerIds.map((id) => fromTeam?.roster.find((p) => p.id === id)).filter(Boolean);
+            const myNames = o.myPlayerIds.map((id) => myTeam.roster.find((p) => p.id === id)).filter(Boolean);
+            return (
+              <div key={o.id} style={{ background: "var(--navy2)", border: "1px solid var(--gold)", borderRadius: 6, padding: 12, marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <TeamCrest team={fromTeam} size={22} />
+                  <strong style={{ fontSize: 13 }}>{fromTeam?.name}</strong>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--iceMuted)", fontStyle: "italic", marginBottom: 6 }}>« {o.pitch} »</div>
+                <div style={{ fontSize: 13, marginBottom: 10 }}>
+                  Tu recevrais <strong>{theirNames.map((p) => p.name).join(", ") || "—"}</strong> contre <strong>{myNames.map((p) => p.name).join(", ") || "—"}</strong>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => onAcceptIncoming(o.id)} disabled={!txWindow.open} style={{ ...btnStyle("var(--win)"), fontSize: 12, opacity: txWindow.open ? 1 : 0.5 }}>Accepter</button>
+                  <button onClick={() => onDeclineIncoming(o.id)} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Refuser</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {onBlock.length > 0 && (
         <div style={{ background: "var(--navy)", border: "1px solid var(--accent)", borderRadius: 4, padding: "10px 14px", marginBottom: 14 }}>
           <div style={{ fontSize: 11, color: "var(--accent)", letterSpacing: 0.5, marginBottom: 6 }}>MARCHÉ DES ÉCHANGES — AJOUTER RAPIDEMENT À L'OFFRE</div>

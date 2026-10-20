@@ -31,19 +31,28 @@ export function expireContracts(teams, myTeamId, year) {
 
 // Signatures d'agents libres par l'ordinateur EN SAISON (pas seulement le 1er juillet) : chaque
 // mois, quelques équipes avec un trou de position signent le meilleur agent libre disponible à ce
-// poste si elles ont l'espace sous le plafond. Bien plus timide que aiFreeAgency (probabilité par
-// équipe, `maxSignings` au total) pour ne pas vider le marché d'un coup — juste de quoi donner
-// l'impression d'un marché vivant plutôt que figé toute la saison.
-export function aiSignFreeAgentsInSeason(teams, freeAgents, myTeamId, year, rng, maxSignings = 3) {
+// poste si elles ont l'espace sous le plafond ; même sans trou, une très bonne équipe disponible
+// (cote ≥ 65, nettement au-dessus du pire joueur de l'équipe à ce poste) peut aussi faire une
+// offre hors nécessité pure — comme dans la vraie LNH, les bons agents libres ne traînent pas,
+// même pour des équipes déjà au complet. `maxSignings` au total, pour ne pas vider le marché
+// d'un coup, mais assez agressif pour qu'un joueur convoité se fasse vraiment disputer.
+export function aiSignFreeAgentsInSeason(teams, freeAgents, myTeamId, year, rng, maxSignings = 6) {
   let pool = [...freeAgents].sort((a, b) => b.ovr - a.ovr);
   const signings = [];
   for (const t of teams) {
     if (t.id === myTeamId || signings.length >= maxSignings) continue;
-    if (rng() > 0.35) continue;
+    if (rng() > 0.5) continue;
     const roster = t.roster;
     const needEntry = Object.entries(ROSTER_NEEDS).find(([pos, n]) => roster.filter((p) => p.pos === pos).length < n);
-    if (!needEntry) continue;
-    const [pos] = needEntry;
+    let pos = needEntry?.[0];
+    if (!pos) {
+      const best = pool[0];
+      if (best && best.ovr >= 65) {
+        const worstAtPos = roster.filter((p) => p.pos === best.pos).sort((a, b) => a.ovr - b.ovr)[0];
+        if (!worstAtPos || best.ovr > worstAtPos.ovr + 5) pos = best.pos;
+      }
+    }
+    if (!pos) continue;
     const fa = pool.find((p) => p.pos === pos && fitsUnderCap(roster, year, marketValue(p, year)));
     if (!fa) continue;
     pool = pool.filter((p) => p.id !== fa.id);

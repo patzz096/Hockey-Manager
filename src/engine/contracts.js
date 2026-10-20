@@ -170,6 +170,28 @@ export function interestFactors(player, ctx) {
 }
 export function interestLabel(i) { return i >= 0.45 ? "Très intéressé" : i >= 0.15 ? "Intéressé" : i > -0.15 ? "Neutre" : i > -0.45 ? "Peu intéressé" : "Réticent"; }
 
+// --------------------------- Dialogue de l'agent (variété) ---------------------------
+// Une phrase d'ouverture façon agent, selon l'issue — pour que les messages de négociation
+// sonnent comme un vrai échange plutôt que la même formule répétée à chaque fois. Purement
+// cosmétique (n'affecte rien), ajoutée devant le détail déjà data-driven (raisons du refus,
+// contre-offre, etc.) dans resolveOffer (App.jsx).
+const AGENT_ACCEPT_LINES = [
+  "Mon client est emballé par cette offre.",
+  "On a ce qu'il nous fallait — mon client signe avec plaisir.",
+  "Belle proposition. Mon client est content de se joindre à l'organisation.",
+  "C'est exactement le genre de contrat qu'on espérait.",
+  "Mon client est prêt à s'engager avec vous dès maintenant.",
+];
+const AGENT_REJECT_LINES = [
+  "Ce n'est pas encore ça, mais on reste ouverts à discuter.",
+  "Mon client s'attendait à mieux, franchement.",
+  "On va devoir se parler d'autre chose avant d'en arriver là.",
+  "Il y a un écart important entre vos attentes et les siennes.",
+  "Mon client n'est pas convaincu — revenez avec une meilleure offre.",
+];
+function pickLine(list, rng) { return list[Math.floor(rng() * list.length)]; }
+export function agentLine(accept, rng = Math.random) { return pickLine(accept ? AGENT_ACCEPT_LINES : AGENT_REJECT_LINES, rng); }
+
 // Rang qu'occuperait le joueur à sa position dans ton alignement (pour le temps de glace).
 export function lineupContext(player, roster) {
   const group = player.pos === "G" ? ["G"] : FWD.includes(player.pos) ? FWD : ["LD", "RD"];

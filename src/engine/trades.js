@@ -111,3 +111,59 @@ export function tradeResponseLine(evalResult, rng = Math.random) {
   if (evalResult.accept) return pick(evalResult.diff > evalResult.valueOut * 0.15 ? ACCEPT_GENEROUS_LINES : ACCEPT_FAIR_LINES, rng);
   return pick(evalResult.reason === "star" ? REJECT_STAR_LINES : REJECT_VALUE_LINES, rng);
 }
+
+// Phrases d'ouverture quand c'est L'ORDINATEUR qui te contacte en premier (generateAiTradeOffer
+// ci-dessous), façon DG qui appelle pour une cible précise — distinctes des lignes de réponse
+// ci-dessus (qui répondent à TON offre, pas qui en proposent une).
+const PITCH_LINES = [
+  "On a besoin de renfort à ce poste, et ton joueur nous intéresse beaucoup.",
+  "Nos dépisteurs nous poussent depuis des semaines à t'appeler pour ce joueur.",
+  "On est prêts à payer le prix fort pour combler ce trou dans notre alignement.",
+  "Ce joueur correspond exactement à ce qu'il nous manque en ce moment.",
+  "On a du mal à ce poste depuis le début de la saison — voici notre offre.",
+];
+export function tradePitchLine(rng = Math.random) { return pick(PITCH_LINES, rng); }
+
+// Position simplifiée (attaquant/défenseur/gardien) pour évaluer les besoins d'effectif.
+const posGroup = (pos) => (pos === "G" ? "G" : ["C", "LW", "RW"].includes(pos) ? "F" : "D");
+
+// Offre qu'une équipe de l'ordinateur t'enverrait pour obtenir UN joueur précis de ton effectif :
+// cible le poste où elle est la plus faible, cède des pièces qu'elle peut perdre sans se
+// désavantager (jamais ses meilleurs éléments, même seuil STAR_PROTECTION/QUALITY_THRESHOLD que
+// l'évaluation d'une offre reçue), avec une petite prime (10 %) pour paraître sérieuse. `null` si
+// l'équipe n'a ni besoin clair ni assez de pièces à céder — pas d'offre plutôt qu'une mauvaise.
+export function generateAiTradeOffer(cpuTeam, myTeam, seasonYear, rng) {
+  const groups = ["F", "D", "G"];
+  const starters = { F: 6, D: 4, G: 1 };
+  const groupStrength = (team, g) => {
+    const players = team.roster.filter((p) => posGroup(p.pos) === g).sort((a, b) => b.ovr - a.ovr);
+    return players.slice(0, starters[g]).reduce((a, p) => a + p.ovr, 0) / starters[g] || 0;
+  };
+  // Cherche un vrai écart dans N'IMPORTE quel groupe (pas seulement le plus faible dans
+  // l'absolu) : une équipe globalement forte peut quand même avoir un trou net à un poste
+  // précis — se limiter au groupe le plus faible en moyenne ratait ces cas (ex. gardiens
+  // excellents, défense très légèrement sous la moyenne de la ligue mais sans réel trou).
+  let target = null, bestGap = -Infinity;
+  for (const g of groups) {
+    const strength = groupStrength(cpuTeam, g);
+    myTeam.roster.filter((p) => posGroup(p.pos) === g && p.ovr > strength + 1).forEach((p) => {
+      const gap = p.ovr - strength;
+      if (gap > bestGap) { bestGap = gap; target = p; }
+    });
+  }
+  if (!target) return null;
+  const targetValue = tradeValue(target.ovr, target.potential, target.age, target.pos, target.contract, seasonYear);
+  const tradeable = cpuTeam.roster
+    .filter((p) => p.ovr < QUALITY_THRESHOLD)
+    .map((p) => ({ p, v: tradeValue(p.ovr, p.potential, p.age, p.pos, p.contract, seasonYear) }))
+    .sort((a, b) => a.v - b.v);
+  const need = targetValue * 1.1;
+  const picked = [];
+  let sum = 0;
+  for (const t of tradeable) {
+    if (sum >= need || picked.length >= 3) break;
+    picked.push(t.p); sum += t.v;
+  }
+  if (sum < need * 0.85 || picked.length === 0) return null;
+  return { theirPlayerIds: picked.map((p) => p.id), myPlayerIds: [target.id] };
+}
