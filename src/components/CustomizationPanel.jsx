@@ -28,7 +28,7 @@ export const PACK_EDITOR_URL = "https://claude.ai/artifact/JTwgSfDMH5jbhBbcRUWZH
 // teams : équipes de la partie en cours (pour l'export et la couverture du facepack).
 // onExportSave/onImportSave : sauvegarde de la partie elle-même (saison, alignements, contrats,
 // finances...), distincte du pack de personnalisation ci-dessous — voir engine/gameSave.js.
-export function CustomizationPanel({ teams, inGame, onNewGame, onExportSave, onImportSave }) {
+export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, onExportSave, onImportSave }) {
   const c = useCustomization();
   const [status, setStatus] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -39,8 +39,10 @@ export function CustomizationPanel({ teams, inGame, onNewGame, onExportSave, onI
   const withFace = allPlayers.filter((p) => faceKeys(p).some((k) => c.faces[k])).length;
   const dbTeams = c.rosterDb ? Object.keys(c.rosterDb.teams) : [];
   const dbPlayers = c.rosterDb ? Object.values(c.rosterDb.teams).reduce((a, l) => a + l.length, 0) : 0;
+  const dbFarms = c.rosterDb?.farms ? Object.keys(c.rosterDb.farms).length : 0;
 
-  // Import d'un pack complet, d'une base (.json) ou d'un CSV (tableur ou script LNH).
+  // Import d'un pack complet, d'une base (.json) ou d'un CSV (tableur ou script LNH). Les
+  // joueurs marqués niveau=LAH (CSV) ou rangés sous `farms` (pack) remplacent le club-école.
   async function importDb(files) {
     try {
       const file = files[0];
@@ -48,12 +50,14 @@ export function CustomizationPanel({ teams, inGame, onNewGame, onExportSave, onI
       const done = [];
       if (pack.db) {
         const known = Object.keys(pack.db.teams).filter((id) => teamIds.includes(id));
-        if (known.length === 0) throw new Error("Aucune équipe reconnue (identifiants attendus : MTL, TOR, BOS...).");
+        const knownFarms = Object.keys(pack.db.farms || {}).filter((id) => teamIds.includes(id));
+        if (known.length === 0 && knownFarms.length === 0) throw new Error("Aucune équipe reconnue (identifiants attendus : MTL, TOR, BOS...).");
         const ignored = Object.keys(pack.db.teams).filter((id) => !teamIds.includes(id));
         await c.saveRosterDb({ ...pack.db, source: pack.meta?.name || file.name, importedAt: new Date().toISOString().slice(0, 10) });
-        done.push(`${known.length} équipes${ignored.length ? ` (ignorées : ${ignored.join(", ")})` : ""}`);
+        if (known.length) done.push(`${known.length} équipes${ignored.length ? ` (ignorées : ${ignored.join(", ")})` : ""}`);
+        if (knownFarms.length) done.push(`${knownFarms.length} clubs-écoles`);
       }
-      const info = Object.fromEntries(Object.entries(pack.teamInfo || {}).filter(([id]) => teamIds.includes(id)).map(([id, v]) => [id, { name: v.name, city: v.city, color: v.color }]));
+      const info = Object.fromEntries(Object.entries(pack.teamInfo || {}).filter(([id]) => teamIds.includes(id)).map(([id, v]) => [id, { name: v.name, city: v.city, color: v.color, farmName: v.farmName }]));
       if (Object.keys(info).length) { await c.saveTeamInfo({ ...c.teamInfo, ...info }); done.push(`${Object.keys(info).length} fiches d'équipe`); }
       const img = await c.importPackImages({ logos: Object.fromEntries(Object.entries(pack.logos).filter(([id]) => teamIds.includes(id))), faces: pack.faces });
       if (img.logos) done.push(`${img.logos} logos`);
@@ -66,14 +70,14 @@ export function CustomizationPanel({ teams, inGame, onNewGame, onExportSave, onI
   }
   async function exportPack() {
     setStatus({ ok: true, text: "Préparation du pack…" });
-    const pack = await buildPack(teams, c.exportImages(), { name: "Mon pack Hockey GM" });
+    const pack = await buildPack(teams, c.exportImages(), { name: "Mon pack Hockey GM" }, farmByTeam);
     const text = JSON.stringify(pack);
     const r = await saveFile("hockey-gm-pack.json", text);
     setStatus(r === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: `Pack enregistré (${Math.round(text.length / 1024)} Ko) : ${teams.length} équipes, ${Object.keys(pack.logos).length} logos, ${Object.keys(pack.faces).length} photos. Modifie-le, partage-le, puis réimporte-le ici.` });
   }
   async function exportCsv() {
-    const r = await saveFile("hockey-gm-alignements.csv", exportSheetCsv(teams), "text/csv");
-    setStatus(r === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: "CSV enregistré : ouvre-le dans Excel, LibreOffice ou Google Sheets (une ligne par joueur, salaires en millions), puis réimporte-le ici." });
+    const r = await saveFile("hockey-gm-alignements.csv", exportSheetCsv(teams, farmByTeam), "text/csv");
+    setStatus(r === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: "CSV enregistré : ouvre-le dans Excel, LibreOffice ou Google Sheets (une ligne par joueur et par club-école, salaires en millions), puis réimporte-le ici." });
   }
   function setTeamField(id, field, value) {
     c.saveTeamInfo({ ...info, [id]: { ...(info[id] || {}), [field]: value } });
@@ -125,8 +129,8 @@ export function CustomizationPanel({ teams, inGame, onNewGame, onExportSave, onI
           <br />3. un éditeur de texte, directement dans le fichier .json.
         </div>
         <div style={{ ...hint, marginBottom: 10 }}>
-          Actuelle : <strong style={{ color: "var(--ice)" }}>{c.rosterDb ? `${c.rosterDb.source || "personnalisée"} — ${dbTeams.length} équipes, ${dbPlayers} joueurs (importée le ${c.rosterDb.importedAt})` : "par défaut"}</strong><br />
-          Formats acceptés : pack (.json), base du jeu (.json), CSV du tableur, ou le JSON/CSV de <code>scripts/fetch_nhl_rosters.py</code>. Les équipes absentes du fichier gardent leur alignement par défaut ; un pack qui ne contient que des logos ou des photos les ajoute sans toucher aux alignements.
+          Actuelle : <strong style={{ color: "var(--ice)" }}>{c.rosterDb ? `${c.rosterDb.source || "personnalisée"} — ${dbTeams.length} équipes, ${dbPlayers} joueurs${dbFarms ? `, ${dbFarms} clubs-écoles` : ""} (importée le ${c.rosterDb.importedAt})` : "par défaut"}</strong><br />
+          Formats acceptés : pack (.json), base du jeu (.json), CSV du tableur, ou le JSON/CSV de <code>scripts/fetch_nhl_rosters.py</code>. Les équipes absentes du fichier gardent leur alignement par défaut ; un pack qui ne contient que des logos ou des photos les ajoute sans toucher aux alignements. Dans le CSV, une ligne avec <code>niveau</code> = <code>LAH</code> va au club-école de l'équipe plutôt qu'à son alignement LNH.
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <FileButton label="Importer un pack, une base ou un CSV" accept=".json,.csv,application/json,text/csv" onFiles={importDb} color="var(--red)" />
@@ -171,6 +175,7 @@ export function CustomizationPanel({ teams, inGame, onNewGame, onExportSave, onI
               <TeamCrest team={t} size={40} />
               <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
                 <input aria-label={`Nom ${t.id}`} value={t.name} onChange={(e) => setTeamField(t.id, "name", e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 12, gridColumn: "1 / 3" }} />
+                <input aria-label={`Club-école ${t.id}`} placeholder="Club-école (ex. Rocket de Laval)" value={t.farmName || ""} onChange={(e) => setTeamField(t.id, "farmName", e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 12, gridColumn: "1 / 3" }} />
                 <input aria-label={`Ville ${t.id}`} value={t.city} onChange={(e) => setTeamField(t.id, "city", e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 12 }} />
                 <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                   <input aria-label={`Couleur ${t.id}`} type="color" value={t.color} onChange={(e) => setTeamField(t.id, "color", e.target.value)} style={{ width: 28, height: 24, border: "none", background: "none", padding: 0 }} />

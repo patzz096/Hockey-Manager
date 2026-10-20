@@ -973,7 +973,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     const isFreeAgent = player && !player.contract && player.league;
     if (!player || !(player.draftProspect || player.level === "LAH" || isFreeAgent)) return null;
     const owner = Object.keys(farmByTeam).find((id) => farmByTeam[id].some((p) => p.id === player.id));
-    const lg = leagueOf(player, owner ? teamsById[owner]?.name : null);
+    const lg = leagueOf(player, owner ? teamsById[owner]?.name : null, owner ? teamsById[owner]?.farmName : null);
     if (!lg) return null;
     const year = player.draftProspect ? (player.id.split("-")[1] ? Number(player.id.split("-")[1]) : seasonYear) : seasonYear;
     return { ...minorSeasonStats(player, lg.league, year, minorSeasonFraction(currentDay, seasonDates(year).start)), club: lg.club, year };
@@ -1763,7 +1763,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     // quitte le junior pour la LAH.
     setFarmByTeam(Object.fromEntries(Object.entries(farmByTeam).map(([id, list]) => {
       const withHistory = list.map((p) => {
-        const lg = leagueOf(p, teamsById[id]?.name);
+        const lg = leagueOf(p, teamsById[id]?.name, teamsById[id]?.farmName);
         const line = lg && minorSeasonStats(p, lg.league, seasonYear, 1);
         return line ? { ...p, minorHistory: [...(p.minorHistory || []), { season: seasonYear, club: lg.club, ...line }] } : p;
       });
@@ -2064,7 +2064,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
           />
         )}
 
-        {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} onExportSave={exportSave} onImportSave={importSave} />}
+        {tab === "custom" && <CustomizationPanel teams={teams} farmByTeam={farmByTeam} inGame onNewGame={onNewGame} onExportSave={exportSave} onImportSave={importSave} />}
 
         {tab === "inbox" && <InboxPanel messages={messages} onMarkAllRead={markAllRead} onMarkThreadRead={markThreadRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 

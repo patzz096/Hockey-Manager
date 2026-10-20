@@ -32,7 +32,7 @@ describe("pack de personnalisation", () => {
 
   it("fait l'aller-retour par le CSV du tableur (Excel en français)", async () => {
     const csv = exportSheetCsv(lg.teams.slice(0, 1));
-    expect(csv.split("\n")[0]).toMatch(/^﻿?equipe;nom;position/);
+    expect(csv.split("\n")[0]).toMatch(/^﻿?equipe;niveau;nom;position/);
     const back = await parsePackFile(csv, "alignements.csv");
     const orig = lg.teams[0].roster[0];
     const got = back.db.teams[lg.teams[0].id][0];

@@ -4,6 +4,8 @@ import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL } 
 // ---------------------------------------------------------------------------------------
 // Pack de personnalisation : UN fichier .json partageable qui contient tout ou partie de
 //   - la base d'alignements (joueurs, attributs, contrats) : `teams`, `teamInfo` ;
+//   - le club-école de chaque équipe (mêmes joueurs, mais niveau "LAH") : `farms` ; un nom
+//     personnalisé de club-école se met dans teamInfo[ID].farmName (ex. "Rocket de Laval") ;
 //   - les logos (`logos` : { MTL: "data:image/png;base64,..." }) ;
 //   - le facepack (`faces` : { "8478402": "data:...", "cole_caufield": "data:..." }).
 // Il se prépare hors du jeu (éditeur de pack, éditeur de texte, ou tableur via le CSV) puis
@@ -54,7 +56,9 @@ async function blobToDataUrl(blob) {
 async function dataUrlToBlob(url) { return (await fetch(url)).blob(); }
 
 // Pack complet de la ligue en cours. images : { logos: { id: Blob }, faces: { clé: Blob } }.
-export async function buildPack(teams, images = {}, meta = {}) {
+// farmByTeam (optionnel) : { ID: [joueurs du club-école] }, pour inclure aussi les espoirs/le
+// club-école dans l'export (voir `farms` dans le pack, et teamInfo[ID].farmName pour son nom).
+export async function buildPack(teams, images = {}, meta = {}, farmByTeam = {}) {
   const enc = async (map) => Object.fromEntries(await Promise.all(Object.entries(map || {}).map(async ([k, b]) => [k, b instanceof Blob ? await blobToDataUrl(b) : b])));
   return {
     format: PACK_FORMAT,
@@ -63,8 +67,9 @@ export async function buildPack(teams, images = {}, meta = {}) {
     author: meta.author || "",
     createdAt: new Date().toISOString().slice(0, 10),
     notes: "Montants de contrat en millions de $ (salaryM). Attributs de 1 à 99 (affichés /20 dans le jeu).",
-    teamInfo: Object.fromEntries(teams.map((t) => [t.id, { city: t.city, name: t.name, color: t.color, division: t.division, capacity: t.capacity }])),
+    teamInfo: Object.fromEntries(teams.map((t) => [t.id, { city: t.city, name: t.name, color: t.color, division: t.division, capacity: t.capacity, farmName: t.farmName }])),
     teams: Object.fromEntries(teams.map((t) => [t.id, t.roster.map(stripPlayer)])),
+    farms: Object.fromEntries(Object.entries(farmByTeam).filter(([, list]) => list?.length).map(([id, list]) => [id, list.map(stripPlayer)])),
     logos: await enc(images.logos),
     faces: await enc(images.faces),
   };
@@ -79,8 +84,16 @@ export async function parsePackFile(text, filename = "") {
     if (data?.format === PACK_FORMAT) {
       const dec = async (map) => Object.fromEntries(await Promise.all(Object.entries(map || {}).filter(([, v]) => typeof v === "string" && v.startsWith("data:image/")).map(async ([k, v]) => [k, await dataUrlToBlob(v)])));
       const hasTeams = data.teams && Object.keys(data.teams).length > 0;
-      const db = hasTeams ? parseRosterFile(JSON.stringify({ format: "hockey-gm-db", teams: data.teams, teamInfo: data.teamInfo || {} })) : null;
-      if (db) normalizeDb(db);
+      const hasFarms = data.farms && Object.keys(data.farms).length > 0;
+      const db = hasTeams || hasFarms ? parseRosterFile(JSON.stringify({ format: "hockey-gm-db", teams: data.teams || {}, teamInfo: data.teamInfo || {} })) : null;
+      if (db) {
+        normalizeDb(db);
+        if (hasFarms) {
+          const farmDb = parseRosterFile(JSON.stringify({ format: "hockey-gm-db", teams: data.farms, teamInfo: {} }));
+          normalizeDb(farmDb);
+          db.farms = farmDb.teams;
+        }
+      }
       return { db, teamInfo: data.teamInfo || {}, logos: await dec(data.logos), faces: await dec(data.faces), meta: { name: data.name, author: data.author, createdAt: data.createdAt } };
     }
   } else if (isSheetCsv(clean)) {
@@ -91,6 +104,7 @@ export async function parsePackFile(text, filename = "") {
 }
 function normalizeDb(db) {
   Object.values(db.teams).forEach((list) => list.forEach((p) => { if (p.contract) p.contract = normalizeContract(p.contract); }));
+  if (db.farms) Object.values(db.farms).forEach((list) => list.forEach((p) => { if (p.contract) p.contract = normalizeContract(p.contract); }));
   return db;
 }
 
@@ -98,31 +112,39 @@ function normalizeDb(db) {
 const SKATER_ATTRS = [...OFFENSIVE, ...DEFENSIVE, ...MENTAL, ...PHYSICAL];
 const GOALIE_ATTRS = [...GOALIE_TECH, ...GOALIE_PHYSICAL.filter((k) => !PHYSICAL.includes(k))];
 const ALL_ATTRS = [...new Set([...SKATER_ATTRS, ...GOALIE_ATTRS])];
-const CSV_COLS = ["equipe", "nom", "position", "age", "nationalite", "numero", "salaire_M", "annees", "volets", "salaire_LAH_M", "potentiel", ...ALL_ATTRS];
+const CSV_COLS = ["equipe", "niveau", "nom", "position", "age", "nationalite", "numero", "salaire_M", "annees", "volets", "salaire_LAH_M", "potentiel", ...ALL_ATTRS];
 // Format d'Excel en français : séparateur « ; », décimales à virgule.
 const esc = (v) => { const s = v == null ? "" : typeof v === "number" ? String(v).replace(".", ",") : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
-export function exportSheetCsv(teams) {
+// farmByTeam (optionnel) : exporte aussi le club-\u00E9cole, une ligne par joueur, "niveau" = LAH.
+export function exportSheetCsv(teams, farmByTeam = {}) {
   const rows = [CSV_COLS.join(";")];
-  teams.forEach((t) => t.roster.forEach((p) => {
+  const pushRow = (teamId, level, p) => {
     const c = p.contract || {};
-    rows.push([t.id, p.name, p.pos, p.age, p.nationality, p.number, c.salary != null ? c.salary / 1000 : "", c.years ?? "", c.type === "two" ? 2 : 1, c.type === "two" ? (c.ahlSalary || 80) / 1000 : "", p.potential, ...ALL_ATTRS.map((k) => p.attrs?.[k] ?? "")].map(esc).join(";"));
-  }));
+    rows.push([teamId, level, p.name, p.pos, p.age, p.nationality, p.number, c.salary != null ? c.salary / 1000 : "", c.years ?? "", c.type === "two" ? 2 : 1, c.type === "two" ? (c.ahlSalary || 80) / 1000 : "", p.potential, ...ALL_ATTRS.map((k) => p.attrs?.[k] ?? "")].map(esc).join(";"));
+  };
+  teams.forEach((t) => t.roster.forEach((p) => pushRow(t.id, "LNH", p)));
+  Object.entries(farmByTeam).forEach(([id, list]) => (list || []).forEach((p) => pushRow(id, "LAH", p)));
   return "\uFEFF" + rows.join("\n");
 }
 const isSheetCsv = (text) => { const head = text.split(/\r?\n/)[0].toLowerCase(); return head.includes("equipe") && head.includes("salaire_m"); };
+// Les lignes avec niveau=LAH (club-\u00E9cole) vont dans `farms` plut\u00F4t que dans `teams` (NHL).
 function parseSheetCsv(text) {
   const teams = {};
+  const farms = {};
   parseCsv(text).forEach((r) => {
     const team = String(r.equipe || "").toUpperCase().trim();
     if (!team || !r.nom) return;
     const attrs = {};
     ALL_ATTRS.forEach((k) => { if (r[k] != null && r[k] !== "") attrs[k] = Math.max(1, Math.min(99, Number(r[k]))); });
-    (teams[team] ||= []).push({
+    const target = String(r.niveau || "").toUpperCase().trim() === "LAH" ? farms : teams;
+    (target[team] ||= []).push({
       name: r.nom, pos: String(r.position || "").toUpperCase(), age: Number(String(r.age).replace(",", ".")) || 25, nationality: r.nationalite || "CA", number: r.numero ? Number(r.numero) : undefined,
       potential: r.potentiel ? Number(r.potentiel) : undefined, attrs,
       contract: r.salaire_M ? { salaryM: r.salaire_M, years: r.annees || 1, type: String(r.volets) === "2" ? "two" : "one", ahlSalaryM: r.salaire_LAH_M } : undefined,
     });
   });
-  return parseRosterFile(JSON.stringify({ format: "hockey-gm-db", teams, teamInfo: {} }));
+  const db = parseRosterFile(JSON.stringify({ format: "hockey-gm-db", teams, teamInfo: {} }));
+  if (Object.keys(farms).length) db.farms = parseRosterFile(JSON.stringify({ format: "hockey-gm-db", teams: farms, teamInfo: {} })).teams;
+  return db;
 }

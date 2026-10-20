@@ -105,9 +105,10 @@ export function assignFreeAgentLeague(player, rng = seededRandom(hash(player.id)
 }
 
 // Ligue actuelle d'un joueur hors LNH : la sienne, sinon la LAH pour le club-école.
-export function leagueOf(player, teamName) {
+// farmName : nom personnalisé du club-école (ex. « Rocket de Laval »), sinon « Club-école de X ».
+export function leagueOf(player, teamName, farmName) {
   if (player.league) return { league: player.league, club: player.club || MINOR_LEAGUES[player.league]?.short };
-  if (player.level === "LAH") return { league: "AHL", club: teamName ? `Club-école de ${teamName}` : "Club-école (LAH)" };
+  if (player.level === "LAH") return { league: "AHL", club: farmName || (teamName ? `Club-école de ${teamName}` : "Club-école (LAH)") };
   return null;
 }
 

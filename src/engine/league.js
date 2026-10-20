@@ -21,8 +21,10 @@ function fitUnderCap(roster) {
   return roster.map((p) => (p.contract?.generated ? { ...p, contract: { ...p.contract, salary: Math.max(minSalaryFor(CURRENT_YEAR), Math.round((p.contract.salary * k) / 25) * 25) } } : p));
 }
 
-// custom : base de données personnalisée ({ teams: { ID: [joueurs] }, teamInfo: { ID: {...} } }).
-// Ses alignements remplacent ceux par défaut ; teamInfo renomme ou recolore les équipes.
+// custom : base de données personnalisée ({ teams: { ID: [joueurs] }, farms: { ID: [joueurs] },
+// teamInfo: { ID: {...} } }). Ses alignements remplacent ceux par défaut ; teamInfo renomme ou
+// recolore les équipes (y compris le club-école via teamInfo[ID].farmName) ; farms remplace le
+// club-école d'une équipe par la liste de joueurs fournie.
 export function initLeague(custom = null) {
   const rng = seededRandom(42);
   const teams = TEAM_SEED.map((seed, idx) => {
@@ -32,7 +34,10 @@ export function initLeague(custom = null) {
     return { ...t, roster, lines: buildLines(roster) };
   });
   const farmByTeam = {};
-  teams.forEach((t, idx) => { farmByTeam[t.id] = REAL_FARMS[t.id] ? buildRealFarmRoster(REAL_FARMS[t.id], idx, rng) : buildFarmRoster(idx, rng, 10); });
+  teams.forEach((t, idx) => {
+    const customFarm = custom?.farms?.[t.id];
+    farmByTeam[t.id] = customFarm?.length ? buildRealFarmRoster(customFarm, idx, rng) : REAL_FARMS[t.id] ? buildRealFarmRoster(REAL_FARMS[t.id], idx, rng) : buildFarmRoster(idx, rng, 10);
+  });
   const freeAgents = [...buildRealFreeAgents(REAL_FREE_AGENTS, rng), ...buildFreeAgentPool(rng, 16)];
   const allPlayers = [...teams.flatMap((t) => t.roster), ...Object.values(farmByTeam).flat(), ...freeAgents];
   assignDraftInfo(allPlayers, rng);
