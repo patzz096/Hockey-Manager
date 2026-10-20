@@ -61,55 +61,59 @@ import { DraftPanel } from "./components/DraftPanel";
 import { CapSummary } from "./components/CapSummary";
 import { WaiversPanel } from "./components/WaiversPanel";
 import { TeamRosterModal } from "./components/TeamRosterModal";
+import { persistGame, exportSaveFile, parseSaveFile } from "./engine/gameSave";
 
 const PHASE_LABEL = { preseason: "Matchs préparatoires", regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
 const NEXT_STEP = { preseason: "", regular: "", endRegular: "Saison régulière terminée : place aux séries éliminatoires.", playoffs: "Ton équipe est éliminée ou attend son prochain match.", preDraft: "Les séries sont terminées. Prochaine étape : le repêchage.", draft: "Le repêchage est en cours.", preFreeAgency: "Repêchage terminé. Le marché des agents libres ouvre le 1er juillet.", offseason: "Marché des agents libres ouvert. Prépare la prochaine saison." };
 
-export default function HockeyGM({ custom = null, onNewGame = null }) {
+export default function HockeyGM({ custom = null, onNewGame = null, savedGame = null, onGameImported = null }) {
   const [initial] = useState(() => initLeague(custom));
-  const [teams, setTeams] = useState(initial.teams);
-  const [freeAgents, setFreeAgents] = useState(initial.freeAgents);
-  const [staffMarket, setStaffMarket] = useState(initial.staffMarket);
-  const [scoutKnowledge, setScoutKnowledge] = useState({});
-  const [farmByTeam, setFarmByTeam] = useState(initial.farmByTeam);
+  // Chaque useState ci-dessous reprend sa valeur sauvegardée si une partie existait déjà (voir
+  // engine/gameSave.js) — l'état purement visuel/éphémère (onglet actif, fenêtres ouvertes, etc.)
+  // ignore `savedGame` : repartir sur l'accueil au rechargement est normal, perdre sa saison non.
+  const [teams, setTeams] = useState(() => savedGame?.teams ?? initial.teams);
+  const [freeAgents, setFreeAgents] = useState(() => savedGame?.freeAgents ?? initial.freeAgents);
+  const [staffMarket, setStaffMarket] = useState(() => savedGame?.staffMarket ?? initial.staffMarket);
+  const [scoutKnowledge, setScoutKnowledge] = useState(() => savedGame?.scoutKnowledge ?? {});
+  const [farmByTeam, setFarmByTeam] = useState(() => savedGame?.farmByTeam ?? initial.farmByTeam);
   // Temps : jours depuis le 1er octobre 2026 (voir engine/calendar.js). Un tour du calendrier
   // régulier tous les 3 jours, séries un jour sur deux, repêchage le 24 juin, agents libres le 1er juillet.
-  const [seasonYear, setSeasonYear] = useState(FIRST_SEASON);
-  const [currentDay, setCurrentDay] = useState(() => seasonDates(FIRST_SEASON).preseason - 1);
-  const [playoffs, setPlayoffs] = useState(null);
-  const [draft, setDraft] = useState(null);
-  // Choix de repêchage échangés cette saison : { "ronde-équipeOrigine": équipeQuiLePossèdeMaintenant }.
-  // Remis à zéro à chaque nouvelle saison (voir startNewSeason) — un choix ne se négocie que pour
-  // le repêchage à venir, pas pour les années futures.
-  const [pickTrades, setPickTrades] = useState({});
-  const [freeAgencyDone, setFreeAgencyDone] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [careerStats, setCareerStats] = useState({});
-  const [waivers, setWaivers] = useState([]);
-  const [injuries, setInjuries] = useState({});
-  const [deadCap, setDeadCap] = useState([]); // cap mort de ton équipe (rachats, salaires retenus)
-  const [lotteryHistory, setLotteryHistory] = useState([]);
-  const [myClaims, setMyClaims] = useState([]);
+  const [seasonYear, setSeasonYear] = useState(() => savedGame?.seasonYear ?? FIRST_SEASON);
+  const [currentDay, setCurrentDay] = useState(() => savedGame?.currentDay ?? (seasonDates(FIRST_SEASON).preseason - 1));
+  const [playoffs, setPlayoffs] = useState(() => savedGame?.playoffs ?? null);
+  const [draft, setDraft] = useState(() => savedGame?.draft ?? null);
+  // Choix de repêchage échangés : { "année-ronde-équipeOrigine": équipeQuiLePossèdeMaintenant }.
+  // Les entrées des années passées ne sont jamais consultées (ownedPicks/createDraft filtrent par
+  // année), inutile de les purger — voir engine/draft.js pickKey/ownedPicksByYear.
+  const [pickTrades, setPickTrades] = useState(() => savedGame?.pickTrades ?? {});
+  const [freeAgencyDone, setFreeAgencyDone] = useState(() => savedGame?.freeAgencyDone ?? false);
+  const [history, setHistory] = useState(() => savedGame?.history ?? []);
+  const [careerStats, setCareerStats] = useState(() => savedGame?.careerStats ?? {});
+  const [waivers, setWaivers] = useState(() => savedGame?.waivers ?? []);
+  const [injuries, setInjuries] = useState(() => savedGame?.injuries ?? {});
+  const [deadCap, setDeadCap] = useState(() => savedGame?.deadCap ?? []); // cap mort de ton équipe (rachats, salaires retenus)
+  const [lotteryHistory, setLotteryHistory] = useState(() => savedGame?.lotteryHistory ?? []);
+  const [myClaims, setMyClaims] = useState(() => savedGame?.myClaims ?? []);
   const [notice, setNotice] = useState(null);
-  const [pendingScouts, setPendingScouts] = useState([]);
+  const [pendingScouts, setPendingScouts] = useState(() => savedGame?.pendingScouts ?? []);
   // Dépistage à la FM : zone de chaque dépisteur, couverture des zones (%), suggestions reçues,
   // et ta liste de repêchage (ordre de préférence, pour la cuvée `year`).
   // missions : { idDuDépisteur: { region, league, focus, focusValue, target, weeks, weeksDone } }.
-  const [scoutMissions, setScoutMissions] = useState(DEFAULT_MISSIONS);
-  const [scoutMarket, setScoutMarket] = useState(() => buildScoutMarket(seededRandom(4242), 20));
-  const [scoutingSpend, setScoutingSpend] = useState(0); // frais de mission de la saison ($)
-  const [scoutCoverage, setScoutCoverage] = useState(DEFAULT_COVERAGE);
-  const [scoutSuggestions, setScoutSuggestions] = useState([]);
-  const [draftList, setDraftList] = useState({ year: FIRST_SEASON, ids: [] });
-  const [winsThisMonth, setWinsThisMonth] = useState(0);
-  const [profitThisMonth, setProfitThisMonth] = useState(0);
-  const [progressionReport, setProgressionReport] = useState([]);
+  const [scoutMissions, setScoutMissions] = useState(() => savedGame?.scoutMissions ?? DEFAULT_MISSIONS);
+  const [scoutMarket, setScoutMarket] = useState(() => savedGame?.scoutMarket ?? buildScoutMarket(seededRandom(4242), 20));
+  const [scoutingSpend, setScoutingSpend] = useState(() => savedGame?.scoutingSpend ?? 0); // frais de mission de la saison ($)
+  const [scoutCoverage, setScoutCoverage] = useState(() => savedGame?.scoutCoverage ?? DEFAULT_COVERAGE);
+  const [scoutSuggestions, setScoutSuggestions] = useState(() => savedGame?.scoutSuggestions ?? []);
+  const [draftList, setDraftList] = useState(() => savedGame?.draftList ?? { year: FIRST_SEASON, ids: [] });
+  const [winsThisMonth, setWinsThisMonth] = useState(() => savedGame?.winsThisMonth ?? 0);
+  const [profitThisMonth, setProfitThisMonth] = useState(() => savedGame?.profitThisMonth ?? 0);
+  const [progressionReport, setProgressionReport] = useState(() => savedGame?.progressionReport ?? []);
   // Mécontentement prolongé (engine/contracts.js playerHappiness) : mois consécutifs sous le
   // seuil de mécontentement par joueur ; une fois le seuil de mois atteint, le joueur demande à
   // être échangé (un seul message tant qu'il reste mécontent, pour ne pas répéter chaque mois).
-  const [unhappyMonths, setUnhappyMonths] = useState({});
-  const [tradeRequested, setTradeRequested] = useState({});
-  const [messages, setMessages] = useState([]);
+  const [unhappyMonths, setUnhappyMonths] = useState(() => savedGame?.unhappyMonths ?? {});
+  const [tradeRequested, setTradeRequested] = useState(() => savedGame?.tradeRequested ?? {});
+  const [messages, setMessages] = useState(() => savedGame?.messages ?? []);
   function addMessage(msg) {
     setMessages((prev) => [{ id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, read: false, day: currentDay, ...msg }, ...prev]);
   }
@@ -121,9 +125,9 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     setMessages((prev) => prev.map((m) => (m.from === from && !m.read ? { ...m, read: true } : m)));
   }
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
-  const [schedule, setSchedule] = useState(() => [...buildPreseasonSchedule(teams, FIRST_SEASON), ...buildSchedule(teams)]);
-  const [linesByTeam, setLinesByTeam] = useState(() => Object.fromEntries(teams.map((t) => [t.id, t.lines])));
-  const [myTeamId, setMyTeamId] = useState(null);
+  const [schedule, setSchedule] = useState(() => savedGame?.schedule ?? [...buildPreseasonSchedule(teams, FIRST_SEASON), ...buildSchedule(teams)]);
+  const [linesByTeam, setLinesByTeam] = useState(() => savedGame?.linesByTeam ?? Object.fromEntries(teams.map((t) => [t.id, t.lines])));
+  const [myTeamId, setMyTeamId] = useState(() => savedGame?.myTeamId ?? null);
   const [showCustomization, setShowCustomization] = useState(false);
   // Nom, ville et couleur modifiés dans Personnalisation s'appliquent tout de suite.
   const { teamInfo } = useCustomization();
@@ -147,7 +151,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute("content", forceDesktop ? "width=1100" : "width=device-width, initial-scale=1.0");
   }, [forceDesktop]);
-  const [rngSeed, setRngSeed] = useState(1000);
+  const [rngSeed, setRngSeed] = useState(() => savedGame?.rngSeed ?? 1000);
   const [expandedGameId, setExpandedGameId] = useState(null);
   const [liveMatch, setLiveMatch] = useState(null);
   // Choix du trio / de la paire à envoyer sur la glace pour la prochaine mise au jeu (sim en
@@ -164,21 +168,21 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // lassitude de négociation par joueur : { [playerId]: { rejections, stonewalled } }. Un joueur
   // trop relancé (MAX_OFFER_ATTEMPTS refus d'affilée) refuse toute négociation pour le reste de
   // la saison (façon FM24) ; remis à zéro à la signature ou au début d'une nouvelle saison.
-  const [pendingOffers, setPendingOffers] = useState([]);
-  const [negotiations, setNegotiations] = useState({});
+  const [pendingOffers, setPendingOffers] = useState(() => savedGame?.pendingOffers ?? []);
+  const [negotiations, setNegotiations] = useState(() => savedGame?.negotiations ?? {});
   // Offres d'embauche du personnel en attente de réponse et lassitude de négociation par
   // candidat (même principe que pendingOffers/negotiations ci-dessus, voir engine/staff.js
   // evaluateStaffOffer) : { [candidateId]: { rejections, stonewalled } }.
-  const [pendingStaffOffers, setPendingStaffOffers] = useState([]);
-  const [staffNegotiations, setStaffNegotiations] = useState({});
+  const [pendingStaffOffers, setPendingStaffOffers] = useState(() => savedGame?.pendingStaffOffers ?? []);
+  const [staffNegotiations, setStaffNegotiations] = useState(() => savedGame?.staffNegotiations ?? {});
   // Marché des échanges : joueurs de ton effectif que tu signales disponibles (purement
   // organisationnel — n'affecte pas les décisions de l'IA), visible dans l'onglet Transactions.
-  const [tradeBlockIds, setTradeBlockIds] = useState([]);
+  const [tradeBlockIds, setTradeBlockIds] = useState(() => savedGame?.tradeBlockIds ?? []);
   // Menu contextuel (clic droit sur un joueur) et comparaison de deux joueurs.
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, player }
   const [compareBase, setCompareBase] = useState(null); // joueur en attente d'un second choix
   const [comparePlayers, setComparePlayers] = useState(null); // [p1, p2]
-  const [business, setBusiness] = useState({ cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), merchItems: DEFAULT_MERCH_ITEMS.map((i) => ({ ...i })), fanEngagement: DEFAULT_ENGAGEMENT, tvDeal: negotiateTvDeal(DEFAULT_ENGAGEMENT, 0.5, FIRST_SEASON), staff: { hockeyOpsDirector: null, gm: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null, broadcastDirector: null, ahlCoach: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual", farmLines: "delegated" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
+  const [business, setBusiness] = useState(() => savedGame?.business ?? { cash: 50000, ticketTiers: DEFAULT_TICKET_TIERS.map((t) => ({ ...t })), facilities: { ...DEFAULT_FACILITIES }, parking: { ...DEFAULT_PARKING }, concessionItems: DEFAULT_CONCESSION_ITEMS.map((i) => ({ ...i })), merchItems: DEFAULT_MERCH_ITEMS.map((i) => ({ ...i })), fanEngagement: DEFAULT_ENGAGEMENT, tvDeal: negotiateTvDeal(DEFAULT_ENGAGEMENT, 0.5, FIRST_SEASON), staff: { hockeyOpsDirector: null, gm: null, financeDirector: null, headCoach: null, assistantOff: null, assistantDef: null, fitnessCoach: null, scoutAmateur: null, scoutPro: null, broadcastDirector: null, ahlCoach: null }, delegation: { finance: "manual", hockeyOps: "manual", training: "manual", farmLines: "delegated" }, trainingFocus: DEFAULT_FOCUS, trainingSchedule: {}, log: [] });
 
   const rng = useMemo(() => seededRandom(rngSeed), [rngSeed]);
   // Ton équipe telle que ton personnel la perçoit (valeurs estimées) : c'est ce qu'affiche l'interface.
@@ -268,7 +272,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   const preseasonStats = useMemo(() => aggregateStats(preseasonGames, teamsById, everyone, teams), [preseasonGames, teamsById, everyone, teams]);
   const playoffGames = useMemo(() => (playoffs ? playoffs.rounds.flat().flatMap((x) => x.games) : []), [playoffs]);
   const playoffStats = useMemo(() => aggregateStats(playoffGames, teamsById, everyone), [playoffGames, teamsById, everyone]);
-  const [statsMode, setStatsMode] = useState("regular");
+  const [statsMode, setStatsMode] = useState(() => savedGame?.statsMode ?? "regular");
 
   const leaders = useMemo(() => leadersOf(seasonStats), [seasonStats]);
   const preseasonRatings = useMemo(() => ratingsOf(preseasonStats), [preseasonStats]);
@@ -656,7 +660,31 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
   // dès que l'effectif de la LAH change) ou gérés manuellement (éditions conservées dans
   // manualFarmLines, nettoyées des joueurs qui ont quitté le club-école — rappel, échange,
   // ballottage — à chaque rendu, plutôt que d'intercepter chaque site de mouvement de joueur).
-  const [manualFarmLines, setManualFarmLines] = useState(null);
+  const [manualFarmLines, setManualFarmLines] = useState(() => savedGame?.manualFarmLines ?? null);
+
+  // Sauvegarde automatique (voir engine/gameSave.js) : tout l'état de la partie, débattu pour ne
+  // pas écrire à chaque frappe pendant une saisie rapide (ex. masse salariale ajustée à la
+  // volée). `notice`/`ctxMenu`/etc. et tout ce qui reste purement visuel (onglet actif, fenêtres
+  // ouvertes) ne sont pas inclus : les perdre au rechargement est normal.
+  const saveBundle = useMemo(
+    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines }),
+    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines]
+  );
+  useEffect(() => {
+    const t = setTimeout(() => { persistGame(saveBundle); }, 800);
+    return () => clearTimeout(t);
+  }, [saveBundle]);
+  // Sauvegarde manuelle, en fichier .json portable (voir CustomizationPanel) : toujours la
+  // dernière version de saveBundle, pas celle (débattue) déjà écrite dans IndexedDB.
+  async function exportSave() { return exportSaveFile(saveBundle); }
+  // Importe un fichier de sauvegarde : l'installe dans IndexedDB puis demande un remontage
+  // complet (voir main.jsx onGameImported) — plus sûr que de réaffecter 40 états un par un ici.
+  async function importSave(file) {
+    const data = parseSaveFile(await file.text());
+    await persistGame(data);
+    onGameImported?.();
+  }
+
   const farmLines = useMemo(() => {
     const farmRoster = farmByTeam[myTeamId] || [];
     const coachSkill = business.staff.ahlCoach?.attrs?.teamManagement ?? null;
@@ -1676,7 +1704,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
             <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 40, margin: "0 0 8px" }}>{showCustomization ? "Personnalisation" : "Choisis ton équipe"}</h1>
             <button onClick={() => setShowCustomization((v) => !v)} style={btnStyle(showCustomization ? "var(--red)" : "var(--steel)")}><Palette size={14} /> {showCustomization ? "Retour au choix d'équipe" : "Personnalisation"}</button>
           </div>
-          {showCustomization ? <div style={{ marginTop: 16 }}><CustomizationPanel teams={teams} inGame={false} onNewGame={() => { setShowCustomization(false); onNewGame?.(); }} /></div> : <>
+          {showCustomization ? <div style={{ marginTop: 16 }}><CustomizationPanel teams={teams} inGame={false} onNewGame={() => { setShowCustomization(false); onNewGame?.(); }} onExportSave={exportSave} onImportSave={importSave} /></div> : <>
           <p style={{ color: "var(--iceMuted)", fontSize: 15, maxWidth: 520, marginBottom: 32 }}>Gère tes trios, tes paires et tes gardiens, avance le calendrier et surveille les meneurs statistiques.</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
             {teams.map((t) => {
@@ -1873,7 +1901,7 @@ export default function HockeyGM({ custom = null, onNewGame = null }) {
           />
         )}
 
-        {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} />}
+        {tab === "custom" && <CustomizationPanel teams={teams} inGame onNewGame={onNewGame} onExportSave={exportSave} onImportSave={importSave} />}
 
         {tab === "inbox" && <InboxPanel messages={messages} onMarkAllRead={markAllRead} onMarkThreadRead={markThreadRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 

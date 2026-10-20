@@ -26,10 +26,13 @@ function FileButton({ label, accept, multiple, directory, onFiles, color = "var(
 export const PACK_EDITOR_URL = "https://claude.ai/artifact/JTwgSfDMH5jbhBbcRUWZHa";
 
 // teams : équipes de la partie en cours (pour l'export et la couverture du facepack).
-export function CustomizationPanel({ teams, inGame, onNewGame }) {
+// onExportSave/onImportSave : sauvegarde de la partie elle-même (saison, alignements, contrats,
+// finances...), distincte du pack de personnalisation ci-dessous — voir engine/gameSave.js.
+export function CustomizationPanel({ teams, inGame, onNewGame, onExportSave, onImportSave }) {
   const c = useCustomization();
   const [status, setStatus] = useState(null);
   const [progress, setProgress] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null);
   const teamIds = teams.map((t) => t.id);
   const info = c.teamInfo;
   const allPlayers = teams.flatMap((t) => t.roster);
@@ -78,12 +81,40 @@ export function CustomizationPanel({ teams, inGame, onNewGame }) {
   function resetTeam(id) {
     c.saveTeamInfo(Object.fromEntries(Object.entries(info).filter(([k]) => k !== id)));
   }
+  async function exportSave() {
+    setSaveStatus({ ok: true, text: "Préparation de la sauvegarde…" });
+    const { result, size } = await onExportSave();
+    setSaveStatus(result === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: `Sauvegarde enregistrée (${Math.round(size / 1024)} Ko).` });
+  }
+  async function importSave(files) {
+    try {
+      await onImportSave(files[0]);
+      setSaveStatus({ ok: true, text: "Sauvegarde importée — reprise en cours…" });
+    } catch (e) {
+      setSaveStatus({ ok: false, text: `Import impossible : ${e.message}` });
+    }
+  }
 
   return (
     <div>
       {inGame && <h2 style={h2Style}>Personnalisation</h2>}
       <p style={{ ...hint, marginTop: -8, marginBottom: 16 }}>Comme dans Football Manager ou Eastside Hockey Manager : charge ta propre base de données d'alignements, tes logos et ton facepack. Tout est conservé dans ce navigateur.</p>
       {status && <div style={{ ...section, borderColor: status.ok ? "var(--win)" : "var(--loss)", fontSize: 13, padding: 12 }}>{status.text}</div>}
+
+      {inGame && onExportSave && (
+        <div style={section}>
+          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Sauvegarde de partie</div>
+          <div style={{ ...hint, marginBottom: 10 }}>
+            La partie se sauvegarde <strong style={{ color: "var(--ice)" }}>automatiquement</strong> dans ce navigateur (ferme l'onglet et reviens plus tard, tu reprends exactement où tu en étais). Pour garder une copie de secours ou passer à un autre appareil, exporte-la en fichier .json et réimporte-la ici.
+          </div>
+          {saveStatus && <div style={{ ...section, borderColor: saveStatus.ok ? "var(--win)" : "var(--loss)", fontSize: 13, padding: 12 }}>{saveStatus.text}</div>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={exportSave} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Exporter la sauvegarde</button>
+            <FileButton label="Importer une sauvegarde" accept="application/json,.json" onFiles={importSave} color="var(--red)" />
+          </div>
+          <div style={{ ...hint, marginTop: 8 }}>Importer une sauvegarde remplace la partie en cours par celle du fichier.</div>
+        </div>
+      )}
 
       <div style={section}>
         <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Pack de personnalisation (alignements, contrats, logos, photos)</div>

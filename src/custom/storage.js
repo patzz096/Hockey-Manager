@@ -2,7 +2,11 @@
 // IndexedDB : les images d'un facepack dépassent vite la limite de localStorage.
 // Si IndexedDB est indisponible (navigation privée, aperçu), on garde tout en mémoire.
 const DB_NAME = "hockey-gm-custom";
-const STORES = ["settings", "logos", "faces"];
+// "game" : v2, ajouté pour la sauvegarde de partie (voir engine/gameSave.js) — la montée de
+// version déclenche onupgradeneeded chez les joueurs qui avaient déjà la base en v1, pour que le
+// magasin existe aussi chez eux (indexedDB ne crée pas un magasin manquant autrement).
+const DB_VERSION = 2;
+const STORES = ["settings", "logos", "faces", "game"];
 const memory = Object.fromEntries(STORES.map((s) => [s, new Map()]));
 let dbPromise = null;
 
@@ -10,7 +14,7 @@ function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve) => {
     try {
-      const req = indexedDB.open(DB_NAME, 1);
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => STORES.forEach((s) => { if (!req.result.objectStoreNames.contains(s)) req.result.createObjectStore(s); });
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
