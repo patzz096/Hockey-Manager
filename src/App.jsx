@@ -98,6 +98,17 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   // persisté (une célébration ponctuelle, pas un état de jeu) — "Continuer la dynastie" la
   // referme sans rien bloquer, la saison suivante est déjà en cours.
   const [franchiseComplete, setFranchiseComplete] = useState(false);
+  // Licenciement (voir startNewSeason) : optionnel, réglable uniquement avant le tout premier
+  // choix d'équipe (voir franchiseStarted ci-dessous) — jamais modifiable en cours de franchise.
+  const [firingEnabled, setFiringEnabled] = useState(() => savedGame?.firingEnabled ?? true);
+  // Vrai dès le premier choix d'équipe de cette sauvegarde, même après un licenciement (qui
+  // remet myTeamId à null pour revenir à l'écran de sélection) — verrouille firingEnabled.
+  const [franchiseStarted, setFranchiseStarted] = useState(() => savedGame?.franchiseStarted ?? false);
+  const [missedPlayoffsStreak, setMissedPlayoffsStreak] = useState(() => savedGame?.missedPlayoffsStreak ?? 0);
+  const [overCapStreak, setOverCapStreak] = useState(() => savedGame?.overCapStreak ?? 0);
+  // Écran de licenciement (voir startNewSeason) : { reason: "playoffs"|"cap", teamName, seasons }
+  // — pas persisté, comme franchiseComplete (un seul affichage, la saison suivante est déjà en cours).
+  const [firedNotice, setFiredNotice] = useState(null);
   const [waivers, setWaivers] = useState(() => savedGame?.waivers ?? []);
   const [injuries, setInjuries] = useState(() => savedGame?.injuries ?? {});
   const [deadCap, setDeadCap] = useState(() => savedGame?.deadCap ?? []); // cap mort de ton équipe (rachats, salaires retenus)
@@ -676,8 +687,8 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   // volée). `notice`/`ctxMenu`/etc. et tout ce qui reste purement visuel (onglet actif, fenêtres
   // ouvertes) ne sont pas inclus : les perdre au rechargement est normal.
   const saveBundle = useMemo(
-    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines }),
-    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines]
+    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak }),
+    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak]
   );
   useEffect(() => {
     const t = setTimeout(() => { persistGame(saveBundle); }, 800);
@@ -1660,6 +1671,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
 
   // ---------- Nouvelle saison ----------
   function startNewSeason() {
+    console.log("DIAG startNewSeason called, seasonYear=", seasonYear);
     const my = standings.find((x) => x.id === myTeamId);
     setHistory((prev) => [{ year: seasonYear, champion: playoffs?.champion ? teamsById[playoffs.champion].name : "—", presidents: teamsById[standings[0].id].name, myRecord: my ? `${my.w}-${my.l}-${my.otl}, ${my.pts} pts (${standings.indexOf(my) + 1}e)` : "—", topScorer: leaders[0] ? `${leaders[0].player.name} (${leaders[0].pts} pts)` : "—" }, ...prev]);
     setCareerStats((prev) => {
@@ -1724,6 +1736,23 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     advanceTo(seasonDates(seasonYear + 1).preseason - 1);
     addMessage({ from: "Ligue", subject: `Saison ${seasonYear + 1}-${seasonYear + 2}`, category: "general", body: `Matchs préparatoires à partir du ${formatDay(seasonDates(seasonYear + 1).preseason)}, premier match qui compte le ${formatDay(seasonDates(seasonYear + 1).start)}. Date limite des échanges : ${formatDay(seasonDates(seasonYear + 1).tradeDeadline)}.` });
     setTab("roster");
+    // Licenciement (optionnel, voir le réglage sur l'écran de sélection d'équipe) : 3 saisons de
+    // suite sans séries, ou 2 saisons de suite terminées au-dessus du plafond salarial (le
+    // plafond est déjà respecté à chaque transaction — voir fitsUnderCap — mais un retour de
+    // LTIR ou un rachat raté peut encore y pousser une équipe après coup). Les deux compteurs se
+    // remettent à zéro dès que la condition n'est plus remplie une saison donnée.
+    if (firingEnabled) {
+      const madePlayoffs = playoffs?.rounds?.[0]?.some((s) => s.high === myTeamId || s.low === myTeamId) ?? false;
+      const overCapNow = capStatus(teamsById[myTeamId]?.roster || [], seasonYear, myCapOpts).overCap;
+      const nextMissed = madePlayoffs ? 0 : missedPlayoffsStreak + 1;
+      const nextOverCap = overCapNow ? overCapStreak + 1 : 0;
+      setMissedPlayoffsStreak(nextMissed);
+      setOverCapStreak(nextOverCap);
+      if (nextMissed >= 3 || nextOverCap >= 2) {
+        setFiredNotice({ reason: nextOverCap >= 2 ? "cap" : "playoffs", teamName: teamsById[myTeamId]?.name || "" });
+        return;
+      }
+    }
     // Bilan de franchise (voir FranchiseSummaryPanel) : célébré une fois, à la fin de la saison
     // qui porte le compteur à FRANCHISE_YEARS — `seasonYear` ici est encore la saison qui vient de
     // se terminer (pas encore incrémentée dans cette closure, malgré le setSeasonYear ci-dessus).
@@ -1741,12 +1770,18 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
             <button onClick={() => setShowCustomization((v) => !v)} style={btnStyle(showCustomization ? "var(--red)" : "var(--steel)")}><Palette size={14} /> {showCustomization ? "Retour au choix d'équipe" : "Personnalisation"}</button>
           </div>
           {showCustomization ? <div style={{ marginTop: 16 }}><CustomizationPanel teams={teams} inGame={false} onNewGame={() => { setShowCustomization(false); onNewGame?.(); }} onExportSave={exportSave} onImportSave={importSave} /></div> : <>
-          <p style={{ color: "var(--iceMuted)", fontSize: 15, maxWidth: 520, marginBottom: 32 }}>Gère tes trios, tes paires et tes gardiens, avance le calendrier et surveille les meneurs statistiques.</p>
+          <p style={{ color: "var(--iceMuted)", fontSize: 15, maxWidth: 520, marginBottom: 20 }}>Gère tes trios, tes paires et tes gardiens, avance le calendrier et surveille les meneurs statistiques.</p>
+          {!franchiseStarted && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)", marginBottom: 20, cursor: "pointer", maxWidth: 520 }}>
+              <input type="checkbox" checked={firingEnabled} onChange={(e) => setFiringEnabled(e.target.checked)} />
+              Licenciement possible (3 saisons de suite sans séries, ou 2 au-dessus du plafond salarial) — réglable seulement maintenant, avant de choisir une équipe.
+            </label>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
             {teams.map((t) => {
               const s = teamStrength(t, linesByTeam[t.id]);
               return (
-                <button key={t.id} className="team-card" onClick={() => setMyTeamId(t.id)} style={{ "--team": t.color, textAlign: "left", background: `linear-gradient(135deg, ${t.color}22, var(--navy2) 55%)`, border: `1px solid ${t.color}55`, borderLeft: `4px solid ${t.color}`, borderRadius: 8, padding: "14px 16px", color: "var(--ice)", cursor: "pointer", display: "flex", gap: 12, alignItems: "center" }}>
+                <button key={t.id} className="team-card" onClick={() => { setFranchiseStarted(true); setMyTeamId(t.id); }} style={{ "--team": t.color, textAlign: "left", background: `linear-gradient(135deg, ${t.color}22, var(--navy2) 55%)`, border: `1px solid ${t.color}55`, borderLeft: `4px solid ${t.color}`, borderRadius: 8, padding: "14px 16px", color: "var(--ice)", cursor: "pointer", display: "flex", gap: 12, alignItems: "center" }}>
                   <TeamCrest team={t} size={38} />
                   <div>
                     <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 18 }}>{t.name}</div>
@@ -1798,6 +1833,22 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     { key: "draft", label: "Repêchage", icon: ListOrdered },
     { key: "custom", label: "Personnalisation", icon: Palette },
   ];
+
+  if (firedNotice) {
+    return (
+      <div style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", padding: "40px 24px" }}>
+        <style>{FONT_IMPORT}</style>
+        <div style={{ maxWidth: 560, margin: "80px auto", textAlign: "center" }}>
+          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 13, letterSpacing: 2, color: "var(--loss)", marginBottom: 10 }}>CONGÉDIÉ</div>
+          <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 32, margin: "0 0 16px" }}>La direction des {firedNotice.teamName} met fin à ton mandat</h1>
+          <p style={{ color: "var(--iceMuted)", fontSize: 15, marginBottom: 28 }}>
+            {firedNotice.reason === "cap" ? "Deux saisons de suite terminées au-dessus du plafond salarial — la direction n'a plus confiance dans ta gestion de la masse salariale." : "Trois saisons de suite sans séries éliminatoires — la direction se tourne vers quelqu'un d'autre."}
+          </p>
+          <button onClick={() => { setFiredNotice(null); setMyTeamId(null); }} style={btnStyle("var(--red)")}>Choisir une nouvelle équipe</button>
+        </div>
+      </div>
+    );
+  }
 
   if (franchiseComplete) {
     return (
