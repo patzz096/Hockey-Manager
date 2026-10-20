@@ -317,8 +317,12 @@ export function resolveOvertime(home, away, linesHome, linesAway, staffByTeam, r
     const top = [lines.forwards[0]?.C, lines.forwards[0]?.LW, lines.forwards[0]?.RW, lines.defense[0]?.LD, lines.defense[0]?.RD, lines.forwards[1]?.C]
       .map((id) => team.roster.find((p) => p.id === id)).filter(Boolean);
     const pool = top.length ? top : team.roster.filter((p) => p.pos !== "G");
+    // Effectif de patineurs vide (ne devrait jamais arriver avec un alignement sain, mais une
+    // franchise jouée des décennies peut en théorie s'approcher du minimum légal) : pas de buteur
+    // attribuable, traité comme un but anonyme plutôt que de planter sur un événement incomplet.
+    if (pool.length === 0) return { winner, shootout: true, event: { side: winner, type: "SO", period: 5, minute: 65, assistIds: [] } };
     const att = distributeAttack(pool, 1, 1, rng, (p) => skillPower(offenseSkillScore(p)), "OT");
-    return { winner, shootout: false, event: { ...att.events[0], side: winner, period: 4, minute: 60 + rng() * 5 } };
+    return { winner, shootout: false, event: { ...att.events[0], side: winner, period: 4, minute: 60 + rng() * 5, assistIds: att.events[0]?.assistIds || [] } };
   }
   return { winner, shootout: true, event: { side: winner, type: "SO", period: 5, minute: 65, assistIds: [] } };
 }

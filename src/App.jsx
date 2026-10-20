@@ -1675,7 +1675,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     const retiredThisYear = [];
     const recordRetirees = (list, teamId) => list.forEach((p) => retiredThisYear.push({ id: p.id, name: p.name, pos: p.pos, nationality: p.nationality, teamId, retiredYear: seasonYear + 1, finalOvr: p.ovr }));
     const agedTeams = teams.map((t) => {
-      const { active, retired } = retirePlayers(agePlayers(t.roster), seasonYear);
+      const { active, retired } = retirePlayers(agePlayers(t.roster), seasonYear, 14);
       recordRetirees(retired, t.id);
       return { ...t, roster: active.sort((a, b) => b.ovr - a.ovr) };
     });

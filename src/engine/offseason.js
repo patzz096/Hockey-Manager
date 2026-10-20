@@ -129,7 +129,13 @@ export function aiFreeAgency(teams, freeAgents, myTeamId, year = 2027, maxPerTea
 // accumule des joueurs de 50, 60 ans encore sur les rôles d'effectif. Jamais avant 33 ans, quasi
 // certaine (100 %) à partir de 45 ; un peu plus tôt pour un joueur nettement en déclin (cote
 // basse). Déterministe (graine = saison), comme le reste du moteur hors-saison.
-export function retirePlayers(list, year) {
+// `minSkaters` : un alignement NHL ne doit jamais tomber à court de patineurs (gardiens exclus)
+// juste à cause des retraites d'une même saison — le repêchage/marché des agents libres reste la
+// vraie source de relève, mais sans ce plancher une franchise jouée assez longtemps peut, par pur
+// hasard, voir une équipe de l'ordinateur retraiter presque tout son effectif la même année et
+// planter la simulation (plus aucun patineur disponible pour marquer en prolongation). Les plus
+// jeunes des joueurs "retraités" sont alors repêchés en priorité pour combler le plancher.
+export function retirePlayers(list, year, minSkaters = 0) {
   const rng = seededRandom(year * 17 + 11);
   const active = [], retired = [];
   list.forEach((p) => {
@@ -139,7 +145,20 @@ export function retirePlayers(list, year) {
     const chance = Math.min(1, Math.pow(ageFactor, 1.6) + declinePenalty);
     if (rng() < chance) retired.push(p); else active.push(p);
   });
-  return { active, retired };
+  let nextActive = active, nextRetired = retired;
+  const skaterCount = nextActive.filter((p) => p.pos !== "G").length;
+  if (skaterCount < minSkaters) {
+    const reinstated = nextRetired.filter((p) => p.pos !== "G").sort((a, b) => a.age - b.age).slice(0, minSkaters - skaterCount);
+    const ids = new Set(reinstated.map((p) => p.id));
+    nextActive = [...nextActive, ...reinstated]; nextRetired = nextRetired.filter((p) => !ids.has(p.id));
+  }
+  // Même plancher pour les gardiens (au moins un, si l'effectif en comptait un avant retraite) :
+  // une équipe sans aucun gardien casse le calcul des cotes d'équipe bien avant la prolongation.
+  if (minSkaters > 0 && !nextActive.some((p) => p.pos === "G")) {
+    const youngestGoalie = nextRetired.filter((p) => p.pos === "G").sort((a, b) => a.age - b.age)[0];
+    if (youngestGoalie) { nextActive = [...nextActive, youngestGoalie]; nextRetired = nextRetired.filter((p) => p.id !== youngestGoalie.id); }
+  }
+  return { active: nextActive, retired: nextRetired };
 }
 
 // Passage à la saison suivante : tout le monde vieillit d'un an. Les vétérans perdent un peu,
