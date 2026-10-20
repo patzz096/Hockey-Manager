@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { dayToDate, monthLabel, gameDay } from "../engine/calendar";
 import { TRAINING_FOCUSES } from "../engine/training";
 import { btnStyle } from "../ui/theme";
-import { TeamCrest } from "./common";
+import { TeamCrest, TeamLink } from "./common";
 
 const WEEKDAYS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const SLOT_LABEL = ["Matin", "Après-midi"];
@@ -18,7 +18,7 @@ const SLOT_LABEL = ["Matin", "Après-midi"];
 // l'annule. En délégué, `trainingPreview` (App.jsx) affiche un aperçu non confirmé (italique,
 // « ? ») des séances que l'IA choisirait, tant que le temps n'a pas réellement avancé. `monthDay`
 // doit toujours être le 1er du mois affiché (voir engine/calendar.js `monthStartDay`/`addMonths`).
-export function MonthlyCalendar({ monthDay, currentDay, myTeam, teamsById, schedule, seasonYear, trainingSchedule, delegation, trainingPreview = {}, onPrevMonth, onNextMonth, onSchedule, onCancelTraining }) {
+export function MonthlyCalendar({ monthDay, currentDay, myTeam, teamsById, schedule, seasonYear, trainingSchedule, delegation, trainingPreview = {}, onPrevMonth, onNextMonth, onSchedule, onCancelTraining, onSelectTeam }) {
   const [picker, setPicker] = useState(null); // { day, slot }
   const monthStart = dayToDate(monthDay);
   const year = monthStart.getUTCFullYear(), month = monthStart.getUTCMonth();
@@ -59,7 +59,7 @@ export function MonthlyCalendar({ monthDay, currentDay, myTeam, teamsById, sched
               return (
                 <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10 }}>
                   <TeamCrest team={opp} size={14} />
-                  <span>{home ? "vs" : "@"} {opp.name.split(" ").slice(-1)[0]}</span>
+                  <span>{home ? "vs" : "@"} <TeamLink team={opp} onSelect={onSelectTeam}>{opp.name.split(" ").slice(-1)[0]}</TeamLink></span>
                   {game.played && (
                     <span style={{ fontWeight: 700, color: (home ? game.homeScore > game.awayScore : game.awayScore > game.homeScore) ? "var(--win)" : "var(--loss)" }}>
                       {game.homeScore}–{game.awayScore}

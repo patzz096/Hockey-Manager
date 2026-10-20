@@ -1,16 +1,17 @@
 import { formatTOI } from "../../ui/format";
 import { skaterRating, goalieRatingFromSavePct } from "../../engine/stats";
 import { GoalSummary } from "./GoalSummary";
+import { TeamLink } from "../common";
 
 const ratingColor = (v) => (v == null ? "var(--iceMuted)" : v >= 7 ? "var(--win)" : v >= 5.5 ? "var(--gold)" : v >= 4 ? "var(--iceMuted)" : "var(--loss)");
 const fmtRating = (v) => (v == null ? "—" : v.toFixed(1));
 
-export function StatLines({ title, box, team, lines, onSelectPlayer, onContextMenu }) {
+export function StatLines({ title, box, team, lines, onSelectPlayer, onContextMenu, onSelectTeam }) {
   const ids = new Set([...Object.keys(box.goalsBy), ...Object.keys(box.assistsBy), ...Object.keys(box.hitsBy), ...Object.keys(box.pimBy || {}), ...Object.keys(box.shotsBy || {}), ...Object.keys(box.toiBy || {})]);
   const rows = [...ids].map((id) => { const player = team.roster.find((p) => p.id === id); return { player, g: box.goalsBy[id] || 0, a: box.assistsBy[id] || 0, h: box.hitsBy[id] || 0, bl: (box.blocksBy || {})[id] || 0, pim: (box.pimBy || {})[id] || 0, s: (box.shotsBy || {})[id] || 0, pm: (box.plusMinusBy || {})[id] || 0, toi: (box.toiBy || {})[id] }; }).filter((r) => r.player && r.player.pos !== "G").sort((x, y) => (box.toiBy?.[y.player.id] || 0) - (box.toiBy?.[x.player.id] || 0));
   return (
     <div style={{ flex: 1, minWidth: 280 }}>
-      <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, color: team.color, marginBottom: 8 }}>{title}</div>
+      <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, color: team.color, marginBottom: 8 }}><TeamLink team={team} onSelect={onSelectTeam} />{title}</div>
       {rows.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucune statistique notable.</div>}
       <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
         <thead><tr style={{ color: "var(--iceMuted)", fontSize: 11 }}><th style={{ textAlign: "left", padding: "3px 6px" }}>Joueur</th><th style={{ padding: "3px 6px" }}>TMG</th><th style={{ padding: "3px 6px" }}>B</th><th style={{ padding: "3px 6px" }}>A</th><th style={{ padding: "3px 6px" }}>T</th><th style={{ padding: "3px 6px" }}>+/-</th><th style={{ padding: "3px 6px" }}>MEC</th><th style={{ padding: "3px 6px" }}>PUN</th><th style={{ padding: "3px 6px" }} title="Cote offensive du match">Off.</th><th style={{ padding: "3px 6px" }} title="Cote défensive du match">Déf.</th><th style={{ padding: "3px 6px" }} title="Cote générale du match">Gén.</th></tr></thead>
@@ -54,7 +55,7 @@ export function CompareBar({ label, homeVal, awayVal, homeColor, awayColor, home
   );
 }
 
-export function MatchCompare({ game, home, away }) {
+export function MatchCompare({ game, home, away, onSelectTeam }) {
   const { box } = game;
   const pct = (v) => `${v}%`;
   const homeFo = box.home.faceoffsTotal ? Math.round((box.home.faceoffsWon / box.home.faceoffsTotal) * 100) : 0;
@@ -64,8 +65,8 @@ export function MatchCompare({ game, home, away }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>
-        <span style={{ color: home.color, fontWeight: 600 }}>{home.name}</span>
-        <span style={{ color: away.color, fontWeight: 600 }}>{away.name}</span>
+        <span style={{ color: home.color, fontWeight: 600 }}><TeamLink team={home} onSelect={onSelectTeam} /></span>
+        <span style={{ color: away.color, fontWeight: 600 }}><TeamLink team={away} onSelect={onSelectTeam} /></span>
       </div>
       <CompareBar label="BUTS" homeVal={game.homeScore} awayVal={game.awayScore} homeColor={home.color} awayColor={away.color} />
       <CompareBar label="TIRS AU BUT" homeVal={box.home.shots} awayVal={box.away.shots} homeColor={home.color} awayColor={away.color} />
@@ -79,26 +80,26 @@ export function MatchCompare({ game, home, away }) {
   );
 }
 
-function GoalieLine({ label, goalie }) {
+function GoalieLine({ label, team, goalie, onSelectTeam }) {
   const savePct = goalie.shotsAgainst > 0 ? goalie.saves / goalie.shotsAgainst : null;
   const r = goalieRatingFromSavePct(savePct ?? 0.9);
-  return <span>{label}: {goalie.saves}/{goalie.shotsAgainst} arrêts{savePct != null && ` (${(savePct * 100).toFixed(1)} %)`} · cote <strong style={{ color: ratingColor(r.overall) }}>{fmtRating(r.overall)}</strong></span>;
+  return <span>{label} <TeamLink team={team} onSelect={onSelectTeam} />: {goalie.saves}/{goalie.shotsAgainst} arrêts{savePct != null && ` (${(savePct * 100).toFixed(1)} %)`} · cote <strong style={{ color: ratingColor(r.overall) }}>{fmtRating(r.overall)}</strong></span>;
 }
 
-export function BoxscoreView({ game, teamsById, linesByTeam, onSelectPlayer, onContextMenu, schedule, seasonYear }) {
+export function BoxscoreView({ game, teamsById, linesByTeam, onSelectPlayer, onSelectTeam, onContextMenu, schedule, seasonYear }) {
   const home = teamsById[game.home], away = teamsById[game.away];
   const { box } = game;
   return (
     <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 16, marginTop: 6, marginBottom: 10 }}>
-      <MatchCompare game={game} home={home} away={away} />
-      <GoalSummary game={game} home={home} away={away} onSelectPlayer={onSelectPlayer} schedule={schedule} seasonYear={seasonYear} />
+      <MatchCompare game={game} home={home} away={away} onSelectTeam={onSelectTeam} />
+      <GoalSummary game={game} home={home} away={away} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} schedule={schedule} seasonYear={seasonYear} />
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 14 }}>
-        <StatLines title={`${home.name} (dom.)`} box={box.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} onContextMenu={onContextMenu} />
-        <StatLines title={`${away.name} (visit.)`} box={box.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} onContextMenu={onContextMenu} />
+        <StatLines title=" (dom.)" box={box.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} onContextMenu={onContextMenu} />
+        <StatLines title=" (visit.)" box={box.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} onContextMenu={onContextMenu} />
       </div>
       <div style={{ display: "flex", gap: 24, fontSize: 12, color: "var(--iceMuted)", borderTop: "1px solid #ffffff1a", paddingTop: 10, flexWrap: "wrap" }}>
-        <GoalieLine label={`Gardien ${home.name}`} goalie={box.homeGoalie} />
-        <GoalieLine label={`Gardien ${away.name}`} goalie={box.awayGoalie} />
+        <GoalieLine label="Gardien" team={home} goalie={box.homeGoalie} onSelectTeam={onSelectTeam} />
+        <GoalieLine label="Gardien" team={away} goalie={box.awayGoalie} onSelectTeam={onSelectTeam} />
       </div>
     </div>
   );

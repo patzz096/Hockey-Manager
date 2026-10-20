@@ -1,13 +1,13 @@
 import { gameDay } from "../engine/calendar";
 import { h2Style, btnStyle } from "../ui/theme";
-import { TeamCrest, PlayerLink } from "./common";
+import { TeamCrest, PlayerLink, TeamLink } from "./common";
 import { NewsFeed } from "./NewsFeed";
 import { TeamOfTheWeek } from "./TeamOfTheWeek";
 
 // Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, le fil de nouvelles de ses
 // derniers matchs (articles — voir NewsFeed), l'équipe de la semaine et les meneurs au pointage
 // de la ligue, avec des raccourcis vers les onglets complets (Classement, Statistiques).
-export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, onSelectPlayer, onGoTo }) {
+export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, onSelectPlayer, onSelectTeam, onGoTo }) {
   const myRankIdx = standings.findIndex((s) => s.id === myTeamId);
   const my = standings[myRankIdx];
   const myTeam = teamsById[myTeamId];
@@ -26,7 +26,7 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
         <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--navy2)", border: "1px solid #ffffff1a", borderRadius: 6, padding: 14, marginBottom: 18 }}>
           <TeamCrest team={myTeam} size={40} />
           <div>
-            <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 18 }}>{myTeam.name}</div>
+            <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 18 }}><TeamLink team={myTeam} onSelect={onSelectTeam} /></div>
             <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>
               {myRankIdx + 1}{myRankIdx === 0 ? "er" : "e"} au classement général · {my.w}-{my.l}-{my.otl} · <strong style={{ color: "var(--ice)" }}>{my.pts} pts</strong>
               {my.streak && ` · séquence ${my.streak}`}{recent.length > 0 && ` · 10 derniers : ${my.last10?.join("") || "—"}`}
@@ -53,7 +53,7 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                       <span style={{ width: 14, color: "var(--iceMuted)", fontSize: 11 }}>{i + 1}</span>
                       <TeamCrest team={teamsById[s.id]} size={18} />
-                      <span style={{ color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400 }}>{teamsById[s.id].name}</span>
+                      <TeamLink team={teamsById[s.id]} onSelect={onSelectTeam} style={{ color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400 }} />
                     </span>
                   </td>
                   <td style={{ padding: "6px", textAlign: "center" }}>{s.gp}</td>
@@ -67,7 +67,7 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
           </table>
 
           <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, marginBottom: 8 }}>Le journal</div>
-          <NewsFeed games={recent} seasonYear={seasonYear} teamsById={teamsById} onSelectPlayer={onSelectPlayer} />
+          <NewsFeed games={recent} seasonYear={seasonYear} teamsById={teamsById} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} />
         </div>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

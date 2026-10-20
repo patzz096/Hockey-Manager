@@ -1,6 +1,6 @@
 import { attr20, starsFor, teamOvrBenchmark } from "../engine/attributes";
 import { BASE_CONDITION, TRAINING_FOCUSES, conditionColor, conditionLabel, cohesionColor, cohesionLabel } from "../engine/training";
-import { h2Style, btnStyle, attr20Color, selectStyle } from "../ui/theme";
+import { h2Style, attr20Color, selectStyle } from "../ui/theme";
 import { StarRating } from "./common";
 import { MonthlyCalendar } from "./MonthlyCalendar";
 
@@ -9,7 +9,7 @@ import { MonthlyCalendar } from "./MonthlyCalendar";
 // toujours dans Personnel (embauche/congédiement, comme le reste du personnel). Le calendrier de
 // planification des séances (matin/après-midi) vit ici plutôt que dans l'onglet Calendrier,
 // puisqu'il s'agit d'entraînement et non de matchs.
-export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, onSetTrainingFocus, calendarMonth, currentDay, teamsById, schedule, seasonYear, trainingPreview, onPrevMonth, onNextMonth, onScheduleTraining, onCancelTraining }) {
+export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, onSetTrainingFocus, calendarMonth, currentDay, teamsById, schedule, seasonYear, trainingPreview, onPrevMonth, onNextMonth, onScheduleTraining, onCancelTraining, onSelectTeam }) {
   const avgCondition = myTeam.roster.length ? myTeam.roster.reduce((a, p) => a + (p.condition ?? BASE_CONDITION), 0) / myTeam.roster.length : BASE_CONDITION;
   const coach = business.staff.fitnessCoach;
   const benchmark = teamOvrBenchmark(myTeam);
@@ -20,8 +20,8 @@ export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, on
       <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, maxWidth: 420, marginBottom: 8 }}>
         <div style={{ fontSize: 12, marginBottom: 8 }}>Entraînement {coach ? `(${coach.name})` : "(poste vacant — embauche dans Personnel)"}</div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => onSetDelegation("training", "manual")} style={{ ...btnStyle(!delegated ? "var(--red)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
-          <button onClick={() => onSetDelegation("training", "delegated")} style={{ ...btnStyle(delegated ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
+          <button onClick={() => onSetDelegation("training", "manual")} style={{ ...selectStyle(!delegated), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
+          <button onClick={() => onSetDelegation("training", "delegated")} style={{ ...selectStyle(delegated), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
         </div>
       </div>
       <p style={{ fontSize: 11, color: "var(--iceMuted)", marginBottom: 26 }}>Délégué : l'accent (physique, tactique, repos) est choisi automatiquement, jour par jour, selon la forme de l'effectif, la cohésion et le calendrier à venir — visible dans l'onglet Calendrier.</p>
@@ -71,7 +71,7 @@ export function TrainingCenter({ business, myTeam, cohesion, onSetDelegation, on
       <MonthlyCalendar
         monthDay={calendarMonth} currentDay={currentDay} myTeam={myTeam} teamsById={teamsById} schedule={schedule} seasonYear={seasonYear}
         trainingSchedule={business.trainingSchedule} delegation={business.delegation.training} trainingPreview={trainingPreview}
-        onPrevMonth={onPrevMonth} onNextMonth={onNextMonth} onSchedule={onScheduleTraining} onCancelTraining={onCancelTraining}
+        onPrevMonth={onPrevMonth} onNextMonth={onNextMonth} onSchedule={onScheduleTraining} onCancelTraining={onCancelTraining} onSelectTeam={onSelectTeam}
       />
     </div>
   );

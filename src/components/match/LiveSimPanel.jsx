@@ -1,5 +1,5 @@
 import { btnStyle } from "../../ui/theme";
-import { TeamCrest } from "../common";
+import { TeamCrest, TeamLink } from "../common";
 import { StatLines } from "./BoxscoreView";
 import { GoalSummary } from "./GoalSummary";
 import { BASE_CONDITION, conditionColor, conditionLabel } from "../../engine/training";
@@ -94,7 +94,7 @@ function LineChoice({ team, lines, forwardIdx, defenseIdx, onPickForward, onPick
 // les visiteurs envoient toujours leur ligne en premier (visible), l'équipe locale réplique en
 // dernier. Si tu es à domicile, tu vois la ligne adverse avant de choisir la tienne ; à
 // l'étranger, la réplique des locaux reste cachée jusqu'au prochain arrêt.
-function ShiftPicker({ liveMatch, shiftPicker, onPickForward, onPickDefense, onSend, onCancel }) {
+function ShiftPicker({ liveMatch, shiftPicker, onPickForward, onPickDefense, onSend, onCancel, onSelectTeam }) {
   const { home, away, linesHome, linesAway, energy } = liveMatch;
   const { myIsHome, oppShift, forwardIdx, defenseIdx } = shiftPicker;
   const mine = { forwardIdx, defenseIdx };
@@ -104,7 +104,7 @@ function ShiftPicker({ liveMatch, shiftPicker, onPickForward, onPickDefense, onS
   const side = (team, lines, interactive, idx, badge) => (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-        <TeamCrest team={team} size={20} /><strong style={{ fontSize: 12 }}>{team.name}</strong>
+        <TeamCrest team={team} size={20} /><strong style={{ fontSize: 12 }}><TeamLink team={team} onSelect={onSelectTeam} /></strong>
         {badge && <span style={{ fontSize: 10, color: interactive ? "var(--accent)" : "var(--gold)" }}>{badge}</span>}
       </div>
       {interactive || idx
@@ -131,7 +131,7 @@ function ShiftPicker({ liveMatch, shiftPicker, onPickForward, onPickDefense, onS
   );
 }
 
-export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer, onNextPeriod, onEndOfPeriod, onFinish, onGoToLines, onGoToStrategy, shiftPicker, onOpenShiftPicker, onPickForward, onPickDefense, onSendShift, onCancelShift }) {
+export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer, onSelectTeam, onNextPeriod, onEndOfPeriod, onFinish, onGoToLines, onGoToStrategy, shiftPicker, onOpenShiftPicker, onPickForward, onPickDefense, onSendShift, onCancelShift }) {
   const { home, away, minute, homeScore, awayScore, accum, lastStop, lastShift } = liveMatch;
   const done = minute >= 60;
   const currentPeriod = livePeriod(minute);
@@ -142,7 +142,7 @@ export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer,
     <div style={{ background: "var(--navy2)", border: `1px solid ${done ? "var(--win)" : "var(--gold)"}66`, borderRadius: 6, padding: 16, marginBottom: 22 }}>
       <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 14, marginBottom: 10, color: "var(--gold)" }}>SIMULATION EN DIRECT{liveMatch.game.playoff ? " · SÉRIES ÉLIMINATOIRES" : ""}</div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-        <div style={{ textAlign: "center" }}><TeamCrest team={home} size={34} /><div style={{ fontSize: 11, marginTop: 3 }}>{home.name}</div></div>
+        <div style={{ textAlign: "center" }}><TeamCrest team={home} size={34} /><div style={{ fontSize: 11, marginTop: 3 }}><TeamLink team={home} onSelect={onSelectTeam} /></div></div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 28 }}>{homeScore} – {awayScore}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center", marginTop: 2 }}>
@@ -150,7 +150,7 @@ export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer,
             <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 15, background: "#000", color: "#0f0", padding: "1px 8px", borderRadius: 3, letterSpacing: 1 }}>{clockDisplay(minute)}</span>
           </div>
         </div>
-        <div style={{ textAlign: "center" }}><TeamCrest team={away} size={34} /><div style={{ fontSize: 11, marginTop: 3 }}>{away.name}</div></div>
+        <div style={{ textAlign: "center" }}><TeamCrest team={away} size={34} /><div style={{ fontSize: 11, marginTop: 3 }}><TeamLink team={away} onSelect={onSelectTeam} /></div></div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <div style={{ display: "flex", gap: 3, marginBottom: 6 }}>
             {[0, 1, 2].map((p) => (
@@ -168,7 +168,7 @@ export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer,
           )}
         </div>
       </div>
-      {!done && shiftPicker && <ShiftPicker liveMatch={liveMatch} shiftPicker={shiftPicker} onPickForward={onPickForward} onPickDefense={onPickDefense} onSend={onSendShift} onCancel={onCancelShift} />}
+      {!done && shiftPicker && <ShiftPicker liveMatch={liveMatch} shiftPicker={shiftPicker} onPickForward={onPickForward} onPickDefense={onPickDefense} onSend={onSendShift} onCancel={onCancelShift} onSelectTeam={onSelectTeam} />}
       {!done ? (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
           {!shiftPicker && <>
@@ -183,10 +183,10 @@ export function LiveSimPanel({ liveMatch, myTeamId, linesByTeam, onSelectPlayer,
       ) : (
         <button onClick={onFinish} style={{ ...btnStyle("var(--win)"), marginBottom: 16 }}>Confirmer le résultat final</button>
       )}
-      <GoalSummary goalLog={accum.goalLog} home={home} away={away} onSelectPlayer={onSelectPlayer} />
+      <GoalSummary goalLog={accum.goalLog} home={home} away={away} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} />
       <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-        <StatLines title={`${home.name} (dom.)`} box={accum.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} />
-        <StatLines title={`${away.name} (visit.)`} box={accum.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} />
+        <StatLines title=" (dom.)" box={accum.home} team={home} lines={linesByTeam[home.id]} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} />
+        <StatLines title=" (visit.)" box={accum.away} team={away} lines={linesByTeam[away.id]} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} />
       </div>
     </div>
   );

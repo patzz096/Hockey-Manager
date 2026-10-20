@@ -6,13 +6,13 @@ import { gmSpread } from "../engine/contracts";
 import { tradeValue, pickValue } from "../engine/trades";
 import { ownedPicksByYear } from "../engine/draft";
 import { capStatus } from "../engine/cap";
-import { h2Style, btnStyle, inputStyle, scoutQualityColor } from "../ui/theme";
-import { StarRating, PlayerLink, TeamCrest } from "./common";
+import { h2Style, btnStyle, inputStyle, scoutQualityColor, selectStyle } from "../ui/theme";
+import { StarRating, PlayerLink, TeamCrest, TeamLink } from "./common";
 import { money } from "../ui/format";
 
 const POS_GROUPS = [["Tous", null], ["Attaquants", ["C", "LW", "RW"]], ["Défenseurs", ["LD", "RD"]], ["Gardiens", ["G"]]];
 
-function CapBadge({ label, team, seasonYear, opts }) {
+function CapBadge({ label, team, seasonYear, opts, onSelectTeam }) {
   const st = capStatus(team.roster, seasonYear, opts);
   const color = st.overCap ? "var(--loss)" : st.space < 3000 ? "var(--gold)" : "var(--win)";
   return (
@@ -26,7 +26,7 @@ function CapBadge({ label, team, seasonYear, opts }) {
   );
 }
 
-export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock, seasonYear, myCapOpts = {}, standings = [], pickTrades = {}, incomingOffers = [], onAcceptIncoming, onDeclineIncoming }) {
+export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowledge, pendingScouts, onRequestScout, onSelectPlayer, onSelectTeam, onTrade, txWindow = { open: true }, gmRating = null, tradeBlockIds = [], onToggleTradeBlock, seasonYear, myCapOpts = {}, standings = [], pickTrades = {}, incomingOffers = [], onAcceptIncoming, onDeclineIncoming }) {
   const otherTeams = teams.filter((t) => t.id !== myTeam.id);
   const [partnerId, setPartnerId] = useState(otherTeams[0]?.id);
   const [myIds, setMyIds] = useState([]);
@@ -35,6 +35,8 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
   const [theirPickKeys, setTheirPickKeys] = useState([]);
   const [myFilter, setMyFilter] = useState(null);
   const [theirFilter, setTheirFilter] = useState(null);
+  const [myNameFilter, setMyNameFilter] = useState("");
+  const [theirNameFilter, setTheirNameFilter] = useState("");
   const partner = teams.find((t) => t.id === partnerId) || otherTeams[0];
   const teamIds = useMemo(() => teams.map((t) => t.id), [teams]);
   // Choix de l'année en cours + les 2 suivantes (3 repêchages à l'avance), voir ownedPicksByYear.
@@ -44,7 +46,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
   const theirOwnedPicks = useMemo(() => theirOwnedByYear.flatMap((g) => g.picks), [theirOwnedByYear]);
 
   function toggle(setFn, list, id) { setFn(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]); }
-  function changePartner(id) { setPartnerId(id); setMyIds([]); setTheirIds([]); setMyPickKeys([]); setTheirPickKeys([]); setTheirFilter(null); }
+  function changePartner(id) { setPartnerId(id); setMyIds([]); setTheirIds([]); setMyPickKeys([]); setTheirPickKeys([]); setTheirFilter(null); setTheirNameFilter(""); }
   const [retention, setRetention] = useState({});
   function confirmTrade() {
     const myPicks = myOwnedPicks.filter((k) => myPickKeys.includes(k.key));
@@ -53,7 +55,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
     setMyIds([]); setTheirIds([]); setRetention({}); setMyPickKeys([]); setTheirPickKeys([]);
   }
 
-  function PickPicker({ byYear, selected, onToggle, ownerId, teamsById }) {
+  function PickPicker({ byYear, selected, onToggle, ownerId, teamsById, onSelectTeam }) {
     const total = byYear.reduce((a, g) => a + g.picks.length, 0);
     return (
       <div style={{ marginTop: 8, border: "1px solid #ffffff1a", borderRadius: 4, maxHeight: 180, overflow: "auto" }}>
@@ -64,7 +66,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
             {picks.map((k) => (
               <label key={k.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", fontSize: 12, borderBottom: "1px solid #ffffff11", cursor: "pointer", background: selected.includes(k.key) ? "#ffffff14" : "transparent" }}>
                 <input type="checkbox" checked={selected.includes(k.key)} onChange={() => onToggle(k.key)} />
-                <span style={{ flex: 1 }}>Ronde {k.round}{k.origTeamId !== ownerId ? ` (choix de ${teamsById[k.origTeamId]?.name || k.origTeamId})` : ""}</span>
+                <span style={{ flex: 1 }}>Ronde {k.round}{k.origTeamId !== ownerId ? <> (choix de {teamsById[k.origTeamId] ? <TeamLink team={teamsById[k.origTeamId]} onSelect={onSelectTeam} /> : k.origTeamId})</> : ""}</span>
               </label>
             ))}
           </div>
@@ -77,14 +79,15 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
   const benchmark = teamOvrBenchmark(myTeam);
   const rankOf = (teamId) => { const i = standings.findIndex((x) => x.id === teamId); return i >= 0 ? i + 1 : null; };
 
-  function RosterPicker({ team, selected, onToggle, posFilter, onFilter }) {
-    const roster = team.roster.filter((p) => !posFilter || posFilter.includes(p.pos)).sort((a, b) => b.ovr - a.ovr);
+  function RosterPicker({ team, selected, onToggle, posFilter, onFilter, nameFilter, onNameFilter }) {
+    const roster = team.roster.filter((p) => (!posFilter || posFilter.includes(p.pos)) && p.name.toLowerCase().includes(nameFilter.toLowerCase())).sort((a, b) => b.ovr - a.ovr);
     const ownerTeamId = team.id;
     return (
       <>
-        <div style={{ display: "flex", gap: 4, marginBottom: 6, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <input value={nameFilter} onChange={(e) => onNameFilter(e.target.value)} placeholder="Filtrer par nom..." style={{ ...inputStyle, width: 140 }} />
           {POS_GROUPS.map(([label, grp]) => (
-            <button key={label} onClick={() => onFilter(grp)} style={{ ...btnStyle(JSON.stringify(posFilter) === JSON.stringify(grp) ? "var(--accent)" : "var(--steel)"), fontSize: 11, padding: "3px 8px" }}>{label}</button>
+            <button key={label} onClick={() => onFilter(grp)} style={selectStyle(JSON.stringify(posFilter) === JSON.stringify(grp), { fontSize: 11, padding: "3px 8px" })}>{label}</button>
           ))}
         </div>
         <div style={{ maxHeight: 300, overflow: "auto", border: "1px solid #ffffff1a", borderRadius: 4 }}>
@@ -137,11 +140,11 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
     <div>
       <h2 style={h2Style}>Échanges</h2>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
-        <CapBadge label={`${myTeam.name} · ${rankOf(myTeamId) ? `${rankOf(myTeamId)}e` : "—"}`} team={myTeam} seasonYear={seasonYear} opts={myCapOpts} />
+        <CapBadge label={<><TeamLink team={myTeam} onSelect={onSelectTeam} /> · {rankOf(myTeamId) ? `${rankOf(myTeamId)}e` : "—"}</>} team={myTeam} seasonYear={seasonYear} opts={myCapOpts} />
         <span style={{ color: "var(--iceMuted)", fontSize: 18 }}>⇄</span>
         {partner && (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <CapBadge label={`${partner.name} · ${rankOf(partner.id) ? `${rankOf(partner.id)}e` : "—"}`} team={partner} seasonYear={seasonYear} opts={{}} />
+            <CapBadge label={<><TeamLink team={partner} onSelect={onSelectTeam} /> · {rankOf(partner.id) ? `${rankOf(partner.id)}e` : "—"}</>} team={partner} seasonYear={seasonYear} opts={{}} />
             <select value={partner?.id} onChange={(e) => changePartner(e.target.value)} style={{ ...inputStyle, width: "auto" }}>
               {otherTeams.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
             </select>
@@ -159,11 +162,11 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
               <div key={o.id} style={{ background: "var(--navy2)", border: "1px solid var(--gold)", borderRadius: 6, padding: 12, marginBottom: 8 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <TeamCrest team={fromTeam} size={22} />
-                  <strong style={{ fontSize: 13 }}>{fromTeam?.name}</strong>
+                  <strong style={{ fontSize: 13 }}><TeamLink team={fromTeam} onSelect={onSelectTeam} /></strong>
                 </div>
                 <div style={{ fontSize: 12, color: "var(--iceMuted)", fontStyle: "italic", marginBottom: 6 }}>« {o.pitch} »</div>
                 <div style={{ fontSize: 13, marginBottom: 10 }}>
-                  Tu recevrais <strong>{theirNames.map((p) => p.name).join(", ") || "—"}</strong> contre <strong>{myNames.map((p) => p.name).join(", ") || "—"}</strong>
+                  Tu recevrais <strong>{theirNames.length ? theirNames.map((p, i) => <span key={p.id}>{i > 0 && ", "}<PlayerLink player={p} team={fromTeam} onSelect={onSelectPlayer} /></span>) : "—"}</strong> contre <strong>{myNames.length ? myNames.map((p, i) => <span key={p.id}>{i > 0 && ", "}<PlayerLink player={p} team={myTeam} onSelect={onSelectPlayer} /></span>) : "—"}</strong>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={() => onAcceptIncoming(o.id)} disabled={!txWindow.open} style={{ ...btnStyle("var(--win)"), fontSize: 12, opacity: txWindow.open ? 1 : 0.5 }}>Accepter</button>
@@ -190,14 +193,14 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 12, color: myTeam.color, fontWeight: 600, marginBottom: 6 }}>Tu envoies ({myTeam.name})</div>
-          <RosterPicker team={myTeam} selected={myIds} onToggle={(id) => toggle(setMyIds, myIds, id)} posFilter={myFilter} onFilter={setMyFilter} />
-          <PickPicker byYear={myOwnedByYear} selected={myPickKeys} onToggle={(key) => toggle(setMyPickKeys, myPickKeys, key)} ownerId={myTeamId} teamsById={teamsById} />
+          <div style={{ fontSize: 12, color: myTeam.color, fontWeight: 600, marginBottom: 6 }}>Tu envoies (<TeamLink team={myTeam} onSelect={onSelectTeam} />)</div>
+          <RosterPicker team={myTeam} selected={myIds} onToggle={(id) => toggle(setMyIds, myIds, id)} posFilter={myFilter} onFilter={setMyFilter} nameFilter={myNameFilter} onNameFilter={setMyNameFilter} />
+          <PickPicker byYear={myOwnedByYear} selected={myPickKeys} onToggle={(key) => toggle(setMyPickKeys, myPickKeys, key)} ownerId={myTeamId} teamsById={teamsById} onSelectTeam={onSelectTeam} />
         </div>
         <div>
-          <div style={{ fontSize: 12, color: partner?.color || "var(--iceMuted)", fontWeight: 600, marginBottom: 6 }}>Tu reçois ({partner?.name})</div>
-          {partner && <RosterPicker team={partner} selected={theirIds} onToggle={(id) => toggle(setTheirIds, theirIds, id)} posFilter={theirFilter} onFilter={setTheirFilter} />}
-          {partner && <PickPicker byYear={theirOwnedByYear} selected={theirPickKeys} onToggle={(key) => toggle(setTheirPickKeys, theirPickKeys, key)} ownerId={partner.id} teamsById={teamsById} />}
+          <div style={{ fontSize: 12, color: partner?.color || "var(--iceMuted)", fontWeight: 600, marginBottom: 6 }}>Tu reçois ({partner && <TeamLink team={partner} onSelect={onSelectTeam} />})</div>
+          {partner && <RosterPicker team={partner} selected={theirIds} onToggle={(id) => toggle(setTheirIds, theirIds, id)} posFilter={theirFilter} onFilter={setTheirFilter} nameFilter={theirNameFilter} onNameFilter={setTheirNameFilter} />}
+          {partner && <PickPicker byYear={theirOwnedByYear} selected={theirPickKeys} onToggle={(key) => toggle(setTheirPickKeys, theirPickKeys, key)} ownerId={partner.id} teamsById={teamsById} onSelectTeam={onSelectTeam} />}
         </div>
       </div>
       {myIds.length > 0 && (
@@ -205,7 +208,7 @@ export function TransactionsCenter({ myTeam, teams, myTeamId, staff, scoutKnowle
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>Rétention de salaire (optionnelle) : tu gardes une part du salaire jusqu'à la fin du contrat (cap mort), l'autre équipe reçoit le joueur moins cher. Maximum 50 %, 3 contrats retenus à la fois.</div>
           {myTeam.roster.filter((p) => myIds.includes(p.id)).map((p) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "3px 0" }}>
-              <span style={{ flex: 1 }}>{p.name} <span style={{ color: "var(--iceMuted)" }}>({money(p.contract?.salary || 0)} × {p.contract?.years ?? "?"} an{(p.contract?.years ?? 1) > 1 ? "s" : ""})</span></span>
+              <span style={{ flex: 1 }}><PlayerLink player={p} team={myTeam} onSelect={onSelectPlayer} /> <span style={{ color: "var(--iceMuted)" }}>({money(p.contract?.salary || 0)} × {p.contract?.years ?? "?"} an{(p.contract?.years ?? 1) > 1 ? "s" : ""})</span></span>
               <select aria-label={`Rétention ${p.name}`} value={retention[p.id] || 0} onChange={(e) => setRetention({ ...retention, [p.id]: Number(e.target.value) })} style={{ ...inputStyle, width: "auto" }}>
                 {[0, 0.25, 0.5].map((r) => <option key={r} value={r}>{r === 0 ? "Aucune" : `${r * 100} % retenu (${money(Math.round((p.contract?.salary || 0) * r))})`}</option>)}
               </select>

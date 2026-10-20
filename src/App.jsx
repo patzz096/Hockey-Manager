@@ -25,7 +25,7 @@ import { STAFF_ROLES, buildStaffMarketRT, evaluateStaffOffer, MAX_STAFF_OFFER_AT
 import { scoutOptions, scoutingDelay, createScoutReport, staffViewPlayer, getScoutInfo } from "./engine/scouting";
 import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue, developPlayer } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
-import { VARS, FONT_IMPORT, h2Style, btnStyle } from "./ui/theme";
+import { VARS, FONT_IMPORT, h2Style, btnStyle, selectStyle } from "./ui/theme";
 import { money } from "./ui/format";
 import { ContractOfferModal } from "./components/ContractOfferModal";
 import { ContractsPanel } from "./components/ContractsPanel";
@@ -49,7 +49,7 @@ import { StatsTables } from "./components/StatsTables";
 import { PreseasonRatings } from "./components/PreseasonRatings";
 import { StrategyEditor } from "./components/StrategyEditor";
 import { TransactionsCenter } from "./components/TransactionsCenter";
-import { TeamCrest } from "./components/common";
+import { TeamCrest, TeamLink } from "./components/common";
 import { CustomizationPanel } from "./components/CustomizationPanel";
 import { useCustomization } from "./custom/CustomizationContext";
 import { BoxscoreView } from "./components/match/BoxscoreView";
@@ -1969,13 +1969,13 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
             <button onClick={() => setCompareBase(null)} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Annuler</button>
           </div>
         )}
-        {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onNextPeriod={() => playLive(false)} onEndOfPeriod={() => playLive(true)} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")}
+        {liveMatch && <LiveSimPanel liveMatch={liveMatch} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onNextPeriod={() => playLive(false)} onEndOfPeriod={() => playLive(true)} onFinish={finishLiveMatch} onGoToLines={() => setTab("lines")} onGoToStrategy={() => setTab("strategy")}
           shiftPicker={shiftPicker} onOpenShiftPicker={openShiftPicker} onPickForward={(i) => updateShiftPicker({ forwardIdx: i })} onPickDefense={(i) => updateShiftPicker({ defenseIdx: i })} onSendShift={sendShift} onCancelShift={cancelShiftPicker} />}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
           <div>
             <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 3 }}>{formatDay(currentDay)} · Saison {seasonYear}-{seasonYear + 1} · {PHASE_LABEL[phase]}</div>
             {nextMyGame ? (
-              <div style={{ fontSize: 14 }}>Prochain match — <strong>{teamsById[nextMyGame.home].name}</strong> vs <strong>{teamsById[nextMyGame.away].name}</strong><span style={{ color: "var(--iceMuted)" }}> ({typeof nextMyGame.round === "number" ? `${formatDay(gameDay(seasonYear, nextMyGame))}` : nextMyGame.round})</span></div>
+              <div style={{ fontSize: 14 }}>Prochain match — <strong><TeamLink team={teamsById[nextMyGame.home]} onSelect={setViewedTeamId} /></strong> vs <strong><TeamLink team={teamsById[nextMyGame.away]} onSelect={setViewedTeamId} /></strong><span style={{ color: "var(--iceMuted)" }}> ({typeof nextMyGame.round === "number" ? `${formatDay(gameDay(seasonYear, nextMyGame))}` : nextMyGame.round})</span></div>
             ) : (<div style={{ fontSize: 14, color: "var(--iceMuted)" }}>{NEXT_STEP[phase]}</div>)}
             <div style={{ fontSize: 11, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)", marginTop: 3 }}>{txWindow.open ? "Échanges et signatures ouverts" : "Échanges et signatures gelés"} — {txWindow.reason}</div>
           </div>
@@ -1997,7 +1997,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
           </div>
         </div>
 
-        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} onSelectPlayer={selectPlayer} onGoTo={setTab} />}
+        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onGoTo={setTab} />}
 
         {tab === "roster" && (
           <div>
@@ -2006,7 +2006,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 6 }}>
                   {[["active", `Actif (${myTeam.roster.length})`], ["full", `Organisation complète (${myTeam.roster.length + (farmByTeam[myTeamId] || []).length})`]].map(([k, l]) => (
-                    <button key={k} onClick={() => setRosterScope(k)} style={{ ...btnStyle(rosterScope === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>
+                    <button key={k} onClick={() => setRosterScope(k)} style={{ ...selectStyle(rosterScope === k), fontSize: 12 }}>{l}</button>
                   ))}
                 </div>
                 <button onClick={openCreatePlayer} style={btnStyle("var(--win)")}>+ Créer un joueur</button>
@@ -2027,7 +2027,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
               <h2 style={{ ...h2Style, marginBottom: 0 }}>Trios du club-école</h2>
               <div style={{ display: "flex", gap: 6 }}>
                 {[["delegated", "Délégué à l'entraîneur-chef LAH"], ["manual", "Contrôle manuel"]].map(([k, l]) => (
-                  <button key={k} onClick={() => setDelegation("farmLines", k)} style={{ ...btnStyle(business.delegation.farmLines === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>
+                  <button key={k} onClick={() => setDelegation("farmLines", k)} style={{ ...selectStyle(business.delegation.farmLines === k), fontSize: 12 }}>{l}</button>
                 ))}
               </div>
             </div>
@@ -2044,9 +2044,9 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
 
         {tab === "strategy" && <StrategyEditor team={myTeam} lines={myLines} onChangeStrategy={updateStrategy} onChangeMentality={updateMentality} onAutoStrategy={autoOptimizeStrategy} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} />}
 
-        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onTrade={executeTrade} txWindow={txWindow} gmRating={gmNegotiationRating} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} incomingOffers={incomingTradeOffers} onAcceptIncoming={acceptIncomingOffer} onDeclineIncoming={declineIncomingOffer} />}
+        {tab === "transactions" && <TransactionsCenter myTeam={myTeam} teams={teams} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onRequestScout={requestScouting} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onTrade={executeTrade} txWindow={txWindow} gmRating={gmNegotiationRating} tradeBlockIds={tradeBlockIds} onToggleTradeBlock={toggleTradeBlock} seasonYear={seasonYear} myCapOpts={myCapOpts} standings={standings} pickTrades={pickTrades} incomingOffers={incomingTradeOffers} onAcceptIncoming={acceptIncomingOffer} onDeclineIncoming={declineIncomingOffer} />}
         {tab === "transactions" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
-        {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} />}
+        {tab === "transactions" && <WaiversPanel waivers={waivers} myTeam={teamsById[myTeamId]} myTeamId={myTeamId} myClaims={myClaims} year={seasonYear} teamsById={teamsById} capOpts={myCapOpts} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} />}
 
         {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} onRequestScout={requestScouting} onCancelScout={cancelScouting} onContextMenu={openPlayerContextMenu} freeAgents={freeAgents} txWindow={txWindow} />}
 
@@ -2060,7 +2060,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
             business={business} myTeam={myTeam} cohesion={linesByTeam[myTeamId]?.cohesion ?? 100} onSetDelegation={setDelegation} onSetTrainingFocus={setTrainingFocus}
             calendarMonth={calendarMonth} currentDay={currentDay} teamsById={teamsById} schedule={schedule} seasonYear={seasonYear} trainingPreview={trainingPreview}
             onPrevMonth={() => setCalendarMonth((d) => addMonths(d, -1))} onNextMonth={() => setCalendarMonth((d) => addMonths(d, 1))}
-            onScheduleTraining={scheduleTraining} onCancelTraining={cancelTraining}
+            onScheduleTraining={scheduleTraining} onCancelTraining={cancelTraining} onSelectTeam={setViewedTeamId}
           />
         )}
 
@@ -2075,8 +2075,8 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <h2 style={{ ...h2Style, marginBottom: 0 }}>Calendrier</h2>
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => setScheduleFilter("mine")} style={{ ...btnStyle(scheduleFilter === "mine" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Mon équipe seulement</button>
-                <button onClick={() => setScheduleFilter("all")} style={{ ...btnStyle(scheduleFilter === "all" ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>Calendrier complet</button>
+                <button onClick={() => setScheduleFilter("mine")} style={{ ...selectStyle(scheduleFilter === "mine"), fontSize: 12 }}>Mon équipe seulement</button>
+                <button onClick={() => setScheduleFilter("all")} style={{ ...selectStyle(scheduleFilter === "all"), fontSize: 12 }}>Calendrier complet</button>
               </div>
             </div>
             <p style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: -2, marginBottom: 12 }}>Comme dans la vraie LNH, les équipes ne jouent pas toutes le même soir — les séances d'entraînement se planifient dans l'onglet <strong>Entraînement</strong>.</p>
@@ -2094,12 +2094,12 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
                       <div key={g.id} style={{ marginBottom: 4 }}>
                         <div onClick={() => g.played && setExpandedGameId(expanded ? null : g.id)} style={{ display: "flex", alignItems: "center", gap: 10, background: involved ? "var(--navy2)" : "#ffffff08", padding: "8px 12px", borderRadius: 3, fontSize: 14, cursor: g.played ? "pointer" : "default", border: involved ? `1px solid ${myTeam.color}44` : "1px solid transparent" }}>
                           {g.played ? <Circle size={6} fill={g.homeScore > g.awayScore ? "var(--win)" : "var(--loss)"} color="none" /> : <Circle size={6} fill="var(--iceMuted)" color="none" />}
-                          <span style={{ flex: 1 }}>{teamsById[g.home].name}</span>
+                          <span style={{ flex: 1 }}><TeamLink team={teamsById[g.home]} onSelect={setViewedTeamId} /></span>
                           <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, minWidth: 50, textAlign: "center" }}>{g.played ? `${g.homeScore} – ${g.awayScore}${g.decidedIn === "OT" ? " (P)" : g.decidedIn === "SO" ? " (TB)" : ""}` : "à venir"}</span>
-                          <span style={{ flex: 1, textAlign: "right" }}>{teamsById[g.away].name}</span>
+                          <span style={{ flex: 1, textAlign: "right" }}><TeamLink team={teamsById[g.away]} onSelect={setViewedTeamId} /></span>
                           {g.played && (expanded ? <ChevronUp size={14} color="var(--iceMuted)" /> : <ChevronDown size={14} color="var(--iceMuted)" />)}
                         </div>
-                        {expanded && g.played && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} schedule={schedule} seasonYear={seasonYear} />}
+                        {expanded && g.played && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onContextMenu={openPlayerContextMenu} schedule={schedule} seasonYear={seasonYear} />}
                       </div>
                     );
                   })}
@@ -2110,24 +2110,24 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
           </div>
         )}
 
-        {tab === "stats" && statsMode === "regular" && <TeamOfTheWeek tow={weeklyTeam} onSelectPlayer={selectPlayer} />}
+        {tab === "stats" && statsMode === "regular" && <TeamOfTheWeek tow={weeklyTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} />}
         {tab === "stats" && <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-          {[["preseason", "Présaison"], ["regular", "Saison régulière"], ["playoffs", "Séries éliminatoires"]].map(([k, l]) => <button key={k} onClick={() => setStatsMode(k)} style={{ ...btnStyle(statsMode === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>)}
+          {[["preseason", "Présaison"], ["regular", "Saison régulière"], ["playoffs", "Séries éliminatoires"]].map(([k, l]) => <button key={k} onClick={() => setStatsMode(k)} style={{ ...selectStyle(statsMode === k), fontSize: 12 }}>{l}</button>)}
         </div>}
         {tab === "stats" && statsMode === "playoffs" && playoffLeaders.length === 0 && <p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Aucun match de séries joué pour l'instant.</p>}
-        {tab === "stats" && statsMode === "preseason" && <PreseasonRatings ratings={preseasonRatings} onSelectPlayer={selectPlayer} />}
-        {tab === "stats" && statsMode !== "preseason" && <StatsTables leaders={statsMode === "playoffs" ? playoffLeaders : leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} />}
+        {tab === "stats" && statsMode === "preseason" && <PreseasonRatings ratings={preseasonRatings} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} />}
+        {tab === "stats" && statsMode !== "preseason" && <StatsTables leaders={statsMode === "playoffs" ? playoffLeaders : leaders} standings={standings} teamHitTotals={teamHitTotals} teamAdvancedTotals={teamAdvancedTotals} teamsById={teamsById} myTeamId={myTeamId} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} />}
 
         {tab === "standings" && <StandingsTable standings={standings} teamsById={teamsById} myTeamId={myTeamId} history={history} onSelectTeam={setViewedTeamId} />}
 
-        {tab === "playoffs" && <PlayoffsPanel playoffs={playoffs} teamsById={teamsById} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} />}
+        {tab === "playoffs" && <PlayoffsPanel playoffs={playoffs} teamsById={teamsById} myTeamId={myTeamId} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} />}
 
         {tab === "scouting" && <ScoutingCenter scouts={scouts} missions={scoutMissions} coverage={scoutCoverage} onSetMission={setScoutMission} market={scoutMarket} onHire={hireScout} onFire={fireScout} onRefreshMarket={refreshScoutMarket} spend={scoutingSpend} cash={business.cash} maxExtra={MAX_EXTRA_SCOUTS} staff={business.staff}
           suggestions={scoutSuggestions} draftClass={draftClass} classYear={classYear} myTeam={myTeam} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} teamsById={teamsById}
-          draftIds={myDraftIds} onReorder={setMyDraftIds} onRemoveFromList={toggleDraftList} draft={draft} minorLine={minorLine} onSelectPlayer={selectPlayer} onOpenPlayerById={openPlayerById} />}
+          draftIds={myDraftIds} onReorder={setMyDraftIds} onRemoveFromList={toggleDraftList} draft={draft} minorLine={minorLine} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onOpenPlayerById={openPlayerById} />}
 
         {tab === "draft" && (draft
-          ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} draftIds={draftList.year === draft.year ? draftList.ids : []} onPickFromList={() => { const p = myDraftChoice(draft); if (p) runDraft({ myPlayerId: p.id, untilMine: true }); }} />
+          ? <DraftPanel draft={draft} draftDay={dates.draft} teamsById={teamsById} myTeam={myTeam} staff={business.staff} scoutKnowledge={scoutKnowledge} onSimToMyPick={() => runDraft({ untilMine: true })} onSimAll={() => runDraft({ all: true })} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} draftIds={draftList.year === draft.year ? draftList.ids : []} onPickFromList={() => { const p = myDraftChoice(draft); if (p) runDraft({ myPlayerId: p.id, untilMine: true }); }} />
           : <div><h2 style={h2Style}>Repêchage</h2><p style={{ fontSize: 13, color: "var(--iceMuted)" }}>Le repêchage a lieu le {formatDay(dates.draft)}, une semaine avant l'ouverture du marché des agents libres (1er juillet), après les séries. Ordre : équipes hors séries (pire dossier d'abord ; loterie pour les 2 premiers choix), puis selon la ronde d'élimination.</p></div>)}
       </div>
     </div>

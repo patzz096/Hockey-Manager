@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CONFERENCES, conferenceOf, playoffSeeds, qualificationMarks } from "../engine/standings";
-import { h2Style, btnStyle } from "../ui/theme";
-import { TeamCrest } from "./common";
+import { h2Style, selectStyle } from "../ui/theme";
+import { TeamCrest, TeamLink } from "./common";
 
 const COLS = [
   ["gp", "PJ"], ["w", "V"], ["l", "D"], ["otl", "DP"], ["pts", "PTS"], ["pct", "P%"], ["rw", "VR"], ["row", "VRP"],
@@ -33,7 +33,7 @@ function Table({ rows, teamsById, myTeamId, marks, cutAfter = [], title, onSelec
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 16, color: "var(--iceMuted)", fontSize: 11 }}>{i + 1}</span>
                   <TeamCrest team={teamsById[s.id]} size={20} />
-                  <span onClick={() => onSelectTeam?.(s.id)} style={{ color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400, cursor: onSelectTeam ? "pointer" : "default" }}>{teamsById[s.id].name}</span>
+                  <TeamLink team={teamsById[s.id]} onSelect={onSelectTeam} style={{ color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400 }} />
                   {marks[s.id] && <span title={MARK_LABEL[marks[s.id]]} style={{ fontSize: 10, color: "var(--gold)", fontWeight: 700 }}>{marks[s.id]}</span>}
                 </span>
               </td>
@@ -56,7 +56,7 @@ export function StandingsTable({ standings, teamsById, myTeamId, history = [], o
         <h2 style={{ ...h2Style, marginBottom: 0 }}>Classement</h2>
         <div style={{ display: "flex", gap: 6 }}>
           {[["division", "Division"], ["wildcard", "Équipes repêchées"], ["league", "Ligue"]].map(([k, l]) => (
-            <button key={k} onClick={() => setView(k)} style={{ ...btnStyle(view === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>
+            <button key={k} onClick={() => setView(k)} style={{ ...selectStyle(view === k), fontSize: 12 }}>{l}</button>
           ))}
         </div>
       </div>

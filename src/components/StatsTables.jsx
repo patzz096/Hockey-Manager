@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import { h2Style, inputStyle } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
-import { SortTh } from "./common";
+import { SortTh, PlayerLink, TeamLink } from "./common";
 
-export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTotals, teamsById, myTeamId, onSelectPlayer }) {
+export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTotals, teamsById, myTeamId, onSelectPlayer, onSelectTeam }) {
   const [lk, ld, lToggle] = useSort("pts");
   const [tk, td, tToggle] = useSort("pts");
   const [teamFilter, setTeamFilter] = useState("Toutes");
+  const [nameFilter, setNameFilter] = useState("");
   const teamOptions = useMemo(() => ["Toutes", ...Object.values(teamsById).map((t) => t.id).sort((a, b) => teamsById[a].name.localeCompare(teamsById[b].name))], [teamsById]);
   const leaderAcc = (s, key) => {
     if (key === "name") return s.player.name;
@@ -21,7 +22,8 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
     if (key === "plusMinus") return s.plusMinus;
     return 0;
   };
-  const filteredLeaders = teamFilter === "Toutes" ? leaders : leaders.filter((s) => s.team.id === teamFilter);
+  const filteredLeaders = (teamFilter === "Toutes" ? leaders : leaders.filter((s) => s.team.id === teamFilter))
+    .filter((s) => s.player.name.toLowerCase().includes(nameFilter.toLowerCase()));
   const sortedLeadersFull = sortRows(filteredLeaders, lk, ld, leaderAcc);
   const sortedLeaders = teamFilter === "Toutes" ? sortedLeadersFull.slice(0, 20) : sortedLeadersFull;
   const teamAcc = (s, key) => {
@@ -37,9 +39,12 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <h2 style={{ ...h2Style, marginBottom: 0 }}>Meneurs individuels</h2>
-        <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} style={{ ...inputStyle, width: "auto" }}>
-          {teamOptions.map((id) => (<option key={id} value={id}>{id === "Toutes" ? "Toutes les équipes (top 20)" : teamsById[id].name}</option>))}
-        </select>
+        <div style={{ display: "flex", gap: 6 }}>
+          <input value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} placeholder="Filtrer par nom..." style={{ ...inputStyle, width: 160 }} />
+          <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} style={{ ...inputStyle, width: "auto" }}>
+            {teamOptions.map((id) => (<option key={id} value={id}>{id === "Toutes" ? "Toutes les équipes (top 20)" : teamsById[id].name}</option>))}
+          </select>
+        </div>
       </div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 12 }}>{teamFilter === "Toutes" ? "Meilleurs pointeurs de la ligue." : `Tous les patineurs de ${teamsById[teamFilter].name} ayant joué.`}</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 30 }}>
@@ -57,9 +62,9 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
         </tr></thead>
         <tbody>
           {sortedLeaders.map((s) => (
-            <tr key={s.player.id} onClick={() => onSelectPlayer(s.player, s.team)} style={{ borderBottom: "1px solid #ffffff11", cursor: "pointer" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-              <td style={{ padding: "7px 10px" }}>{s.player.name}</td>
-              <td style={{ padding: "7px 10px", color: s.team.color }}>{s.team.name}</td>
+            <tr key={s.player.id} style={{ borderBottom: "1px solid #ffffff11" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+              <td style={{ padding: "7px 10px" }}><PlayerLink player={s.player} team={s.team} onSelect={onSelectPlayer} /></td>
+              <td style={{ padding: "7px 10px", color: s.team.color }}><TeamLink team={s.team} onSelect={onSelectTeam} /></td>
               <td style={{ padding: "7px 10px" }}>{s.gp}</td>
               <td style={{ padding: "7px 10px" }}>{s.g}</td>
               <td style={{ padding: "7px 10px" }}>{s.a}</td>
@@ -92,7 +97,7 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
         <tbody>
           {sortedTeams.map((s) => (
             <tr key={s.id} style={{ borderBottom: "1px solid #ffffff11" }}>
-              <td style={{ padding: "7px 10px", color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400 }}>{teamsById[s.id].name}</td>
+              <td style={{ padding: "7px 10px", color: s.id === myTeamId ? teamsById[s.id].color : "var(--ice)", fontWeight: s.id === myTeamId ? 600 : 400 }}><TeamLink team={teamsById[s.id]} onSelect={onSelectTeam} /></td>
               <td style={{ padding: "7px 10px" }}>{s.gp}</td>
               <td style={{ padding: "7px 10px" }}>{s.w}</td>
               <td style={{ padding: "7px 10px" }}>{s.l}</td>

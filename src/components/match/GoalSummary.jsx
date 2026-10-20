@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { PlayerLink } from "../common";
+import { PlayerLink, TeamLink } from "../common";
 import { goalTime } from "./LiveSimPanel";
 import { seasonGoalNumber } from "../../engine/stats";
 import { ordinalFr } from "../../ui/format";
@@ -7,7 +7,7 @@ import { ordinalFr } from "../../ui/format";
 // `game` (match déjà joué, terminé) ou `goalLog` (match en cours, sim en direct) : l'un des deux
 // suffit. `schedule`/`seasonYear`, fournis seulement avec `game`, annotent chaque but du rang de
 // la saison de son buteur ; sans eux (sim en direct, séries), pas d'annotation.
-export function GoalSummary({ game, goalLog: goalLogProp, home, away, onSelectPlayer, schedule, seasonYear }) {
+export function GoalSummary({ game, goalLog: goalLogProp, home, away, onSelectPlayer, onSelectTeam, schedule, seasonYear }) {
   const goalLog = goalLogProp || game?.box?.goalLog;
   if (!goalLog || goalLog.length === 0) return <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 14 }}>Aucun but.</div>;
   const periods = [1, 2, 3, 4, 5];
@@ -23,7 +23,7 @@ export function GoalSummary({ game, goalLog: goalLogProp, home, away, onSelectPl
             <div style={{ fontSize: 11, color: "var(--iceMuted)", background: "#ffffff0a", padding: "3px 8px", borderRadius: 3, marginBottom: 6, display: "inline-block" }}>{periodTitle[p]}</div>
             {goals.map((g, i) => {
               const team = g.side === "home" ? home : away;
-              if (g.type === "SO") return <div key={i} style={{ fontSize: 13, padding: "4px 0" }}>Victoire de <strong>{team.name}</strong> en tirs de barrage (+1 au score final, sans buteur)</div>;
+              if (g.type === "SO") return <div key={i} style={{ fontSize: 13, padding: "4px 0" }}>Victoire de <strong><TeamLink team={team} onSelect={onSelectTeam} /></strong> en tirs de barrage (+1 au score final, sans buteur)</div>;
               const scorer = team.roster.find((pl) => pl.id === g.scorerId);
               const assists = g.assistIds.map((id) => team.roster.find((pl) => pl.id === id)).filter(Boolean);
               const seasonNo = scorer && game && schedule && seasonYear != null ? seasonGoalNumber(schedule, seasonYear, game, scorer.id, goalLog.indexOf(g)) : null;
@@ -38,7 +38,7 @@ export function GoalSummary({ game, goalLog: goalLogProp, home, away, onSelectPl
                   </span>
                   {g.type === "PP" && <span style={{ fontSize: 10, background: "rgba(255,194,71,0.2)", color: "var(--gold)", padding: "1px 6px", borderRadius: 3 }}>AN</span>}
                 {g.type === "SH" && <span style={{ fontSize: 10, background: "rgba(92,200,255,0.18)", color: "var(--accent)", padding: "1px 6px", borderRadius: 3 }}>DN</span>}
-                  <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>{team.name}</span>
+                  <span style={{ fontSize: 11, color: "var(--iceMuted)" }}><TeamLink team={team} onSelect={onSelectTeam} /></span>
                 </div>
               );
             })}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { STAFF_ROLES } from "../engine/staff";
 import { NATION_FLAG } from "../data/names";
-import { h2Style, btnStyle } from "../ui/theme";
+import { h2Style, btnStyle, selectStyle } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 import { money } from "../ui/format";
@@ -26,22 +26,22 @@ export function StaffCenter({ business, staffMarket, myTeam, farmRoster = [], mo
         <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, flex: 1, minWidth: 220 }}>
           <div style={{ fontSize: 12, marginBottom: 8 }}>Directeur des finances {business.staff.financeDirector ? `(${business.staff.financeDirector.name})` : "(poste vacant)"}</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => onSetDelegation("finance", "manual")} style={{ ...btnStyle(business.delegation.finance === "manual" ? "var(--red)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
-            <button onClick={() => onSetDelegation("finance", "delegated")} style={{ ...btnStyle(business.delegation.finance === "delegated" ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
+            <button onClick={() => onSetDelegation("finance", "manual")} style={{ ...selectStyle(business.delegation.finance === "manual"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
+            <button onClick={() => onSetDelegation("finance", "delegated")} style={{ ...selectStyle(business.delegation.finance === "delegated"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
           </div>
         </div>
         <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, flex: 1, minWidth: 220 }}>
           <div style={{ fontSize: 12, marginBottom: 8 }}>Directeur des opérations hockey {business.staff.hockeyOpsDirector ? `(${business.staff.hockeyOpsDirector.name})` : "(poste vacant)"}</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => onSetDelegation("hockeyOps", "manual")} style={{ ...btnStyle(business.delegation.hockeyOps === "manual" ? "var(--red)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
-            <button onClick={() => onSetDelegation("hockeyOps", "delegated")} style={{ ...btnStyle(business.delegation.hockeyOps === "delegated" ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
+            <button onClick={() => onSetDelegation("hockeyOps", "manual")} style={{ ...selectStyle(business.delegation.hockeyOps === "manual"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
+            <button onClick={() => onSetDelegation("hockeyOps", "delegated")} style={{ ...selectStyle(business.delegation.hockeyOps === "delegated"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
           </div>
         </div>
         <div style={{ background: "var(--navy)", border: "1px solid #ffffff22", borderRadius: 4, padding: 12, flex: 1, minWidth: 220 }}>
           <div style={{ fontSize: 12, marginBottom: 8 }}>Entraîneur-chef du club-école {business.staff.ahlCoach ? `(${business.staff.ahlCoach.name})` : "(poste vacant)"}</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => onSetDelegation("farmLines", "manual")} style={{ ...btnStyle(business.delegation.farmLines === "manual" ? "var(--red)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
-            <button onClick={() => onSetDelegation("farmLines", "delegated")} style={{ ...btnStyle(business.delegation.farmLines === "delegated" ? "var(--win)" : "var(--steel)"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
+            <button onClick={() => onSetDelegation("farmLines", "manual")} style={{ ...selectStyle(business.delegation.farmLines === "manual"), fontSize: 12, flex: 1, justifyContent: "center" }}>Contrôle</button>
+            <button onClick={() => onSetDelegation("farmLines", "delegated")} style={{ ...selectStyle(business.delegation.farmLines === "delegated"), fontSize: 12, flex: 1, justifyContent: "center" }}>Délégué</button>
           </div>
         </div>
       </div>

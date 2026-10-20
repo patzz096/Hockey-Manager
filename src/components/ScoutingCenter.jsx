@@ -7,8 +7,8 @@ import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { teamOvrBenchmark, starsFor, attr20 } from "../engine/attributes";
 import { formatDay } from "../engine/calendar";
 import { NATION_FLAG } from "../data/names";
-import { h2Style, btnStyle, selectStyle } from "../ui/theme";
-import { StarRating, TeamCrest, ConfirmButton } from "./common";
+import { h2Style, btnStyle, selectStyle, inputStyle } from "../ui/theme";
+import { StarRating, TeamCrest, TeamLink, PlayerLink, ConfirmButton } from "./common";
 import { money as fmtMoney } from "../ui/format";
 
 // ---------------------------------------------------------------------------------------
@@ -208,13 +208,15 @@ function TeamView({ scouts, missions, onSetMission, market, onHire, onFire, onRe
 }
 
 // ------------------------------------ Rapports ------------------------------------
-function ReportsView({ suggestions, findPlayerView, onOpenPlayerById, teamsById, benchmark }) {
+function ReportsView({ suggestions, findPlayerView, onOpenPlayerById, teamsById, benchmark, onSelectTeam }) {
   const [grade, setGrade] = useState("AB");
   const [kind, setKind] = useState("all");
-  const rows = suggestions.filter((s) => grade.includes(s.grade) && (kind === "all" || (kind === "draft") === s.draftProspect));
+  const [nameFilter, setNameFilter] = useState("");
+  const rows = suggestions.filter((s) => grade.includes(s.grade) && (kind === "all" || (kind === "draft") === s.draftProspect) && s.playerName.toLowerCase().includes(nameFilter.toLowerCase()));
   return (
     <div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <input value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} placeholder="Filtrer par nom..." style={{ ...inputStyle, width: 160 }} />
         <select aria-label="Notes" value={grade} onChange={(e) => setGrade(e.target.value)} style={selStyle}>
           <option value="AB">A et B (recommandés)</option><option value="A">A seulement</option><option value="ABC">A, B et C</option>
         </select>
@@ -234,7 +236,7 @@ function ReportsView({ suggestions, findPlayerView, onOpenPlayerById, teamsById,
                   <td style={{ ...td, fontWeight: 600 }}>{s.playerName}</td>
                   <td style={td}>{POS_FR[s.pos]}</td>
                   <td style={td}>{s.age}</td>
-                  <td style={td}>{s.ownerTeamId ? <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><TeamCrest team={teamsById[s.ownerTeamId]} size={16} />{teamsById[s.ownerTeamId].name}</span> : v?.player?.league ? `${v.player.club} (${MINOR_LEAGUES[v.player.league].short})` : "Agent libre"}</td>
+                  <td style={td}>{s.ownerTeamId ? <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><TeamCrest team={teamsById[s.ownerTeamId]} size={16} /><TeamLink team={teamsById[s.ownerTeamId]} onSelect={onSelectTeam} /></span> : v?.player?.league ? `${v.player.club} (${MINOR_LEAGUES[v.player.league].short})` : "Agent libre"}</td>
                   <td style={td}>{v ? <Estimate player={v.player} info={v.info} benchmark={benchmark} /> : "—"}</td>
                   <td style={{ ...td, color: "var(--iceMuted)" }}>{s.scoutName}</td>
                   <td style={{ ...td, color: "var(--iceMuted)" }}>{formatDay(s.day)}</td>
@@ -255,8 +257,9 @@ function ClassView({ draftClass, classYear, info, benchmark, minorLine, draftIds
   const [pos, setPos] = useState("all");
   const [onlyKnown, setOnlyKnown] = useState(false);
   const [sort, setSort] = useState("pts");
+  const [nameFilter, setNameFilter] = useState("");
   const rows = draftClass
-    .filter((p) => (region === "all" || SCOUT_REGIONS.find((r) => r.id === region).leagues.includes(p.league)) && (pos === "all" || p.pos === pos) && (!onlyKnown || info(p).known))
+    .filter((p) => (region === "all" || SCOUT_REGIONS.find((r) => r.id === region).leagues.includes(p.league)) && (pos === "all" || p.pos === pos) && (!onlyKnown || info(p).known) && p.name.toLowerCase().includes(nameFilter.toLowerCase()))
     .map((p) => ({ p, line: minorLine(p), inf: info(p) }))
     .sort((a, b) => {
       if (sort === "est") return (b.inf.known ? perceivedRatings(b.p, b.inf).potential : 0) - (a.inf.known ? perceivedRatings(a.p, a.inf).potential : 0);
@@ -266,6 +269,7 @@ function ClassView({ draftClass, classYear, info, benchmark, minorLine, draftIds
   return (
     <div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+        <input value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} placeholder="Filtrer par nom..." style={{ ...inputStyle, width: 160 }} />
         <select aria-label="Zone" value={region} onChange={(e) => setRegion(e.target.value)} style={selStyle}>
           <option value="all">Toutes les zones</option>
           {SCOUT_REGIONS.filter((r) => r.id !== "pro").map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
@@ -289,7 +293,7 @@ function ClassView({ draftClass, classYear, info, benchmark, minorLine, draftIds
             return (
               <tr key={p.id} onClick={() => onSelectPlayer(p, null)} style={{ cursor: "pointer" }}>
                 <td style={{ ...td, color: "var(--gold)", fontWeight: 700 }}>{n >= 0 ? `n° ${n + 1}` : ""}</td>
-                <td style={{ ...td, fontWeight: 600 }}>{p.name}</td>
+                <td style={{ ...td, fontWeight: 600 }}><PlayerLink player={p} onSelect={(pl) => onSelectPlayer(pl, null)} /></td>
                 <td style={td}>{POS_FR[p.pos]}</td>
                 <td style={td}>{p.age}</td>
                 <td style={{ ...td, color: "var(--iceMuted)" }}>{p.club}</td>
@@ -310,7 +314,7 @@ function ClassView({ draftClass, classYear, info, benchmark, minorLine, draftIds
 }
 
 // ------------------------------------ Ma liste ------------------------------------
-function ListView({ draftIds, byId, info, benchmark, minorLine, onReorder, onRemove, onSelectPlayer, draft, teamsById }) {
+function ListView({ draftIds, byId, info, benchmark, minorLine, onReorder, onRemove, onSelectPlayer, draft, teamsById, onSelectTeam }) {
   const [dragIdx, setDragIdx] = useState(null);
   const move = (from, to) => { if (to < 0 || to >= draftIds.length) return; const ids = [...draftIds]; const [x] = ids.splice(from, 1); ids.splice(to, 0, x); onReorder(ids); };
   const pickedBy = (id) => draft?.picks.find((k) => k.playerId === id);
@@ -333,7 +337,7 @@ function ListView({ draftIds, byId, info, benchmark, minorLine, onReorder, onRem
                 <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>{POS_FR[p.pos]} · {p.age} ans · {p.club} ({MINOR_LEAGUES[p.league]?.short})</span>
                 {line && p.pos !== "G" && <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>{line.gp} PJ · {line.pts} PTS</span>}
                 <Estimate player={p} info={info(p)} benchmark={benchmark} />
-                {taken && <span style={{ fontSize: 11, color: "var(--loss)" }}>Repêché par {teamsById[taken.teamId]?.name} (n° {taken.overall})</span>}
+                {taken && <span style={{ fontSize: 11, color: "var(--loss)" }}>Repêché par <TeamLink team={teamsById[taken.teamId]} onSelect={onSelectTeam} /> (n° {taken.overall})</span>}
               </button>
             ) : <span style={{ flex: 1, color: "var(--iceMuted)" }}>Joueur indisponible</span>}
             <button title="Monter" aria-label="Monter" onClick={() => move(i, i - 1)} style={icon}><ArrowUp size={13} /></button>
@@ -348,7 +352,7 @@ function ListView({ draftIds, byId, info, benchmark, minorLine, onReorder, onRem
 
 const VIEWS = [["team", "Équipe et missions"], ["zones", "Zones à couvrir"], ["reports", "Rapports et suggestions"], ["class", "Cuvée du repêchage"], ["list", "Ma liste de repêchage"]];
 
-export function ScoutingCenter({ scouts, missions, coverage, onSetMission, market, onHire, onFire, onRefreshMarket, spend, cash, maxExtra, staff, suggestions, draftClass, classYear, myTeam, myTeamId, scoutKnowledge, pendingScouts, teamsById, draftIds, onReorder, onRemoveFromList, draft, minorLine, onSelectPlayer, onOpenPlayerById }) {
+export function ScoutingCenter({ scouts, missions, coverage, onSetMission, market, onHire, onFire, onRefreshMarket, spend, cash, maxExtra, staff, suggestions, draftClass, classYear, myTeam, myTeamId, scoutKnowledge, pendingScouts, teamsById, draftIds, onReorder, onRemoveFromList, draft, minorLine, onSelectPlayer, onSelectTeam, onOpenPlayerById }) {
   const [view, setView] = useState("team");
   const benchmark = teamOvrBenchmark(myTeam);
   const info = (p, owner = null) => getScoutInfo(p, owner, myTeamId, staff, scoutKnowledge);
@@ -373,9 +377,9 @@ export function ScoutingCenter({ scouts, missions, coverage, onSetMission, marke
       </div>
       {view === "team" && <TeamView scouts={scouts} missions={missions} onSetMission={onSetMission} market={market} onHire={onHire} onFire={onFire} onRefreshMarket={onRefreshMarket} spend={spend} cash={cash} maxExtra={maxExtra} />}
       {view === "zones" && <ZonesView scouts={scouts} missions={missions} coverage={coverage} draftClass={draftClass} />}
-      {view === "reports" && <ReportsView suggestions={suggestions} findPlayerView={findPlayerView} onOpenPlayerById={onOpenPlayerById} teamsById={teamsById} benchmark={benchmark} />}
+      {view === "reports" && <ReportsView suggestions={suggestions} findPlayerView={findPlayerView} onOpenPlayerById={onOpenPlayerById} teamsById={teamsById} benchmark={benchmark} onSelectTeam={onSelectTeam} />}
       {view === "class" && <ClassView draftClass={draftClass} classYear={classYear} info={info} benchmark={benchmark} minorLine={minorLine} draftIds={draftIds} onSelectPlayer={onSelectPlayer} />}
-      {view === "list" && <ListView draftIds={draftIds} byId={(id) => classById.get(id)} info={info} benchmark={benchmark} minorLine={minorLine} onReorder={onReorder} onRemove={onRemoveFromList} onSelectPlayer={onSelectPlayer} draft={draft} teamsById={teamsById} />}
+      {view === "list" && <ListView draftIds={draftIds} byId={(id) => classById.get(id)} info={info} benchmark={benchmark} minorLine={minorLine} onReorder={onReorder} onRemove={onRemoveFromList} onSelectPlayer={onSelectPlayer} draft={draft} teamsById={teamsById} onSelectTeam={onSelectTeam} />}
     </div>
   );
 }

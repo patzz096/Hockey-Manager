@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { RosterTable } from "./RosterTable";
 import { TeamCrest } from "./common";
-import { btnStyle } from "../ui/theme";
+import { selectStyle } from "../ui/theme";
 
 const td = { padding: "5px 9px" };
 const th = { textAlign: "left", padding: "6px 9px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid #ffffff22" };
@@ -61,7 +61,7 @@ export function TeamRosterModal({ team, teamId, lines, myTeamId, staff, scoutKno
       </div>
       <div style={{ padding: "12px 28px 0", display: "flex", gap: 6, flexShrink: 0 }}>
         {[["roster", "Alignement"], ["stats", "Statistiques"]].map(([k, l]) => (
-          <button key={k} onClick={() => setView(k)} style={{ ...btnStyle(view === k ? "var(--red)" : "var(--steel)"), fontSize: 12 }}>{l}</button>
+          <button key={k} onClick={() => setView(k)} style={{ ...selectStyle(view === k), fontSize: 12 }}>{l}</button>
         ))}
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: "14px 28px 28px" }}>

@@ -1,10 +1,10 @@
 import { formatDay } from "../engine/calendar";
 import { gameArticle } from "../engine/stats";
-import { TeamCrest, PlayerLink } from "./common";
+import { TeamCrest, PlayerLink, TeamLink } from "./common";
 
 // Fil de nouvelles façon journal sportif (page Accueil) : un article par match joué récemment
 // (manchette, résumé, fait saillant, étoile du match — voir engine/stats.js gameArticle).
-function Article({ article, onSelectPlayer }) {
+function Article({ article, onSelectPlayer, onSelectTeam }) {
   const { paragraph, star, winner, home, away, day } = article;
   return (
     <div style={{ background: "var(--navy2)", border: "1px solid #ffffff1a", borderLeft: `4px solid ${winner.color}`, borderRadius: 4, padding: "12px 14px", marginBottom: 10 }}>
@@ -13,9 +13,9 @@ function Article({ article, onSelectPlayer }) {
         <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>{formatDay(day)}</span>
       </div>
       <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-        <TeamCrest team={home} size={18} /><span>{home.name}</span>
+        <TeamCrest team={home} size={18} /><TeamLink team={home} onSelect={onSelectTeam} />
         <span style={{ color: "var(--iceMuted)", fontWeight: 400 }}>{article.game.homeScore}–{article.game.awayScore}</span>
-        <span>{away.name}</span><TeamCrest team={away} size={18} />
+        <TeamLink team={away} onSelect={onSelectTeam} /><TeamCrest team={away} size={18} />
       </div>
       <div style={{ fontSize: 13, color: "var(--iceMuted)", marginBottom: star ? 8 : 0 }}>{paragraph}</div>
       {star && (
@@ -29,8 +29,8 @@ function Article({ article, onSelectPlayer }) {
   );
 }
 
-export function NewsFeed({ games, seasonYear, teamsById, onSelectPlayer, limit = 6 }) {
+export function NewsFeed({ games, seasonYear, teamsById, onSelectPlayer, onSelectTeam, limit = 6 }) {
   const articles = games.map((g) => gameArticle(g, seasonYear, teamsById)).filter(Boolean).slice(0, limit);
   if (articles.length === 0) return <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucun match joué pour l'instant.</div>;
-  return <div>{articles.map((a) => <Article key={a.id} article={a} onSelectPlayer={onSelectPlayer} />)}</div>;
+  return <div>{articles.map((a) => <Article key={a.id} article={a} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} />)}</div>;
 }

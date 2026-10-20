@@ -3,11 +3,12 @@ import { MINOR_LEAGUES } from "../engine/minorLeagues";
 import { starsFor, teamOvrBenchmark } from "../engine/attributes";
 import { staffViewPlayer, getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { formatDay } from "../engine/calendar";
-import { h2Style, btnStyle } from "../ui/theme";
-import { StarRating, PlayerLink, TeamCrest } from "./common";
+import { h2Style, btnStyle, inputStyle } from "../ui/theme";
+import { StarRating, PlayerLink, TeamLink, TeamCrest } from "./common";
 
-export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKnowledge, onSimToMyPick, onSimAll, onSelectPlayer, draftIds = [], onPickFromList }) {
+export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKnowledge, onSimToMyPick, onSimAll, onSelectPlayer, onSelectTeam, draftIds = [], onPickFromList }) {
   const [posFilter, setPosFilter] = useState("Tous");
+  const [filter, setFilter] = useState("");
   const taken = useMemo(() => new Set(draft.picks.map((k) => k.playerId).filter(Boolean)), [draft]);
   const benchmark = teamOvrBenchmark(myTeam);
   // Classement selon TON dépisteur (rapport de dépistage s'il existe, sinon évaluation du personnel).
@@ -23,7 +24,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
   const myTurn = current && current.teamId === myTeam.id;
   const done = !current;
   const myPicks = draft.picks.filter((k) => k.teamId === myTeam.id);
-  const rows = board.filter((r) => posFilter === "Tous" || r.p.pos === posFilter).slice(0, 80);
+  const rows = board.filter((r) => (posFilter === "Tous" || r.p.pos === posFilter) && r.p.name.toLowerCase().includes(filter.toLowerCase())).slice(0, 80);
   const listAvailable = draftIds.map((id) => draft.pool.find((p) => p.id === id)).filter((p) => p && !taken.has(p.id));
   const recent = draft.picks.slice(Math.max(0, draft.current - 8), draft.current).reverse();
   return (
@@ -35,7 +36,7 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
             <TeamCrest team={teamsById[current.teamId]} size={34} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>RONDE {current.round} · CHOIX {current.overall}</div>
-              <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 17 }}>{myTurn ? "À toi de choisir !" : `${teamsById[current.teamId].name} est au micro`}</div>
+              <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 17 }}>{myTurn ? "À toi de choisir !" : <><TeamLink team={teamsById[current.teamId]} onSelect={onSelectTeam} /> est au micro</>}</div>
             </div>
             {myTurn && listAvailable.length > 0 && <button onClick={onPickFromList} style={btnStyle("var(--win)")}>Repêcher le n° 1 de ma liste : {listAvailable[0].name}</button>}
             {!myTurn && <button onClick={onSimToMyPick} style={btnStyle("var(--red)")}>Avancer jusqu'à mon choix</button>}
@@ -47,9 +48,12 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Classement de ton dépisteur amateur (clique un espoir pour ouvrir son profil : rapport de dépistage et « Repêcher »)</div>
-            <select value={posFilter} onChange={(e) => setPosFilter(e.target.value)} style={{ background: "var(--navy)", color: "var(--ice)", border: "1px solid #ffffff33", borderRadius: 3, padding: "4px 6px", fontSize: 12 }}>
-              {["Tous", "C", "LW", "RW", "LD", "RD", "G"].map((p) => <option key={p}>{p}</option>)}
-            </select>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrer par nom..." style={{ ...inputStyle, width: 160 }} />
+              <select value={posFilter} onChange={(e) => setPosFilter(e.target.value)} style={{ background: "var(--navy)", color: "var(--ice)", border: "1px solid #ffffff33", borderRadius: 3, padding: "4px 6px", fontSize: 12 }}>
+                {["Tous", "C", "LW", "RW", "LD", "RD", "G"].map((p) => <option key={p}>{p}</option>)}
+              </select>
+            </div>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr>{["#", "Espoir", "Pos", "Âge", "Ligue", "Actuel", "Potentiel"].map((h) => <th key={h} style={{ textAlign: "left", padding: "5px 8px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 11, borderBottom: "1px solid #ffffff22" }}>{h}</th>)}</tr></thead>
@@ -72,26 +76,26 @@ export function DraftPanel({ draft, draftDay, teamsById, myTeam, staff, scoutKno
               <div style={{ fontSize: 12, color: "var(--gold)", marginBottom: 6 }}>LOTERIE</div>
               {draft.lottery.draws.map((d) => (
                 <div key={d.pick} style={{ fontSize: 12, padding: "2px 0" }}>
-                  Choix n° {d.pick} : <strong>{teamsById[d.winner].name}</strong> <span style={{ color: "var(--iceMuted)" }}>({d.from}e pire dossier)</span>
-                  {d.movedTo && <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{teamsById[d.drawn].name}, tirée au sort, ne peut monter que de 10 rangs : elle passe au {d.movedTo}e choix.</div>}
+                  Choix n° {d.pick} : <strong><TeamLink team={teamsById[d.winner]} onSelect={onSelectTeam} /></strong> <span style={{ color: "var(--iceMuted)" }}>({d.from}e pire dossier)</span>
+                  {d.movedTo && <div style={{ fontSize: 11, color: "var(--iceMuted)" }}><TeamLink team={teamsById[d.drawn]} onSelect={onSelectTeam} />, tirée au sort, ne peut monter que de 10 rangs : elle passe au {d.movedTo}e choix.</div>}
                 </div>
               ))}
-              {draft.lottery.ineligible?.length > 0 && <div style={{ fontSize: 11, color: "var(--loss)", marginTop: 6 }}>Exclues des tirages (2 loteries gagnées en 5 ans) : {draft.lottery.ineligible.map((id) => teamsById[id].name).join(", ")}</div>}
+              {draft.lottery.ineligible?.length > 0 && <div style={{ fontSize: 11, color: "var(--loss)", marginTop: 6 }}>Exclues des tirages (2 loteries gagnées en 5 ans) : {draft.lottery.ineligible.map((id) => <TeamLink key={id} team={teamsById[id]} onSelect={onSelectTeam} style={{ marginRight: 4 }} />)}</div>}
               <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6 }}>16 équipes hors séries, 2 tirages, chances de 18,5 % (pire dossier) à 0,5 %. Montée maximale de 10 rangs. Une équipe ne peut gagner plus de 2 loteries en 5 ans.</div>
             </div>
           )}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 6 }}>MA LISTE ({listAvailable.length} disponible{listAvailable.length > 1 ? "s" : ""})</div>
           {listAvailable.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 12 }}>Liste vide ou épuisée : tes choix automatiques suivent le classement de ton dépisteur. Prépare ta liste dans l'onglet Dépistage.</div>}
           {listAvailable.slice(0, 8).map((p, i) => (
-            <div key={p.id} onClick={() => onSelectPlayer(p, null)} style={{ fontSize: 12, padding: "3px 0", cursor: "pointer" }}><span style={{ color: "var(--gold)", fontWeight: 700 }}>{i + 1}.</span> {p.name} <span style={{ color: "var(--iceMuted)" }}>({p.pos}, {MINOR_LEAGUES[p.league]?.short})</span></div>
+            <div key={p.id} style={{ fontSize: 12, padding: "3px 0" }}><span style={{ color: "var(--gold)", fontWeight: 700 }}>{i + 1}.</span> <PlayerLink player={p} onSelect={(pl) => onSelectPlayer(pl, null)} /> <span style={{ color: "var(--iceMuted)" }}>({p.pos}, {MINOR_LEAGUES[p.league]?.short})</span></div>
           ))}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", margin: "14px 0 6px" }}>TES CHOIX</div>
           {myPicks.map((k) => { const p = k.playerId && draft.pool.find((x) => x.id === k.playerId); return (
-            <div key={k.overall} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #ffffff11" }}>R{k.round} · #{k.overall}{k.origTeamId && k.origTeamId !== myTeam.id ? <span style={{ color: "var(--gold)", fontSize: 11 }}> (choix de {teamsById[k.origTeamId]?.name})</span> : ""} — {p ? `${p.name} (${p.pos})` : <span style={{ color: "var(--iceMuted)" }}>à venir</span>}</div>
+            <div key={k.overall} style={{ fontSize: 13, padding: "4px 0", borderBottom: "1px solid #ffffff11" }}>R{k.round} · #{k.overall}{k.origTeamId && k.origTeamId !== myTeam.id ? <span style={{ color: "var(--gold)", fontSize: 11 }}> (choix de <TeamLink team={teamsById[k.origTeamId]} onSelect={onSelectTeam} />)</span> : ""} — {p ? <><PlayerLink player={p} onSelect={(pl) => onSelectPlayer(pl, null)} /> ({p.pos})</> : <span style={{ color: "var(--iceMuted)" }}>à venir</span>}</div>
           ); })}
           <div style={{ fontSize: 12, color: "var(--iceMuted)", margin: "14px 0 6px" }}>DERNIERS CHOIX</div>
           {recent.map((k) => { const p = draft.pool.find((x) => x.id === k.playerId); return (
-            <div key={k.overall} style={{ fontSize: 12, padding: "3px 0" }}>#{k.overall} {teamsById[k.teamId].name} — {p?.name} ({p?.pos})</div>
+            <div key={k.overall} style={{ fontSize: 12, padding: "3px 0" }}>#{k.overall} <TeamLink team={teamsById[k.teamId]} onSelect={onSelectTeam} /> — {p ? <PlayerLink player={p} onSelect={(pl) => onSelectPlayer(pl, null)} /> : "?"} ({p?.pos})</div>
           ); })}
           <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 12 }}>Ordre : équipes hors séries (pire dossier d'abord, sauf les 2 choix de la loterie), puis selon la ronde d'élimination ; champion en dernier. Les joueurs repêchés rejoignent le club-école avec un contrat d'entrée (3 ans, 950 k$).</div>
         </div>

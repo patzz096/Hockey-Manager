@@ -106,6 +106,23 @@ export function PlayerLink({ player, team, onSelect, onContextMenu, children, st
   );
 }
 
+// Nom d'équipe cliquable : ouvre la fiche d'équipe (TeamRosterModal), où qu'il soit affiché.
+export function TeamLink({ team, onSelect, children, style }) {
+  if (!team) return <span style={style}>{children ?? "?"}</span>;
+  if (!onSelect) return <span style={style}>{children ?? team.name}</span>;
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSelect(team.id); }}
+      onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onSelect(team.id); } }}
+      style={{ cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3, ...style }}
+    >
+      {children ?? team.name}
+    </span>
+  );
+}
+
 // Bouton à confirmation intégrée (deux clics) : les fenêtres confirm() sont bloquées dans
 // certains lecteurs (artefacts Claude).
 export function ConfirmButton({ label, confirmLabel, color, onConfirm, small = false, title }) {

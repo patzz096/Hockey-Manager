@@ -1,25 +1,31 @@
+import { useState } from "react";
 import { formatDay } from "../engine/calendar";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { MINOR_LEAGUES } from "../engine/minorLeagues";
 import { draftLabel } from "../ui/format";
-import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
+import { h2Style, btnStyle, scoutQualityColor, inputStyle } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 
 export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendingScouts, onSelectPlayer, onRequestScout, onCancelScout, onContextMenu, freeAgents, txWindow = { open: true } }) {
   const [fak, fad, faToggle] = useSort("ovr");
+  const [filter, setFilter] = useState("");
   const faAcc = (p, key) => {
     if (key === "draft") return p.draftPick || 9999;
     if (key === "ovr") { const info = getScoutInfo(p, null, myTeamId, staff, scoutKnowledge); return info.known ? perceivedRatings(p, info).ovr : -1; }
     return p[key];
   };
-  const sortedFreeAgents = sortRows(freeAgents, fak, fad, faAcc);
+  const filteredFreeAgents = freeAgents.filter((p) => p.name.toLowerCase().includes(filter.toLowerCase()));
+  const sortedFreeAgents = sortRows(filteredFreeAgents, fak, fad, faAcc);
   const benchmark = teamOvrBenchmark(myTeam);
   return (
     <div>
-      <h2 style={h2Style}>Agents libres</h2>
-      <p style={{ fontSize: 12, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)", marginTop: -8, marginBottom: 12 }}>{txWindow.open ? "Joueurs sans contrat. Clique un joueur pour le dépister ou lui offrir un contrat depuis son profil." : txWindow.reason}</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <h2 style={{ ...h2Style, marginBottom: 0 }}>Agents libres</h2>
+        <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrer par nom..." style={{ ...inputStyle, width: 200 }} />
+      </div>
+      <p style={{ fontSize: 12, color: txWindow.open ? "var(--iceMuted)" : "var(--loss)", marginTop: 6, marginBottom: 12 }}>{txWindow.open ? "Joueurs sans contrat. Clique un joueur pour le dépister ou lui offrir un contrat depuis son profil." : txWindow.reason}</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
         <thead><tr>
           <SortTh label="Joueur" sortKey="name" activeKey={fak} activeDir={fad} onSort={faToggle} />

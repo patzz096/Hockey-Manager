@@ -1,14 +1,16 @@
-import { h2Style } from "../ui/theme";
+import { useState } from "react";
+import { h2Style, inputStyle } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
-import { SortTh, PlayerLink, TeamCrest } from "./common";
+import { SortTh, PlayerLink, TeamCrest, TeamLink } from "./common";
 
 const ratingColor = (v) => (v == null ? "var(--iceMuted)" : v >= 7 ? "var(--win)" : v >= 5.5 ? "var(--gold)" : v >= 4 ? "var(--iceMuted)" : "var(--loss)");
 const fmt = (v) => (v == null ? "—" : v.toFixed(1));
 
 // Cotes de performance sur 10 des matchs préparatoires (présaison) : utile pour juger l'effectif
 // avant que la saison régulière ne compte pour vrai — voir engine/stats.js ratingsOf.
-export function PreseasonRatings({ ratings, onSelectPlayer }) {
+export function PreseasonRatings({ ratings, onSelectPlayer, onSelectTeam }) {
   const [sortKey, sortDir, toggleSort] = useSort("overall");
+  const [filter, setFilter] = useState("");
   const accessor = (r, key) => {
     if (key === "name") return r.player.name;
     if (key === "team") return r.team.name;
@@ -18,11 +20,15 @@ export function PreseasonRatings({ ratings, onSelectPlayer }) {
     if (key === "overall") return r.overall;
     return 0;
   };
-  const sorted = sortRows(ratings, sortKey, sortDir, accessor);
+  const filtered = ratings.filter((r) => r.player.name.toLowerCase().includes(filter.toLowerCase()));
+  const sorted = sortRows(filtered, sortKey, sortDir, accessor);
   return (
     <div>
-      <h2 style={h2Style}>Cotes de la présaison</h2>
-      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: -8, marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <h2 style={{ ...h2Style, marginBottom: 0 }}>Cotes de la présaison</h2>
+        {ratings.length > 15 && <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filtrer par nom..." style={{ ...inputStyle, width: 200 }} />}
+      </div>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 14 }}>
         Rendement sur 10 dans les matchs préparatoires, avant que la saison régulière ne commence à compter pour vrai. 5/10 = rendement moyen. Les gardiens sont notés sur leur fiche de décisions seulement (aucun suivi des arrêts par joueur).
       </p>
       {ratings.length === 0 ? (
@@ -41,7 +47,7 @@ export function PreseasonRatings({ ratings, onSelectPlayer }) {
             {sorted.map((r) => (
               <tr key={r.player.id} style={{ borderBottom: "1px solid #ffffff11" }}>
                 <td style={{ padding: "6px 10px" }}><PlayerLink player={r.player} team={r.team} onSelect={onSelectPlayer} /></td>
-                <td style={{ padding: "6px 10px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><TeamCrest team={r.team} size={18} />{r.team.name}</span></td>
+                <td style={{ padding: "6px 10px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><TeamCrest team={r.team} size={18} /><TeamLink team={r.team} onSelect={onSelectTeam} /></span></td>
                 <td style={{ padding: "6px 10px" }}>{r.gp}</td>
                 <td style={{ padding: "6px 10px", color: ratingColor(r.off), fontWeight: 600 }}>{fmt(r.off)}</td>
                 <td style={{ padding: "6px 10px", color: ratingColor(r.def), fontWeight: 600 }}>{fmt(r.def)}</td>
