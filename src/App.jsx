@@ -1671,7 +1671,6 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
 
   // ---------- Nouvelle saison ----------
   function startNewSeason() {
-    console.log("DIAG startNewSeason called, seasonYear=", seasonYear);
     const my = standings.find((x) => x.id === myTeamId);
     setHistory((prev) => [{ year: seasonYear, champion: playoffs?.champion ? teamsById[playoffs.champion].name : "—", presidents: teamsById[standings[0].id].name, myRecord: my ? `${my.w}-${my.l}-${my.otl}, ${my.pts} pts (${standings.indexOf(my) + 1}e)` : "—", topScorer: leaders[0] ? `${leaders[0].player.name} (${leaders[0].pts} pts)` : "—" }, ...prev]);
     setCareerStats((prev) => {
