@@ -42,6 +42,10 @@ const CLUBS = {
   CZE: ["Sparta Prague", "HC Pardubice", "Oceláři Třinec", "Kometa Brno", "HC Plzeň", "Mountfield HK"],
   NL: ["ZSC Lions", "HC Davos", "Genève-Servette", "Lausanne HC", "EV Zug", "SC Berne"],
   DEL: ["Eisbären Berlin", "Adler Mannheim", "Red Bull Munich", "Kölner Haie", "Grizzlys Wolfsburg", "Straubing Tigers"],
+  // Club-écoles réels de la LAH, sans lien avec une équipe LNH précise ici — utilisé seulement
+  // pour un agent libre sans contrat (voir assignFreeAgentLeague), pas pour un club-école
+  // d'équipe (qui garde son vrai nom, "Club-école de X" ou REAL_FARMS).
+  AHL: ["Bears de Hershey", "Marlies de Toronto", "Moose du Manitoba", "Crunch de Syracuse", "Checkers de Charlotte", "Barracuda de San Jose", "Admirals de Milwaukee", "Wolves de Chicago", "Comets d'Utica", "Gulls de San Diego"],
 };
 
 // Zones de dépistage (à la FM) : chaque zone regroupe des ligues ; « pro » couvre la LNH et la LAH.
@@ -77,6 +81,25 @@ export function assignJuniorLeague(player, rng = seededRandom(hash(player.id))) 
     case "CH": league = "NL"; break;
     case "DE": league = r < 0.8 ? "DEL" : "OHL"; break;
     default: league = "OHL";
+  }
+  return { league, club: pick(CLUBS[league], rng) };
+}
+
+// Ligue d'un agent libre (joueur adulte, hors contrat LNH) le temps qu'il reste sans équipe :
+// pro plutôt que junior (LAH, Europe, KHL selon la nationalité), pour qu'il ait des statistiques
+// de saison à montrer — voir App.jsx minorLine, même mécanisme que pour un espoir du repêchage
+// (utile pour décider qui dépister/signer, pas seulement sa cote déjà connue).
+export function assignFreeAgentLeague(player, rng = seededRandom(hash(player.id))) {
+  const r = rng();
+  let league;
+  switch (player.nationality) {
+    case "SE": league = r < 0.55 ? "SHL" : "AHL"; break;
+    case "FI": league = r < 0.55 ? "LIIGA" : "AHL"; break;
+    case "RU": league = r < 0.6 ? "KHL" : "AHL"; break;
+    case "CZ": case "SK": league = r < 0.5 ? "CZE" : "AHL"; break;
+    case "CH": league = r < 0.7 ? "NL" : "AHL"; break;
+    case "DE": league = r < 0.6 ? "DEL" : "AHL"; break;
+    default: league = "AHL";
   }
   return { league, club: pick(CLUBS[league], rng) };
 }

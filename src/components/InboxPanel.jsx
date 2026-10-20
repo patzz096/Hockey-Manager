@@ -34,7 +34,9 @@ function groupThreads(messages) {
     byFrom.get(m.from).push(m);
   });
   return [...byFrom.entries()].map(([from, msgs]) => {
-    const sorted = [...msgs].sort((a, b) => (a.day ?? 0) - (b.day ?? 0) || a.id.localeCompare(b.id));
+    // Le plus récent en premier (pas l'ordre façon chat classique) : on veut voir l'état le plus
+    // à jour d'un fil sans défiler, surtout utile pour un DG qui recoupe plusieurs conversations.
+    const sorted = [...msgs].sort((a, b) => (b.day ?? 0) - (a.day ?? 0) || b.id.localeCompare(a.id));
     const last = msgs[0]; // messages déjà triées du plus récent au plus vieux (voir App.jsx addMessage)
     return { from, messages: sorted, last, unread: msgs.filter((m) => !m.read).length, category: last.category };
   }).sort((a, b) => (b.last.day ?? 0) - (a.last.day ?? 0) || b.last.id.localeCompare(a.last.id));

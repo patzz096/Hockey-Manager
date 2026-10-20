@@ -968,7 +968,10 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   }
   // Ligne de statistiques de la saison en cours dans une ligue mineure (simulation rapide).
   function minorLine(player) {
-    if (!player || !(player.draftProspect || player.level === "LAH")) return null;
+    // Agent libre (sans contrat, voir engine/minorLeagues.js assignFreeAgentLeague) : même
+    // mécanisme que pour un espoir du repêchage, pour l'aider à décider qui signer/dépister.
+    const isFreeAgent = player && !player.contract && player.league;
+    if (!player || !(player.draftProspect || player.level === "LAH" || isFreeAgent)) return null;
     const owner = Object.keys(farmByTeam).find((id) => farmByTeam[id].some((p) => p.id === player.id));
     const lg = leagueOf(player, owner ? teamsById[owner]?.name : null);
     if (!lg) return null;

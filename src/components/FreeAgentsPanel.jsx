@@ -1,6 +1,7 @@
 import { formatDay } from "../engine/calendar";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
+import { MINOR_LEAGUES } from "../engine/minorLeagues";
 import { draftLabel } from "../ui/format";
 import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
@@ -26,6 +27,7 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
           <SortTh label="Âge" sortKey="age" activeKey={fak} activeDir={fad} onSort={faToggle} />
           <SortTh label="Cote" sortKey="ovr" activeKey={fak} activeDir={fad} onSort={faToggle} />
           <SortTh label="Repêché" sortKey="draft" activeKey={fak} activeDir={fad} onSort={faToggle} />
+          <th style={{ textAlign: "left", padding: "7px 10px", fontSize: 11, color: "var(--iceMuted)", fontWeight: 500 }}>Ligue actuelle</th>
           <th style={{ textAlign: "left", padding: "7px 10px", fontSize: 11, color: "var(--iceMuted)", fontWeight: 500 }}>Dépistage</th>
         </tr></thead>
         <tbody>
@@ -39,6 +41,7 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
               <td style={{ padding: "7px 10px" }}>{p.age}</td>
               <td style={{ padding: "7px 10px" }}>{scoutInfo.known ? <StarRating value={starsFor(perceivedRatings(p, scoutInfo).ovr, benchmark)} size={12} color={scoutQualityColor(scoutInfo.quality)} /> : pending ? <span style={{ fontSize: 11, color: "var(--gold)" }}>Dépistage · {formatDay(pending.dueDay)}</span> : <span style={{ fontSize: 11, color: "var(--iceMuted)" }}>Non dépisté</span>}</td>
               <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{scoutInfo.known ? draftLabel(p) : "?"}</td>
+              <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{p.league ? `${MINOR_LEAGUES[p.league]?.short || p.league}${p.club ? ` (${p.club})` : ""}` : "—"}</td>
               <td style={{ padding: "7px 10px" }}>
                 {!scoutInfo.known && onRequestScout && (pending
                   ? <button onClick={() => onCancelScout(p.id)} style={{ ...btnStyle("var(--steel)"), fontSize: 11, padding: "3px 9px" }}>Annuler</button>
@@ -47,7 +50,7 @@ export function FreeAgentsPanel({ myTeam, myTeamId, staff, scoutKnowledge, pendi
             </tr>
             );
           })}
-          {sortedFreeAgents.length === 0 && <tr><td colSpan={6} style={{ padding: 12, color: "var(--iceMuted)" }}>Marché des joueurs autonomes vide.</td></tr>}
+          {sortedFreeAgents.length === 0 && <tr><td colSpan={7} style={{ padding: 12, color: "var(--iceMuted)" }}>Marché des joueurs autonomes vide.</td></tr>}
         </tbody>
       </table>
     </div>

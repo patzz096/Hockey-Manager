@@ -3,6 +3,7 @@ import { OFFENSIVE, DEFENSIVE, MENTAL, PHYSICAL, GOALIE_TECH, GOALIE_PHYSICAL, c
 import { CURRENT_YEAR, randomContract } from "./contracts";
 import { randAttr } from "./random";
 import { BASE_CONDITION } from "./training";
+import { assignFreeAgentLeague } from "./minorLeagues";
 
 // Condition physique de départ (engine/training.js) : centrée sur BASE_CONDITION pour ne pas
 // biaiser le calibrage moyen de la ligue (voir tests/simulation-calibration.test.js).
@@ -32,7 +33,8 @@ export function buildRealFreeAgents(data, rng) {
     allAttrs.forEach((a) => { attrs[a] = (d.attrs && d.attrs[a] != null) ? d.attrs[a] : 60; });
     const ovr = computeOvr(d.pos, attrs);
     const potential = d.potential != null ? Math.max(ovr, Math.min(99, d.potential)) : Math.min(99, ovr + (d.age <= 22 ? 10 : d.age <= 26 ? 4 : 0));
-    return { id: `FA-real-${i}`, name: d.name, pos: d.pos, age: d.age, nationality: d.nationality, attrs, ovr, potential, contract: null, condition: randomCondition(rng) };
+    const p = { id: `FA-real-${i}`, name: d.name, pos: d.pos, age: d.age, nationality: d.nationality, attrs, ovr, potential, contract: null, condition: randomCondition(rng) };
+    return { ...p, ...assignFreeAgentLeague(p, rng) };
   }).sort((a, b) => b.ovr - a.ovr);
 }
 
@@ -107,7 +109,8 @@ export function buildFreeAgentPool(rng, count = 16) {
     const age = Math.round(19 + rng() * 14);
     const ovr = computeOvr(pos, attrs);
     const potential = Math.min(99, ovr + potentialCeiling(age, rng));
-    list.push({ id: `FA-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: null, nationality: pickNationality(rng), condition: randomCondition(rng) });
+    const p = { id: `FA-${i}`, name: `${fn} ${ln}`, pos, age, attrs, ovr, potential, contract: null, nationality: pickNationality(rng), condition: randomCondition(rng) };
+    list.push({ ...p, ...assignFreeAgentLeague(p, rng) });
   }
   return list;
 }
