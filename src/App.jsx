@@ -26,7 +26,7 @@ import { STAFF_ROLES, buildStaffMarketRT, evaluateStaffOffer, MAX_STAFF_OFFER_AT
 import { scoutOptions, scoutingDelay, createScoutReport, staffViewPlayer, getScoutInfo } from "./engine/scouting";
 import { BASE_CONDITION, DEFAULT_FOCUS, autoTrainingFocus, autoTrainingSessions, applyWeeklyCondition, applyWeeklyCohesion, resetCohesion, strategySignature, applyGameFatigue, developPlayer } from "./engine/training";
 import { bestStrategy, normalizeStrategy } from "./engine/strategy";
-import { VARS, FONT_IMPORT, h2Style, btnStyle, selectStyle } from "./ui/theme";
+import { VARS, FONT_IMPORT, h2Style, btnStyle, selectStyle, ACTION_PRIMARY, ACTION_SPECIAL } from "./ui/theme";
 import { money } from "./ui/format";
 import { ContractOfferModal } from "./components/ContractOfferModal";
 import { ContractsPanel } from "./components/ContractsPanel";
@@ -1860,10 +1860,16 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 40, margin: "0 0 8px" }}>{showCustomization ? "Personnalisation" : wantsTeamSelect ? "Choisis ton équipe" : "Menu principal"}</h1>
             <div style={{ display: "flex", gap: 8 }}>
-              {myTeamId && wantsMenu && <button onClick={() => setShowMainMenu(false)} style={btnStyle("var(--win)")}>Continuer cette franchise</button>}
+              {myTeamId && wantsMenu && <button onClick={() => setShowMainMenu(false)} style={btnStyle(...ACTION_PRIMARY)}>Continuer cette franchise</button>}
               {showCustomization && <button onClick={() => setShowCustomization(false)} style={btnStyle("var(--steel)")}><Palette size={14} /> Retour</button>}
             </div>
           </div>
+          {wantsMenu && (
+            <>
+              <div style={{ height: 3, width: 64, background: "linear-gradient(90deg, var(--accent), var(--gold))", borderRadius: 2, margin: "2px 0 14px" }} />
+              <p style={{ color: "var(--iceMuted)", fontSize: 14, maxWidth: 460, marginBottom: 6 }}>{myTeamId ? "Ta franchise t'attend, ou commence/charge-en une autre ci-dessous." : "Gère tes trios, négocie tes contrats et mène ta franchise saison après saison."}</p>
+            </>
+          )}
           {showCustomization ? (
             <div style={{ marginTop: 16 }}>
               <CustomizationPanel teams={teams} farmByTeam={farmByTeam} inGame={!!myTeamId} onNewGame={() => { setShowCustomization(false); setShowMainMenu(false); setShowTeamSelect(false); onNewGame?.(); }} onSwitchFranchise={(id) => { setShowCustomization(false); setShowMainMenu(false); onSwitchFranchise?.(id); }} onExportSave={exportSave} onImportSave={importSave} />
@@ -1891,10 +1897,22 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
             })}
           </div>
           </>) : (
-            <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 12, maxWidth: 420 }}>
-              <button onClick={() => setShowCustomization(true)} style={{ ...btnStyle("var(--win)"), justifyContent: "flex-start", padding: "16px 18px", fontSize: 15 }}><FolderOpen size={18} /> Charger une franchise</button>
-              <button onClick={() => (myTeamId ? onNewGame?.() : setShowTeamSelect(true))} style={{ ...btnStyle("var(--red)"), justifyContent: "flex-start", padding: "16px 18px", fontSize: 15 }}><Play size={18} /> Nouvelle franchise</button>
-              <button onClick={() => setShowCustomization(true)} style={{ ...btnStyle("var(--steel)"), justifyContent: "flex-start", padding: "16px 18px", fontSize: 15 }}><Palette size={18} /> Personnalisation</button>
+            <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 14, maxWidth: 460 }}>
+              {[
+                { key: "load", icon: FolderOpen, title: "Charger une franchise", desc: "Reprends une partie déjà commencée.", color: "var(--accent)", onClick: () => setShowCustomization(true) },
+                { key: "new", icon: Play, title: "Nouvelle franchise", desc: "Choisis une équipe et prends-en les commandes.", color: "var(--gold)", onClick: () => (myTeamId ? onNewGame?.() : setShowTeamSelect(true)) },
+                { key: "custom", icon: Palette, title: "Personnalisation", desc: "Alignements, logos, facepack, club-école.", color: "var(--steel)", onClick: () => setShowCustomization(true) },
+              ].map(({ key, icon: Icon, title: cardTitle, desc, color, onClick }) => (
+                <button key={key} className="team-card" onClick={onClick} style={{ "--team": color, display: "flex", alignItems: "center", gap: 16, textAlign: "left", background: `linear-gradient(135deg, ${color}1a, var(--navy2) 60%)`, border: `1px solid ${color}44`, borderLeft: `4px solid ${color}`, borderRadius: 10, padding: "16px 20px", color: "var(--ice)", cursor: "pointer" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 10, background: `${color}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Icon size={22} color={color} />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 17 }}>{cardTitle}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--iceMuted)", marginTop: 2 }}>{desc}</div>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -2022,19 +2040,19 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(phase === "regular" || phase === "preseason") && <>
-              <button onClick={simDay} disabled={!!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler la journée</button>
+              <button onClick={simDay} disabled={!!liveMatch} style={btnStyle(...ACTION_PRIMARY)}><Play size={14} /> Simuler la journée</button>
               <button onClick={simToSeasonEnd} disabled={!!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> {phase === "preseason" ? "Simuler la présaison" : "Simuler la saison"}</button>
             </>}
-            {phase === "endRegular" && <button onClick={startPlayoffs} style={btnStyle("var(--red)")}><Award size={14} /> Commencer les séries</button>}
+            {phase === "endRegular" && <button onClick={startPlayoffs} style={btnStyle(...ACTION_PRIMARY)}><Award size={14} /> Commencer les séries</button>}
             {phase === "playoffs" && <>
-              <button onClick={() => simPlayoffDay(false)} disabled={!!liveMatch} style={btnStyle("var(--red)")}><Play size={14} /> Simuler une journée des séries</button>
+              <button onClick={() => simPlayoffDay(false)} disabled={!!liveMatch} style={btnStyle(...ACTION_PRIMARY)}><Play size={14} /> Simuler une journée des séries</button>
               <button onClick={() => simPlayoffDay(true)} disabled={!!liveMatch} style={btnStyle("var(--steel)")}><FastForward size={14} /> Simuler les séries au complet</button>
             </>}
-            {phase === "preDraft" && <button onClick={goToDraft} style={btnStyle("var(--red)")}><ListOrdered size={14} /> Aller au repêchage ({formatDay(dates.draft)})</button>}
-            {phase === "draft" && <button onClick={() => setTab("draft")} style={btnStyle("var(--red)")}><ListOrdered size={14} /> Repêchage en cours</button>}
-            {phase === "preFreeAgency" && <button onClick={goToFreeAgency} style={btnStyle("var(--red)")}><UserPlus size={14} /> Avancer au 1er juillet (agents libres)</button>}
-            {phase === "offseason" && <button onClick={startNewSeason} style={btnStyle("var(--red)")}><Play size={14} /> Commencer la saison {seasonYear + 1}-{seasonYear + 2}</button>}
-            {nextMyGame && !liveMatch && <button onClick={() => startLiveMatch(nextMyGame)} style={btnStyle("var(--win)")}>Sim en direct (mon prochain match)</button>}
+            {phase === "preDraft" && <button onClick={goToDraft} style={btnStyle(...ACTION_PRIMARY)}><ListOrdered size={14} /> Aller au repêchage ({formatDay(dates.draft)})</button>}
+            {phase === "draft" && <button onClick={() => setTab("draft")} style={btnStyle(...ACTION_PRIMARY)}><ListOrdered size={14} /> Repêchage en cours</button>}
+            {phase === "preFreeAgency" && <button onClick={goToFreeAgency} style={btnStyle(...ACTION_PRIMARY)}><UserPlus size={14} /> Avancer au 1er juillet (agents libres)</button>}
+            {phase === "offseason" && <button onClick={startNewSeason} style={btnStyle(...ACTION_PRIMARY)}><Play size={14} /> Commencer la saison {seasonYear + 1}-{seasonYear + 2}</button>}
+            {nextMyGame && !liveMatch && <button onClick={() => startLiveMatch(nextMyGame)} style={btnStyle(...ACTION_SPECIAL)}>Sim en direct (mon prochain match)</button>}
           </div>
         </div>
 

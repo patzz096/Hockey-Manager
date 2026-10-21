@@ -21,17 +21,24 @@ export const BODY_FONT = "Barlow, 'Segoe UI', system-ui, sans-serif";
 export const h2Style = { fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 22, letterSpacing: 0.3, marginBottom: 14 };
 
 // Bouton « de jeu » : relief léger, se soulève au survol et s'enfonce au clic (voir global.css).
-export function btnStyle(bg) {
+// `color` : texte du bouton — blanc par défaut (fonds foncés : red/steel/win), à passer en
+// "#06141F" pour un fond clair (accent, gold) où le blanc manquerait de contraste.
+export function btnStyle(bg, color = "#fff") {
   return {
     display: "flex", alignItems: "center", gap: 6,
     background: bg,
     backgroundImage: "linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 55%, rgba(0,0,0,0.12))",
-    color: "#fff", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 7,
+    color, border: "1px solid rgba(255,255,255,0.10)", borderRadius: 7,
     padding: "9px 15px", fontSize: 13, fontWeight: 600, letterSpacing: 0.2,
     fontFamily: BODY_FONT, cursor: "pointer",
     boxShadow: "0 2px 0 rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18)",
   };
 }
+// Couleurs d'action cohérentes (plutôt que rouge/acier/vert façon feu de circulation) : accent
+// pour l'action principale (faire avancer la partie), acier pour une alternative secondaire, or
+// pour une action spéciale/mise en valeur (sim en direct). Texte foncé sur accent/or (fonds clairs).
+export const ACTION_PRIMARY = ["var(--accent)", "#06141F"];
+export const ACTION_SPECIAL = ["var(--gold)", "#06141F"];
 
 export function ratingColor(val) { return val >= 85 ? "var(--win)" : val >= 65 ? "var(--gold)" : "var(--loss)"; }
 
