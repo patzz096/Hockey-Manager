@@ -6,7 +6,7 @@ import { lineLabel } from "../engine/lines";
 import { formatDay } from "../engine/calendar";
 import { ROLES, naturalRole, roleFit, roleOf } from "../engine/roles";
 import { getScoutInfo, perceivedRatings, scoutOptions, scoutingDelay, overallEstimate, reliabilityLabel } from "../engine/scouting";
-import { contractLabel, draftLabel } from "../ui/format";
+import { contractLabel, draftLabel, formatHeight, formatWeight } from "../ui/format";
 import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
 import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge, ConfirmButton } from "./common";
 import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
@@ -218,7 +218,7 @@ function ActionsPanel({ actions, known, onClose }) {
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, extraScouts = [], myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [], minorLine = null, onRushReturn = null }) {
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, extraScouts = [], myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [], minorLine = null, onRushReturn = null, units = "metric" }) {
   const [tab, setTab] = useState("profile");
   // Échap ferme le profil.
   useEffect(() => {
@@ -314,8 +314,8 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: "2px 12px", fontSize: 12, margin: "16px 0 18px", color: "var(--iceMuted)" }}>
               <div>Nationalité <span style={{ color: "var(--ice)" }}>{NATION_FLAG[player.nationality] || ""} {NATION_NAME[player.nationality] || "—"}</span></div>
               <div>Tire <span style={{ color: "var(--ice)" }}>{bio.shoots}</span></div>
-              <div>Taille <span style={{ color: "var(--ice)" }}>{bio.heightCm} cm</span></div>
-              <div>Poids <span style={{ color: "var(--ice)" }}>{bio.weightKg} kg</span></div>
+              <div>Taille <span style={{ color: "var(--ice)" }}>{formatHeight(bio.heightCm, units)}</span></div>
+              <div>Poids <span style={{ color: "var(--ice)" }}>{formatWeight(bio.weightKg, units)}</span></div>
               <div>Forme <span style={{ color: "var(--win)" }}>Bonne</span></div>
             </div>
           )}
@@ -380,7 +380,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
             </div>
           )}
           <FacePicker player={player} />
-          {editable && (
+          {editable && onEdit && (
             <button onClick={() => onEdit(player)} style={{ ...btnStyle("var(--steel)"), width: "100%", justifyContent: "center" }}>Modifier ce joueur</button>
           )}
           </>)}

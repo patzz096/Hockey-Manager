@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useCustomization } from "../custom/CustomizationContext";
 import { exportLeagueDb } from "../custom/rosterFile";
-import { buildPack, parsePackFile, exportSheetCsv } from "../custom/pack";
+import { buildPack, parsePackFile, exportSheetCsv, parseDraftClassCsv, exportDraftClassCsv } from "../custom/pack";
+import { FIRST_SEASON } from "../engine/calendar";
 import { listFranchises, deleteFranchise } from "../engine/gameSave";
 import { saveFile } from "../ui/saveFile";
 import { faceKeys } from "../custom/images";
@@ -83,6 +84,22 @@ export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, 
   async function exportCsv() {
     const r = await saveFile("hockey-gm-alignements.csv", exportSheetCsv(teams, farmByTeam), "text/csv");
     setStatus(r === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: "CSV enregistré : ouvre-le dans Excel, LibreOffice ou Google Sheets (une ligne par joueur et par club-école, salaires en millions), puis réimporte-le ici." });
+  }
+  const draftClasses = c.rosterDb?.draftClasses || {};
+  const draftYears = Object.keys(draftClasses).map(Number).sort((a, b) => a - b);
+  async function importDraftClasses(files) {
+    try {
+      const parsed = parseDraftClassCsv(await files[0].text());
+      if (!Object.keys(parsed).length) throw new Error("aucune ligne valide (colonnes attendues : annee, rang, nom, position, nationalite).");
+      await c.saveDraftClasses({ ...draftClasses, ...parsed });
+      setStatus({ ok: true, text: `${Object.keys(parsed).length} cuvée${Object.keys(parsed).length > 1 ? "s" : ""} de repêchage personnalisée${Object.keys(parsed).length > 1 ? "s" : ""} importée${Object.keys(parsed).length > 1 ? "s" : ""} (${Object.entries(parsed).map(([y, l]) => `${y} : ${l.length}`).join(", ")}).` });
+    } catch (e) {
+      setStatus({ ok: false, text: `Import impossible : ${e.message}` });
+    }
+  }
+  async function exportDraftClasses() {
+    const r = await saveFile("hockey-gm-classes-repechage.csv", exportDraftClassCsv(draftClasses), "text/csv");
+    setStatus(r === "declined" ? { ok: false, text: "Enregistrement annulé." } : { ok: true, text: "CSV enregistré : une ligne par espoir (annee, rang, nom, position, nationalite), puis réimporte-le ici." });
   }
   function setTeamField(id, field, value) {
     c.saveTeamInfo({ ...info, [id]: { ...(info[id] || {}), [field]: value } });
@@ -175,6 +192,21 @@ export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, 
           {onNewGame && (inGame
             ? <ConfirmButton label="Nouvelle partie avec cette base" confirmLabel="Confirmer : la partie en cours sera perdue" color="var(--win)" onConfirm={onNewGame} />
             : <button onClick={onNewGame} style={{ ...btnStyle("var(--win)"), fontSize: 12 }}>Appliquer la base</button>)}
+        </div>
+      </div>
+
+      <div style={section}>
+        <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Classes de repêchage personnalisées</div>
+        <div style={{ ...hint, marginBottom: 10 }}>
+          Remplace la cuvée générée aléatoirement une année donnée par une liste d'espoirs de ton cru (comme les classes de recrues NCAA Football à l'époque). CSV distinct de l'alignement : une ligne par espoir — <code>annee</code> (année moteur où cette cuvée devient le repêchage, ex. {FIRST_SEASON + 9} pour la 10e saison de franchise, {FIRST_SEASON} = 1re), <code>rang</code> (1 = meilleur espoir, calibre son potentiel), <code>nom</code>, <code>position</code>, <code>nationalite</code>. Une année sans ligne reste générée comme avant.
+        </div>
+        <div style={{ ...hint, marginBottom: 10 }}>
+          Actuelles : <strong style={{ color: "var(--ice)" }}>{draftYears.length ? draftYears.map((y) => `${y} (${draftClasses[y].length})`).join(", ") : "aucune — toutes générées"}</strong>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <FileButton label="Importer un CSV de classe(s)" accept=".csv,text/csv" onFiles={importDraftClasses} color="var(--red)" />
+          {draftYears.length > 0 && <button onClick={exportDraftClasses} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Exporter en CSV</button>}
+          {draftYears.length > 0 && <ConfirmButton label="Revenir aux cuvées générées" confirmLabel="Confirmer" color="var(--loss)" onConfirm={() => c.saveDraftClasses({})} />}
         </div>
       </div>
 

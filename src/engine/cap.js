@@ -28,19 +28,22 @@ export function deadCapFor(entries = [], year) {
 }
 
 // opts : { dead: k$ de cap mort, relief: allègement LTIR (k$), ltirIds: joueurs en LTIR,
-//         buried: part des contrats à un volet envoyés dans la LAH qui compte encore (k$) }.
+//         buried: part des contrats à un volet envoyés dans la LAH qui compte encore (k$),
+//         capEnabled: false pour jouer sans plafond (réglage pré-franchise, App.jsx) — cap/floor
+//         restent affichés à titre indicatif, mais n'empêchent jamais rien }.
 export function capStatus(roster, year, opts = {}) {
   const cap = capFor(year), floor = floorFor(year);
   const dead = opts.dead || 0, relief = opts.relief || 0, buried = opts.buried || 0;
   const used = payroll(roster) + dead + buried;
-  const limit = cap + relief;
+  const limit = opts.capEnabled === false ? Infinity : cap + relief;
   const ltir = new Set(opts.ltirIds || []);
-  return { cap, floor, dead, buried, relief, limit, used, space: limit - used, overCap: used > limit, underFloor: used < floor, rosterSize: roster.filter((p) => !ltir.has(p.id)).length };
+  return { cap, floor, dead, buried, relief, limit, used, space: limit - used, overCap: opts.capEnabled !== false && used > limit, underFloor: opts.capEnabled !== false && used < floor, rosterSize: roster.filter((p) => !ltir.has(p.id)).length };
 }
 
 // Vérifie si l'alignement peut ajouter `addSalary` et retirer `removeSalary` (k$).
 // Une équipe déjà au-dessus du plafond peut seulement réduire sa masse salariale.
 export function fitsUnderCap(roster, year, addSalary, removeSalary = 0, opts = {}) {
+  if (opts.capEnabled === false) return true;
   const used = payroll(roster) + (opts.dead || 0) + (opts.buried || 0);
   const after = used + addSalary - removeSalary;
   return after <= capFor(year) + (opts.relief || 0) || after <= used;

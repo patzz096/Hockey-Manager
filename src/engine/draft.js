@@ -20,6 +20,18 @@ const REAL_DRAFT_CLASSES = {
   2027: DRAFT_2028_PROSPECTS, // repêchage de mai 2028
 };
 
+// Cuvées personnalisées (Personnalisation, « Classes de repêchage »), par année moteur — une
+// année absente ici retombe sur REAL_DRAFT_CLASSES puis, faute de classement, sur la génération
+// aléatoire (buildProspect). Un registre au niveau du module plutôt qu'un paramètre à faire
+// traverser tous les appels de ce fichier (createDraft, upcomingDraftClass, suggestions de
+// dépistage...) depuis App.jsx — appelé une fois par initLeague (engine/league.js) au lancement.
+const CUSTOM_DRAFT_CLASSES = new Map();
+export function setCustomDraftClasses(map) {
+  CUSTOM_DRAFT_CLASSES.clear();
+  classCache.clear();
+  Object.entries(map || {}).forEach(([year, list]) => { if (Array.isArray(list) && list.length) CUSTOM_DRAFT_CLASSES.set(Number(year), list); });
+}
+
 // Position principale d'un espoir réel : certaines entrées listent plusieurs postes ("C/LW") ou
 // restent génériques ("D", "F") faute de détail dans le classement source — désambiguïsé ici par
 // alternance déterministe (même rang → même choix d'une partie à l'autre).
@@ -48,7 +60,7 @@ function buildProspect(id, pos, nationality, age, talent, rng) {
 export function generateDraftClass(year, count) {
   const rng = seededRandom(1000 + year * 7);
   const list = [];
-  const real = REAL_DRAFT_CLASSES[year] || [];
+  const real = CUSTOM_DRAFT_CLASSES.get(year) || REAL_DRAFT_CLASSES[year] || [];
   for (let i = 0; i < count; i++) {
     if (i < real.length) {
       const r = real[i];

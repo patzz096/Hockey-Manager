@@ -16,7 +16,7 @@ function GameRoot() {
   const [savedGame, setSavedGame] = useState(undefined); // undefined = en cours de chargement
   useEffect(() => { loadSavedGame().then(setSavedGame); }, [gameKey]);
   if (!ready || savedGame === undefined) return <div style={{ background: "#0B1B2E", color: "#C7D2DD", minHeight: 600, padding: 40, fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif" }}>Chargement…</div>;
-  const custom = { teams: rosterDb?.teams || {}, farms: rosterDb?.farms || {}, teamInfo: mergeInfo(rosterDb?.teamInfo, teamInfo) };
+  const custom = { teams: rosterDb?.teams || {}, farms: rosterDb?.farms || {}, draftClasses: rosterDb?.draftClasses || {}, teamInfo: mergeInfo(rosterDb?.teamInfo, teamInfo) };
   async function startNewGame() {
     setSavedGame(undefined);
     await startNewFranchise();

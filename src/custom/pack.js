@@ -148,3 +148,28 @@ function parseSheetCsv(text) {
   if (Object.keys(farms).length) db.farms = parseRosterFile(JSON.stringify({ format: "hockey-gm-db", teams: farms, teamInfo: {} })).teams;
   return db;
 }
+
+// ------------------------ Classes de repêchage personnalisées ------------------------
+// Un CSV distinct (pas le même que l'alignement) : une ligne par espoir, « annee » = l'année
+// moteur où cette cuvée devient le repêchage de la saison morte (ex. 2035 pour la 10e franchise,
+// FIRST_SEASON=2026 + 9 — voir engine/calendar.js). « rang » calibre le potentiel généré
+// (1 = meilleur espoir) ; le reste des attributs reste procédural, comme pour les vraies cuvées
+// déjà fournies (src/data/draft2027.js) — voir engine/draft.js setCustomDraftClasses.
+const DRAFT_CSV_COLS = ["annee", "rang", "nom", "position", "nationalite"];
+export function exportDraftClassCsv(draftClasses) {
+  const rows = [DRAFT_CSV_COLS.join(";")];
+  Object.entries(draftClasses).forEach(([year, list]) => (list || []).forEach((p) => {
+    rows.push([year, p.rank, p.name, p.pos, p.nationality].map(esc).join(";"));
+  }));
+  return "﻿" + rows.join("\n");
+}
+export function parseDraftClassCsv(text) {
+  const out = {};
+  parseCsv(text).forEach((r) => {
+    const year = Number(r.annee);
+    if (!year || !r.nom) return;
+    (out[year] ||= []).push({ rank: Number(r.rang) || out[year]?.length + 1 || 1, name: r.nom, pos: String(r.position || "").toUpperCase(), nationality: r.nationalite || "CA" });
+  });
+  Object.values(out).forEach((list) => list.sort((a, b) => a.rank - b.rank));
+  return out;
+}

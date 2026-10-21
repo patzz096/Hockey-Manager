@@ -4,6 +4,7 @@ import { REAL_FARMS } from "../data/farms";
 import { TEAM_SEED } from "../data/teams";
 import { buildLines } from "./lines";
 import { buildRealRoster, buildRealFreeAgents, buildRealFarmRoster, buildRoster, buildFreeAgentPool, buildFarmRoster, assignDraftInfo } from "./players";
+import { setCustomDraftClasses } from "./draft";
 import { seededRandom } from "./random";
 import { buildStaffMarket } from "./staff";
 import { capFor, payroll } from "./cap";
@@ -26,6 +27,7 @@ function fitUnderCap(roster) {
 // recolore les équipes (y compris le club-école via teamInfo[ID].farmName) ; farms remplace le
 // club-école d'une équipe par la liste de joueurs fournie.
 export function initLeague(custom = null) {
+  setCustomDraftClasses(custom?.draftClasses);
   const rng = seededRandom(42);
   const teams = TEAM_SEED.map((seed, idx) => {
     const t = { ...seed, ...(custom?.teamInfo?.[seed.id] || {}), id: seed.id };

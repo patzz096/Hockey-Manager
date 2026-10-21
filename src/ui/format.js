@@ -35,3 +35,17 @@ export function draftLabel(player) {
 }
 
 export function ordinalFr(n) { return n === 1 ? "1er" : `${n}e`; }
+
+// Taille/poids selon l'unité choisie (réglage pré-franchise, voir App.jsx units) : métrique
+// (cm, kg, tel qu'enregistré sur le joueur) ou impérial (pi/po, lb) converti à l'affichage.
+export function formatHeight(cm, units = "metric") {
+  if (cm == null) return "—";
+  if (units !== "imperial") return `${cm} cm`;
+  const totalIn = Math.round(cm / 2.54);
+  return `${Math.floor(totalIn / 12)}' ${totalIn % 12}"`;
+}
+export function formatWeight(kg, units = "metric") {
+  if (kg == null) return "—";
+  if (units !== "imperial") return `${kg} kg`;
+  return `${Math.round(kg * 2.20462)} lb`;
+}

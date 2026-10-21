@@ -102,6 +102,12 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
   // Licenciement (voir startNewSeason) : optionnel, réglable uniquement avant le tout premier
   // choix d'équipe (voir franchiseStarted ci-dessous) — jamais modifiable en cours de franchise.
   const [firingEnabled, setFiringEnabled] = useState(() => savedGame?.firingEnabled ?? true);
+  // Réglages pré-franchise (verrouillés dès le premier choix d'équipe, comme firingEnabled) :
+  // unités d'affichage (taille/poids), plafond salarial, et si l'éditeur de joueur reste
+  // accessible en cours de franchise une fois celle-ci commencée.
+  const [units, setUnits] = useState(() => savedGame?.units ?? "metric");
+  const [capEnabled, setCapEnabled] = useState(() => savedGame?.capEnabled ?? true);
+  const [editingEnabled, setEditingEnabled] = useState(() => savedGame?.editingEnabled ?? true);
   // Vrai dès le premier choix d'équipe de cette sauvegarde, même après un licenciement (qui
   // remet myTeamId à null pour revenir à l'écran de sélection) — verrouille firingEnabled.
   const [franchiseStarted, setFranchiseStarted] = useState(() => savedGame?.franchiseStarted ?? false);
@@ -247,8 +253,8 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
     const relief = (teamsById[myTeamId]?.roster || []).filter((p) => ltirIds.includes(p.id)).reduce((a, p) => a + (p.contract?.salary || 0), 0);
     // Contrat à un volet envoyé dans la LAH : la part au-delà de minimum + 375 k$ compte encore.
     const buried = (farmByTeam[myTeamId] || []).filter((p) => p.contract && p.contract.type !== "two").reduce((a, p) => a + Math.max(0, p.contract.salary - (minSalaryFor(seasonYear) + BURIAL_ALLOWANCE)), 0);
-    return { dead: deadCapFor(deadCap, seasonYear), relief, ltirIds, buried };
-  }, [injuries, myTeamId, currentDay, teamsById, deadCap, seasonYear, farmByTeam]);
+    return { dead: deadCapFor(deadCap, seasonYear), relief, ltirIds, buried, capEnabled };
+  }, [injuries, myTeamId, currentDay, teamsById, deadCap, seasonYear, farmByTeam, capEnabled]);
   // Salaires versés au club-école : salaire LAH (deux volets) ou salaire complet (un volet).
   const farmPay = (farmByTeam[myTeamId] || []).reduce((a, p) => a + (!p.contract ? 0 : p.contract.type === "two" ? (p.contract.ahlSalary || 80) : p.contract.salary), 0);
   // Joueurs qui occupent une place dans l'alignement (la LTIR libère la place).
@@ -722,8 +728,8 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
   // volée). `notice`/`ctxMenu`/etc. et tout ce qui reste purement visuel (onglet actif, fenêtres
   // ouvertes) ne sont pas inclus : les perdre au rechargement est normal.
   const saveBundle = useMemo(
-    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, incomingTradeOffers, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak }),
-    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, incomingTradeOffers, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak]
+    () => ({ teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, incomingTradeOffers, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak, units, capEnabled, editingEnabled }),
+    [teams, freeAgents, staffMarket, scoutKnowledge, farmByTeam, seasonYear, currentDay, playoffs, draft, pickTrades, freeAgencyDone, history, careerStats, retiredPlayers, waivers, injuries, deadCap, lotteryHistory, myClaims, pendingScouts, scoutMissions, scoutMarket, scoutingSpend, scoutCoverage, scoutSuggestions, draftList, winsThisMonth, profitThisMonth, progressionReport, unhappyMonths, tradeRequested, messages, schedule, linesByTeam, myTeamId, rngSeed, pendingOffers, negotiations, pendingStaffOffers, staffNegotiations, tradeBlockIds, incomingTradeOffers, business, statsMode, manualFarmLines, firingEnabled, franchiseStarted, missedPlayoffsStreak, overCapStreak, units, capEnabled, editingEnabled]
   );
   useEffect(() => {
     const t = setTimeout(() => { persistGame(saveBundle); }, 800);
@@ -1900,10 +1906,28 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
           ) : wantsTeamSelect ? (<>
           <p style={{ color: "var(--iceMuted)", fontSize: 15, maxWidth: 520, marginBottom: 20 }}>Gère tes trios, tes paires et tes gardiens, avance le calendrier et surveille les meneurs statistiques.</p>
           {!franchiseStarted && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)", marginBottom: 20, cursor: "pointer", maxWidth: 520 }}>
-              <input type="checkbox" checked={firingEnabled} onChange={(e) => setFiringEnabled(e.target.checked)} />
-              Licenciement possible (3 saisons de suite sans séries, ou 2 au-dessus du plafond salarial) — réglable seulement maintenant, avant de choisir une équipe.
-            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20, maxWidth: 520 }}>
+              <div style={{ fontSize: 11, color: "var(--iceMuted)", letterSpacing: 0.5 }}>OPTIONS DE FRANCHISE — réglables seulement maintenant, avant de choisir une équipe</div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)", cursor: "pointer" }}>
+                <input type="checkbox" checked={firingEnabled} onChange={(e) => setFiringEnabled(e.target.checked)} />
+                Licenciement possible (3 saisons de suite sans séries, ou 2 au-dessus du plafond salarial)
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)", cursor: "pointer" }}>
+                <input type="checkbox" checked={capEnabled} onChange={(e) => setCapEnabled(e.target.checked)} />
+                Plafond salarial (décoche pour jouer sans limite de masse salariale)
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)", cursor: "pointer" }}>
+                <input type="checkbox" checked={editingEnabled} onChange={(e) => setEditingEnabled(e.target.checked)} />
+                Modification des joueurs permise en cours de franchise (attributs, potentiel...)
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)" }}>
+                Unités :
+                <select value={units} onChange={(e) => setUnits(e.target.value)} style={{ background: "var(--navy2)", color: "var(--ice)", border: "1px solid var(--line)", borderRadius: 4, padding: "3px 6px", fontSize: 12 }}>
+                  <option value="metric">Métrique (cm, kg)</option>
+                  <option value="imperial">Impérial (po, lb)</option>
+                </select>
+              </label>
+            </div>
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 12 }}>
             {teams.map((t) => {
@@ -2008,7 +2032,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
   return (
     <div className="app-shell" style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} extraScouts={business.scoutTeam || []} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} onRushReturn={selectedPlayer.team?.id === myTeamId ? rushPlayerReturn : null} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} extraScouts={business.scoutTeam || []} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={editingEnabled ? openEditPlayer : null} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} onRushReturn={selectedPlayer.team?.id === myTeamId ? rushPlayerReturn : null} units={units} />}
       {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
       {viewedTeamId && <TeamRosterModal team={teamsById[viewedTeamId]} teamId={viewedTeamId} lines={linesByTeam[viewedTeamId]} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} seasonStats={seasonStats} injuries={injuries} day={currentDay} onSelectPlayer={selectPlayer} onClose={() => setViewedTeamId(null)} />}
       {comparePlayers && <ComparePlayersModal players={comparePlayers} team={myTeam} onClose={() => setComparePlayers(null)} />}
@@ -2091,7 +2115,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
                     <button key={k} onClick={() => setRosterScope(k)} style={{ ...selectStyle(rosterScope === k), fontSize: 12 }}>{l}</button>
                   ))}
                 </div>
-                <button onClick={openCreatePlayer} style={btnStyle("var(--win)")}>+ Créer un joueur</button>
+                {editingEnabled && <button onClick={openCreatePlayer} style={btnStyle("var(--win)")}>+ Créer un joueur</button>}
               </div>
             </div>
             <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 6, marginBottom: 14 }}>Clique un joueur pour voir ses cotes détaillées, puis "Modifier ce joueur" pour l'éditer. L'humeur influence la négociation de contrat, un léger effet sur le rendement en match, et une demande d'échange si elle reste mauvaise trop longtemps.{rosterScope === "full" && " Organisation complète : alignement actif et club-école ensemble."}</p>

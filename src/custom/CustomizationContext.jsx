@@ -30,6 +30,14 @@ export function CustomizationProvider({ children }) {
     setRosterDb(db);
   }, []);
   const saveTeamInfo = useCallback(async (info) => { await setItem("settings", "teamInfo", info); setTeamInfoState(info); }, []);
+  // Classes de repêchage personnalisées (une liste de joueurs éligibles par année moteur) :
+  // fusionnées dans rosterDb plutôt qu'un magasin séparé, pour rester dans le même pack exporté/
+  // importé que les alignements — voir engine/draft.js setCustomDraftClasses.
+  const saveDraftClasses = useCallback(async (draftClasses) => {
+    const next = { ...(rosterDb || { teams: {}, teamInfo: {} }), draftClasses };
+    await setItem("settings", "rosterDb", next);
+    setRosterDb(next);
+  }, [rosterDb]);
   const setLogo = useCallback(async (teamId, file) => {
     if (!file) { await deleteItem("logos", teamId); setLogoBlobs((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => k !== teamId))); return; }
     const blob = await resizeImage(file, 192);
@@ -85,8 +93,8 @@ export function CustomizationProvider({ children }) {
   }, []);
   const clearLogos = useCallback(async () => { await clearStore("logos"); setLogoBlobs({}); }, []);
 
-  const value = useMemo(() => ({ ready, rosterDb, teamInfo, logos, faces, saveRosterDb, saveTeamInfo, setLogo, importLogos, importFaces, setFace, clearFaces, clearLogos, exportImages, importPackImages }),
-    [ready, rosterDb, teamInfo, logos, faces, saveRosterDb, saveTeamInfo, setLogo, importLogos, importFaces, setFace, clearFaces, clearLogos, exportImages, importPackImages]);
+  const value = useMemo(() => ({ ready, rosterDb, teamInfo, logos, faces, saveRosterDb, saveTeamInfo, saveDraftClasses, setLogo, importLogos, importFaces, setFace, clearFaces, clearLogos, exportImages, importPackImages }),
+    [ready, rosterDb, teamInfo, logos, faces, saveRosterDb, saveTeamInfo, saveDraftClasses, setLogo, importLogos, importFaces, setFace, clearFaces, clearLogos, exportImages, importPackImages]);
   return <CustomizationContext.Provider value={value}>{children}</CustomizationContext.Provider>;
 }
 
