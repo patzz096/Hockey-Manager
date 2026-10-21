@@ -68,7 +68,7 @@ import { persistGame, exportSaveFile, parseSaveFile } from "./engine/gameSave";
 const PHASE_LABEL = { preseason: "Matchs préparatoires", regular: "Saison régulière", endRegular: "Fin de la saison régulière", playoffs: "Séries éliminatoires", preDraft: "Saison morte", draft: "Repêchage", preFreeAgency: "Saison morte", offseason: "Marché des agents libres" };
 const NEXT_STEP = { preseason: "", regular: "", endRegular: "Saison régulière terminée : place aux séries éliminatoires.", playoffs: "Ton équipe est éliminée ou attend son prochain match.", preDraft: "Les séries sont terminées. Prochaine étape : le repêchage.", draft: "Le repêchage est en cours.", preFreeAgency: "Repêchage terminé. Le marché des agents libres ouvre le 1er juillet.", offseason: "Marché des agents libres ouvert. Prépare la prochaine saison." };
 
-export default function HockeyGM({ custom = null, onNewGame = null, savedGame = null, onGameImported = null }) {
+export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFranchise = null, savedGame = null, onGameImported = null }) {
   const [initial] = useState(() => initLeague(custom));
   // Chaque useState ci-dessous reprend sa valeur sauvegardée si une partie existait déjà (voir
   // engine/gameSave.js) — l'état purement visuel/éphémère (onglet actif, fenêtres ouvertes, etc.)
@@ -1838,7 +1838,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
             <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 40, margin: "0 0 8px" }}>{showCustomization ? "Personnalisation" : "Choisis ton équipe"}</h1>
             <button onClick={() => setShowCustomization((v) => !v)} style={btnStyle(showCustomization ? "var(--red)" : "var(--steel)")}><Palette size={14} /> {showCustomization ? "Retour au choix d'équipe" : "Personnalisation"}</button>
           </div>
-          {showCustomization ? <div style={{ marginTop: 16 }}><CustomizationPanel teams={teams} inGame={false} onNewGame={() => { setShowCustomization(false); onNewGame?.(); }} onExportSave={exportSave} onImportSave={importSave} /></div> : <>
+          {showCustomization ? <div style={{ marginTop: 16 }}><CustomizationPanel teams={teams} inGame={false} onNewGame={() => { setShowCustomization(false); onNewGame?.(); }} onSwitchFranchise={(id) => { setShowCustomization(false); onSwitchFranchise?.(id); }} onExportSave={exportSave} onImportSave={importSave} /></div> : <>
           <p style={{ color: "var(--iceMuted)", fontSize: 15, maxWidth: 520, marginBottom: 20 }}>Gère tes trios, tes paires et tes gardiens, avance le calendrier et surveille les meneurs statistiques.</p>
           {!franchiseStarted && (
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)", marginBottom: 20, cursor: "pointer", maxWidth: 520 }}>
@@ -2066,7 +2066,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
           />
         )}
 
-        {tab === "custom" && <CustomizationPanel teams={teams} farmByTeam={farmByTeam} inGame onNewGame={onNewGame} onExportSave={exportSave} onImportSave={importSave} />}
+        {tab === "custom" && <CustomizationPanel teams={teams} farmByTeam={farmByTeam} inGame onNewGame={onNewGame} onSwitchFranchise={onSwitchFranchise} onExportSave={exportSave} onImportSave={importSave} />}
 
         {tab === "inbox" && <InboxPanel messages={messages} onMarkAllRead={markAllRead} onMarkThreadRead={markThreadRead} findPlayer={findPlayer} onOpenPlayer={openPlayerById} />}
 

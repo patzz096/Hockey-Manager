@@ -3,11 +3,13 @@ import { createRoot } from "react-dom/client";
 import HockeyGM from "./App";
 import "./ui/global.css";
 import { CustomizationProvider, useCustomization } from "./custom/CustomizationContext";
-import { loadSavedGame, clearSavedGame } from "./engine/gameSave";
+import { loadSavedGame, startNewFranchise, switchFranchise } from "./engine/gameSave";
 
 // Attend la personnalisation (base de données, équipes) et la sauvegarde de partie, puis lance
-// une partie — reprise là où elle était si une sauvegarde existe (voir engine/gameSave.js),
-// nouvelle sinon. « Nouvelle partie » efface la sauvegarde puis change la clé pour tout recréer.
+// une partie — reprise là où elle était si une franchise est active (voir engine/gameSave.js),
+// nouvelle sinon. « Nouvelle franchise » désactive la franchise en cours (elle reste sauvegardée,
+// rechargeable depuis l'onglet Personnalisation, « Mes franchises ») puis change la clé pour tout
+// recréer ; « Charger une franchise » fait pareil mais en activant celle choisie.
 function GameRoot() {
   const { ready, rosterDb, teamInfo } = useCustomization();
   const [gameKey, setGameKey] = useState(0);
@@ -17,7 +19,12 @@ function GameRoot() {
   const custom = { teams: rosterDb?.teams || {}, farms: rosterDb?.farms || {}, teamInfo: mergeInfo(rosterDb?.teamInfo, teamInfo) };
   async function startNewGame() {
     setSavedGame(undefined);
-    await clearSavedGame();
+    await startNewFranchise();
+    setGameKey((k) => k + 1);
+  }
+  async function switchGame(id) {
+    setSavedGame(undefined);
+    await switchFranchise(id);
     setGameKey((k) => k + 1);
   }
   // Après l'import d'un fichier de sauvegarde (déjà écrit dans IndexedDB par App.jsx), remonte
@@ -28,7 +35,7 @@ function GameRoot() {
     setSavedGame(undefined);
     setGameKey((k) => k + 1);
   }
-  return <HockeyGM key={gameKey} custom={custom} savedGame={savedGame} onNewGame={startNewGame} onGameImported={gameImported} />;
+  return <HockeyGM key={gameKey} custom={custom} savedGame={savedGame} onNewGame={startNewGame} onSwitchFranchise={switchGame} onGameImported={gameImported} />;
 }
 function mergeInfo(a = {}, b = {}) {
   const out = { ...a };

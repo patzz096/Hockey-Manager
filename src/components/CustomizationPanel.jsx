@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCustomization } from "../custom/CustomizationContext";
 import { exportLeagueDb } from "../custom/rosterFile";
 import { buildPack, parsePackFile, exportSheetCsv } from "../custom/pack";
+import { listFranchises, deleteFranchise } from "../engine/gameSave";
 import { saveFile } from "../ui/saveFile";
 import { faceKeys } from "../custom/images";
 import { h2Style, btnStyle, inputStyle } from "../ui/theme";
@@ -28,11 +29,15 @@ export const PACK_EDITOR_URL = "https://claude.ai/artifact/JTwgSfDMH5jbhBbcRUWZH
 // teams : équipes de la partie en cours (pour l'export et la couverture du facepack).
 // onExportSave/onImportSave : sauvegarde de la partie elle-même (saison, alignements, contrats,
 // finances...), distincte du pack de personnalisation ci-dessous — voir engine/gameSave.js.
-export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, onExportSave, onImportSave }) {
+export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, onSwitchFranchise, onExportSave, onImportSave }) {
   const c = useCustomization();
   const [status, setStatus] = useState(null);
   const [progress, setProgress] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [franchises, setFranchises] = useState([]);
+  const refreshFranchises = () => listFranchises().then(setFranchises);
+  useEffect(() => { refreshFranchises(); }, []);
+  async function handleDeleteFranchise(id) { await deleteFranchise(id); refreshFranchises(); }
   const teamIds = teams.map((t) => t.id);
   const info = c.teamInfo;
   const allPlayers = teams.flatMap((t) => t.roster);
@@ -119,6 +124,32 @@ export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, 
           <div style={{ ...hint, marginTop: 8 }}>Importer une sauvegarde remplace la partie en cours par celle du fichier.</div>
         </div>
       )}
+
+      <div style={section}>
+        <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Mes franchises</div>
+        <div style={{ ...hint, marginBottom: 10 }}>
+          Chaque franchise se sauvegarde séparément. <strong style={{ color: "var(--ice)" }}>La quitter ne l'efface pas</strong> : elle reste ici, prête à être rechargée, pendant que tu en commences ou poursuis une autre.
+        </div>
+        {franchises.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 10 }}>Aucune franchise sauvegardée pour l'instant.</div>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: franchises.length ? 12 : 0 }}>
+          {franchises.map((f) => (
+            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, background: f.active ? "var(--navy2)" : "#ffffff08", border: `1px solid ${f.active ? "var(--accent)" : "#ffffff1a"}`, borderRadius: 4, padding: "8px 12px" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {f.teamName || "Franchise sans équipe choisie"}
+                  {f.active && <span style={{ color: "var(--accent)", fontWeight: 500, fontSize: 11 }}> — en cours</span>}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>
+                  {f.seasonYear != null ? `Saison ${f.seasonYear}-${String(f.seasonYear + 1).slice(2)} · ` : ""}sauvegardée le {new Date(f.savedAt).toLocaleString("fr-CA")}
+                </div>
+              </div>
+              {!f.active && onSwitchFranchise && <button onClick={() => onSwitchFranchise(f.id)} style={{ ...btnStyle("var(--win)"), fontSize: 11, padding: "4px 10px" }}>Charger</button>}
+              <ConfirmButton label="Supprimer" confirmLabel="Confirmer" color="var(--loss)" onConfirm={() => handleDeleteFranchise(f.id)} />
+            </div>
+          ))}
+        </div>
+        {inGame && onNewGame && <ConfirmButton label="Quitter et commencer une nouvelle franchise" confirmLabel="Confirmer : cette franchise reste sauvegardée ci-dessus" color="var(--steel)" onConfirm={onNewGame} />}
+      </div>
 
       <div style={section}>
         <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Pack de personnalisation (alignements, contrats, logos, photos)</div>
