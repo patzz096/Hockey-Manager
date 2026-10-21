@@ -17,7 +17,7 @@ import { expireContracts, aiFreeAgency, agePlayers, retirePlayers, aiSignFreeAge
 import { aggregateStats, leadersOf, ratingsOf, teamOfTheWeek } from "./engine/stats";
 import { TeamOfTheWeek } from "./components/TeamOfTheWeek";
 import { capStatus, fitsUnderCap, ROSTER_MAX, formatMoney, deadCapFor, buyoutTerms, retentionEntry, MAX_RETAINED_CONTRACTS } from "./engine/cap";
-import { injuriesFromGame, dressTeam, isInjured, ltirEligible, injuryLabel } from "./engine/injuries";
+import { injuriesFromGame, dressTeam, isInjured, ltirEligible, injuryLabel, rushReturn as applyRushReturn, RUSH_RISK_DAYS } from "./engine/injuries";
 import { waiverExempt, placeOnWaivers, resolveWaivers, aiWaiverCandidates, aiMonthlyMoves } from "./engine/waivers";
 import { buildLines } from "./engine/lines";
 import { seededRandom } from "./engine/random";
@@ -478,7 +478,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
     const finalGame = { ...liveMatch.game, played: true, homeScore, awayScore, decidedIn, box };
     const wins = (finalGame.home === myTeamId && finalGame.homeScore > finalGame.awayScore) || (finalGame.away === myTeamId && finalGame.awayScore > finalGame.homeScore) ? 1 : 0;
     if (wins > 0) setWinsThisMonth((w) => w + wins);
-    const liveInj = injuriesFromGame(finalGame, teamsById, currentDay, seededRandom(currentDay * 131 + 9));
+    const liveInj = injuriesFromGame(finalGame, teamsById, currentDay, seededRandom(currentDay * 131 + 9), injuries);
     const freshLive = Object.values(liveInj).filter((x) => !isInjured(injuries, x.playerId, currentDay));
     if (freshLive.length) { setInjuries((prev) => ({ ...prev, ...Object.fromEntries(freshLive.map((x) => [x.playerId, x])) })); announceInjuries(freshLive); }
     if (finalGame.playoff) applyPlayoffResults(playoffs, [finalGame]);
@@ -499,7 +499,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
     const fresh = [];
     const played = games.map((g) => {
       const r = simulateGame(g, dressedTeams, rngGame, dressedLines, staffByTeam, { playoff });
-      Object.values(injuriesFromGame(r, teamsById, day, injRng)).forEach((x) => {
+      Object.values(injuriesFromGame(r, teamsById, day, injRng, inj)).forEach((x) => {
         if (!isInjured(inj, x.playerId, day)) { inj = { ...inj, [x.playerId]: x }; fresh.push(x); }
       });
       return r;
@@ -512,6 +512,16 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
       if (!p) return;
       addMessage({ from: "Thérapeute de l'équipe", subject: `Blessure : ${p.name}`, category: "general", playerIds: [p.id], body: `${injuryLine()} ${p.name} est blessé (${injuryLabel(x, x.since)}). Retour prévu vers le ${formatDay(x.until)}.\nIl est remplacé automatiquement dans les trios.${ltirEligible(x, x.since) ? "\n\nAbsence de plus de 24 jours : tu peux le placer sur la liste des blessés à long terme (LTIR) dans l'onglet Profondeur, ce qui libère sa place et permet de dépasser le plafond de son salaire." : ""}` });
     });
+  }
+  // Revenir au jeu avant un rétablissement complet (onglet État de santé, infirmerie de l'accueil) :
+  // libère sa place tout de suite (isInjured redevient faux), mais le laisse plus exposé à une
+  // rechute pendant RUSH_RISK_DAYS (injuriesFromGame pondère sa sélection, voir engine/injuries.js).
+  function rushPlayerReturn(playerId) {
+    const cur = injuries[playerId];
+    if (!cur || !isInjured(injuries, playerId, currentDay)) return;
+    setInjuries((prev) => ({ ...prev, [playerId]: applyRushReturn(cur, currentDay) }));
+    const p = teamsById[myTeamId]?.roster.find((q) => q.id === playerId);
+    addMessage({ from: "Thérapeute de l'équipe", subject: `Retour précipité : ${p?.name || ""}`, category: "general", playerIds: p ? [p.id] : [], body: `${p?.name || "Le joueur"} reprend le jeu avant un rétablissement complet, à ta demande. Il est de nouveau disponible pour l'alignement, mais plus exposé à une rechute pour les ${RUSH_RISK_DAYS} prochains jours.` });
   }
   // Simule tous les matchs de la prochaine journée où il y en a (calendrier LNH réaliste :
   // toutes les équipes ne jouent jamais toutes le même soir, voir engine/calendar.js gameDay).
@@ -1998,7 +2008,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
   return (
     <div className="app-shell" style={{ ...VARS, minHeight: "640px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", display: "flex" }}>
       <style>{FONT_IMPORT}</style>
-      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} extraScouts={business.scoutTeam || []} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} />}
+      {selectedPlayer && <PlayerModal player={selectedPlayer.player} team={selectedPlayer.team} myTeam={myTeam} lines={selectedPlayer.team ? linesByTeam[selectedPlayer.team.id] : null} editable={selectedPlayer.team?.id === myTeamId} seasonStats={seasonStats} playoffStats={playoffStats} careerStats={careerStats} injuries={injuries} seasonYear={seasonYear} staff={business.staff} extraScouts={business.scoutTeam || []} myTeamId={myTeamId} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} currentDay={currentDay} onRequestScout={requestScouting} onCancelScout={cancelScouting} onClose={() => setSelectedPlayer(null)} onEdit={openEditPlayer} actions={playerActions(selectedPlayer.player)} minorLine={minorLine(selectedPlayer.player)} onRushReturn={selectedPlayer.team?.id === myTeamId ? rushPlayerReturn : null} />}
       {selectedStaff && <StaffProfileModal staff={selectedStaff.staff} role={selectedStaff.role} isHired={selectedStaff.isHired} benchmark={teamOvrBenchmark(myTeam)} team={myTeam} pendingOffer={pendingStaffOffers.find((o) => o.candidateId === selectedStaff.staff.id)} negotiation={staffNegotiations[selectedStaff.staff.id]} onOffer={offerStaff} onFire={fireStaff} onClose={() => setSelectedStaff(null)} />}
       {viewedTeamId && <TeamRosterModal team={teamsById[viewedTeamId]} teamId={viewedTeamId} lines={linesByTeam[viewedTeamId]} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} seasonStats={seasonStats} injuries={injuries} day={currentDay} onSelectPlayer={selectPlayer} onClose={() => setViewedTeamId(null)} />}
       {comparePlayers && <ComparePlayersModal players={comparePlayers} team={myTeam} onClose={() => setComparePlayers(null)} />}
@@ -2069,7 +2079,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
           </div>
         </div>
 
-        {tab === "home" && <HomeDashboard myTeamId={myTeamId} myTeam={myTeam} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} linesByTeam={linesByTeam} freeAgents={freeAgents} staff={business.staff} scoutKnowledge={scoutKnowledge} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onContextMenu={openPlayerContextMenu} onGoTo={setTab} />}
+        {tab === "home" && <HomeDashboard myTeamId={myTeamId} myTeam={myTeam} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} linesByTeam={linesByTeam} freeAgents={freeAgents} staff={business.staff} scoutKnowledge={scoutKnowledge} injuries={injuries} currentDay={currentDay} onRushReturn={rushPlayerReturn} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onContextMenu={openPlayerContextMenu} onGoTo={setTab} />}
 
         {tab === "roster" && (
           <div>

@@ -2,16 +2,17 @@ import { useState } from "react";
 import { gameDay, formatDay } from "../engine/calendar";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
+import { injuryLabel, ltirEligible, atRisk } from "../engine/injuries";
 import { MINOR_LEAGUES } from "../engine/minorLeagues";
 import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
-import { TeamCrest, PlayerLink, TeamLink, StarRating } from "./common";
+import { TeamCrest, PlayerLink, TeamLink, StarRating, ConfirmButton } from "./common";
 import { TeamOfTheWeek } from "./TeamOfTheWeek";
 import { BoxscoreView } from "./match/BoxscoreView";
 
 // Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, ses 5 derniers matchs (clic
-// pour ouvrir le sommaire), l'équipe de la semaine, les meilleurs agents libres et les meneurs au
-// pointage de la ligue, avec des raccourcis vers les onglets complets.
-export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, linesByTeam, freeAgents = [], myTeam: myTeamFull, staff, scoutKnowledge, onSelectPlayer, onSelectTeam, onContextMenu, onGoTo }) {
+// pour ouvrir le sommaire), l'infirmerie, l'équipe de la semaine, les meilleurs agents libres et
+// les meneurs au pointage de la ligue, avec des raccourcis vers les onglets complets.
+export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, linesByTeam, freeAgents = [], myTeam: myTeamFull, staff, scoutKnowledge, injuries = {}, currentDay, onRushReturn, onSelectPlayer, onSelectTeam, onContextMenu, onGoTo }) {
   const [expandedGameId, setExpandedGameId] = useState(null);
   const myRankIdx = standings.findIndex((s) => s.id === myTeamId);
   const my = standings[myRankIdx];
@@ -29,6 +30,13 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
     .filter((r) => r.info.known)
     .sort((a, b) => perceivedRatings(b.p, b.info).ovr - perceivedRatings(a.p, a.info).ovr)
     .slice(0, 5);
+  const infirmary = (myTeam?.roster || [])
+    .map((p) => ({ p, injury: injuries[p.id] }))
+    .filter((r) => r.injury && r.injury.until > currentDay)
+    .sort((a, b) => a.injury.until - b.injury.until);
+  const fragile = (myTeam?.roster || [])
+    .map((p) => ({ p, injury: injuries[p.id] }))
+    .filter((r) => r.injury && r.injury.until <= currentDay && atRisk(r.injury, currentDay));
 
   return (
     <div>
@@ -69,6 +77,31 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      {(infirmary.length > 0 || fragile.length > 0) && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, marginBottom: 8 }}>Infirmerie ({infirmary.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {infirmary.map(({ p, injury }) => {
+              const eligible = ltirEligible(injury, currentDay);
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--navy2)", padding: "8px 12px", borderRadius: 3, fontSize: 13, borderLeft: `3px solid ${injury.ltir ? "#7A4E9E" : "var(--loss)"}` }}>
+                  <PlayerLink player={p} team={myTeam} onSelect={onSelectPlayer} style={{ flex: 1 }} />
+                  <span style={{ color: "var(--iceMuted)", fontSize: 12 }}>{injuryLabel(injury, currentDay)}{injury.ltir ? " · LTIR" : eligible ? " · admissible LTIR" : ""}</span>
+                  <span style={{ fontSize: 11, color: "var(--iceMuted)", whiteSpace: "nowrap" }}>retour {formatDay(injury.until)}</span>
+                  {onRushReturn && <ConfirmButton small label="Revenir avant 100 %" confirmLabel="Confirmer : risque accru" color="var(--gold)" onConfirm={() => onRushReturn(p.id)} />}
+                </div>
+              );
+            })}
+            {fragile.map(({ p, injury }) => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--navy2)", padding: "8px 12px", borderRadius: 3, fontSize: 13, borderLeft: "3px solid var(--gold)" }}>
+                <PlayerLink player={p} team={myTeam} onSelect={onSelectPlayer} style={{ flex: 1 }} />
+                <span title="Revenu avant 100 % : risque de rechute accru" style={{ fontSize: 10, fontWeight: 700, color: "var(--gold)", border: "1px solid rgba(255,194,71,0.45)", borderRadius: 3, padding: "0 4px" }}>FRAGILE</span>
+                <span style={{ fontSize: 11, color: "var(--iceMuted)", whiteSpace: "nowrap" }}>risque accru jusqu'au {formatDay(injury.riskUntil)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

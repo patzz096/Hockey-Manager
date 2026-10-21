@@ -11,7 +11,7 @@ import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
 import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge, ConfirmButton } from "./common";
 import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
 import { MINOR_LEAGUES } from "../engine/minorLeagues";
-import { injuryLabel, ltirEligible } from "../engine/injuries";
+import { injuryLabel, ltirEligible, atRisk, RUSH_RISK_DAYS } from "../engine/injuries";
 
 export function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
 
@@ -77,14 +77,15 @@ function ReportRow({ label, hint, value, size = 14, color }) {
 
 // Onglet État de santé : blessure en cours (type, depuis quand, durée anticipée, retour estimé,
 // admissibilité à la LTIR), ou simple constat « en bonne santé » sinon — voir engine/injuries.js.
-function HealthTab({ injury, currentDay }) {
+function HealthTab({ injury, currentDay, onRushReturn }) {
   if (!injury || injury.until <= currentDay) {
+    const risky = atRisk(injury, currentDay);
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--navy)", border: "1px solid var(--win)44", borderRadius: 4, padding: 14 }}>
-        <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--win)", flexShrink: 0 }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--navy)", border: `1px solid ${risky ? "var(--gold)44" : "var(--win)44"}`, borderRadius: 4, padding: 14 }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: risky ? "var(--gold)" : "var(--win)", flexShrink: 0 }} />
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--win)" }}>En bonne santé</div>
-          <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucune blessure active — disponible pour jouer.</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: risky ? "var(--gold)" : "var(--win)" }}>{risky ? "De retour, encore fragile" : "En bonne santé"}</div>
+          <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>{risky ? `Revenu avant un rétablissement complet : risque de rechute accru jusqu'au ${formatDay(injury.riskUntil)}.` : "Aucune blessure active — disponible pour jouer."}</div>
         </div>
       </div>
     );
@@ -105,6 +106,12 @@ function HealthTab({ injury, currentDay }) {
       </div>
       {!injury.ltir && eligible && (
         <div style={{ fontSize: 11.5, color: "var(--gold)", marginTop: 10, lineHeight: 1.4 }}>Absence de 24 jours ou plus : admissible à la liste des blessés à long terme (LTIR) — libère sa place dans l'alignement et permet de dépasser le plafond de son salaire (onglet Profondeur).</div>
+      )}
+      {onRushReturn && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #ffffff1a" }}>
+          <ConfirmButton label="Revenir avant 100 %" confirmLabel={`Confirmer : risque de rechute accru ${RUSH_RISK_DAYS} jours`} color="var(--gold)" onConfirm={onRushReturn} />
+          <div style={{ fontSize: 11, color: "var(--iceMuted)", marginTop: 6, lineHeight: 1.4 }}>Le rend disponible immédiatement, mais nettement plus exposé à une rechute pour les {RUSH_RISK_DAYS} prochains jours.</div>
+        </div>
       )}
     </div>
   );
@@ -211,7 +218,7 @@ function ActionsPanel({ actions, known, onClose }) {
   );
 }
 
-export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, extraScouts = [], myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [], minorLine = null }) {
+export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats, playoffStats = {}, careerStats = {}, seasonYear, injuries = {}, staff, extraScouts = [], myTeamId, scoutKnowledge, pendingScouts, currentDay, onRequestScout, onCancelScout, onClose, onEdit, actions = [], minorLine = null, onRushReturn = null }) {
   const [tab, setTab] = useState("profile");
   // Échap ferme le profil.
   useEffect(() => {
@@ -262,7 +269,7 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
           {tab === "scouting" ? (
             <ScoutingTab player={player} report={scoutInfo} pending={pending} currentDay={currentDay} staff={staff} extraScouts={extraScouts} benchmark={benchmark} isMine={isMine} onRequestScout={onRequestScout} onCancelScout={onCancelScout} />
           ) : tab === "health" ? (
-            <HealthTab injury={injuries[player.id]} currentDay={currentDay} />
+            <HealthTab injury={injuries[player.id]} currentDay={currentDay} onRushReturn={onRushReturn ? () => { onRushReturn(player.id); onClose(); } : null} />
           ) : (<>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
             <InfoCard label="CÔTE ACTUELLE / POTENTIELLE" accent={known ? "var(--gold)" : "var(--steel)"}>

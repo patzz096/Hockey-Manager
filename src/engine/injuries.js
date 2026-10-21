@@ -9,6 +9,12 @@ import { repairUnits } from "./specialTeams";
 //    permet de dépasser le plafond pendant son absence.
 export const INJURY_RATE = 0.16;
 export const LTIR_MIN_DAYS = 24;
+// Revenir au jeu avant un rétablissement complet (App.jsx rushPlayerReturn, depuis l'infirmerie
+// de l'accueil ou l'onglet État de santé) : libère sa place tout de suite, mais le laisse plus
+// exposé à une rechute pendant RUSH_RISK_DAYS (poids de sélection multiplié par RUSH_RISK_MULT
+// dans injuriesFromGame ci-dessous).
+export const RUSH_RISK_DAYS = 14;
+export const RUSH_RISK_MULT = 2.5;
 const TYPES = ["Haut du corps", "Bas du corps", "Commotion cérébrale", "Genou", "Épaule", "Cheville", "Main", "Dos", "Aine"];
 
 // Durée en jours : 55 % au jour le jour, 28 % 1-3 semaines, 12 % 3-8 semaines, 5 % 2-5 mois.
@@ -20,9 +26,13 @@ export function injuryDuration(rng) {
   return 60 + Math.floor(rng() * 90);
 }
 
+// Joueur revenu plus tôt que prévu (rushPlayerReturn) et encore dans sa fenêtre de risque accru.
+export function atRisk(injury, day) { return !!injury?.riskUntil && injury.riskUntil > day; }
+
 // Tire les blessures d'un match joué le jour `day`. Les joueurs physiques et les gros temps de
-// glace sont un peu plus exposés. Renvoie { [playerId]: blessure }.
-export function injuriesFromGame(game, teamsById, day, rng) {
+// glace sont un peu plus exposés, de même qu'un joueur revenu avant 100 % (atRisk ci-dessus).
+// `injuries` (optionnel) : état courant, pour repérer qui est à risque. Renvoie { [playerId]: blessure }.
+export function injuriesFromGame(game, teamsById, day, rng, injuries = {}) {
   const out = {};
   [["home", game.home], ["away", game.away]].forEach(([side, teamId]) => {
     if (rng() >= INJURY_RATE) return;
@@ -30,13 +40,18 @@ export function injuriesFromGame(game, teamsById, day, rng) {
     const skaters = teamsById[teamId].roster.filter((p) => p.pos !== "G" && (toi[p.id] || 0) > 0);
     const pool = skaters.length ? skaters : teamsById[teamId].roster.filter((p) => p.pos !== "G");
     if (!pool.length) return;
-    const weights = pool.map((p) => (toi[p.id] || 10) * (0.7 + (p.attrs.hitting + p.attrs.bravery) / 330));
+    const weights = pool.map((p) => (toi[p.id] || 10) * (0.7 + (p.attrs.hitting + p.attrs.bravery) / 330) * (atRisk(injuries[p.id], day) ? RUSH_RISK_MULT : 1));
     let r = rng() * weights.reduce((a, b) => a + b, 0), pick = pool[0];
     for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) { pick = pool[i]; break; } }
     const days = injuryDuration(rng);
     out[pick.id] = { playerId: pick.id, teamId, type: TYPES[Math.floor(rng() * TYPES.length)], since: day, until: day + days, ltir: false };
   });
   return out;
+}
+
+// Revenir au jeu avant un rétablissement complet (voir RUSH_RISK_DAYS/MULT ci-dessus).
+export function rushReturn(injury, day) {
+  return { ...injury, until: day, rushed: true, riskUntil: day + RUSH_RISK_DAYS };
 }
 
 export function isInjured(injuries, playerId, day) { const i = injuries[playerId]; return !!i && i.until > day; }
