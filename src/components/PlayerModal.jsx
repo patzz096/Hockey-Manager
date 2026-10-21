@@ -11,6 +11,7 @@ import { btnStyle, scoutQualityColor, attr20Color } from "../ui/theme";
 import { StarRating, AttrRow, InfoCard, PlayerFace, InjuryBadge, ConfirmButton } from "./common";
 import { useCustomization, useFaceUrl } from "../custom/CustomizationContext";
 import { MINOR_LEAGUES } from "../engine/minorLeagues";
+import { injuryLabel, ltirEligible } from "../engine/injuries";
 
 export function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; } return h; }
 
@@ -61,6 +62,41 @@ function ReportRow({ label, hint, value, size = 14, color }) {
         {hint && <div style={{ fontSize: 11, color: "var(--iceMuted)" }}>{hint}</div>}
       </div>
       <StarRating value={value} size={size} color={color} />
+    </div>
+  );
+}
+
+// Onglet État de santé : blessure en cours (type, depuis quand, durée anticipée, retour estimé,
+// admissibilité à la LTIR), ou simple constat « en bonne santé » sinon — voir engine/injuries.js.
+function HealthTab({ injury, currentDay }) {
+  if (!injury || injury.until <= currentDay) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--navy)", border: "1px solid var(--win)44", borderRadius: 4, padding: 14 }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--win)", flexShrink: 0 }} />
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--win)" }}>En bonne santé</div>
+          <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucune blessure active — disponible pour jouer.</div>
+        </div>
+      </div>
+    );
+  }
+  const daysLeft = injury.until - currentDay;
+  const eligible = ltirEligible(injury, currentDay);
+  return (
+    <div style={{ background: "var(--navy)", border: `1px solid ${injury.ltir ? "#7A4E9E" : "var(--loss)"}55`, borderRadius: 4, padding: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ width: 10, height: 10, borderRadius: "50%", background: injury.ltir ? "#7A4E9E" : "var(--loss)", flexShrink: 0 }} />
+        <div style={{ fontSize: 15, fontWeight: 700, color: injury.ltir ? "#C9A6E8" : "var(--loss)" }}>{injury.type}{injury.ltir ? " — LTIR" : ""}</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 13 }}>
+        <div><div style={{ fontSize: 11, color: "var(--iceMuted)" }}>Depuis le</div><div style={{ fontWeight: 600 }}>{formatDay(injury.since)}</div></div>
+        <div><div style={{ fontSize: 11, color: "var(--iceMuted)" }}>Retour estimé</div><div style={{ fontWeight: 600 }}>{formatDay(injury.until)}</div></div>
+        <div><div style={{ fontSize: 11, color: "var(--iceMuted)" }}>Absence anticipée</div><div style={{ fontWeight: 600 }}>{injuryLabel(injury, currentDay).split(" — ")[1]}</div></div>
+        <div><div style={{ fontSize: 11, color: "var(--iceMuted)" }}>Jours restants</div><div style={{ fontWeight: 600 }}>{daysLeft} jour{daysLeft > 1 ? "s" : ""}</div></div>
+      </div>
+      {!injury.ltir && eligible && (
+        <div style={{ fontSize: 11.5, color: "var(--gold)", marginTop: 10, lineHeight: 1.4 }}>Absence de 24 jours ou plus : admissible à la liste des blessés à long terme (LTIR) — libère sa place dans l'alignement et permet de dépasser le plafond de son salaire (onglet Profondeur).</div>
+      )}
     </div>
   );
 }
@@ -208,10 +244,15 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
           <button onClick={() => setTab("scouting")} style={tabStyle(tab === "scouting", owner.color)}>
             Dépistage{pending ? " · en cours" : scoutInfo.estOvr != null ? " · rapport" : ""}
           </button>
+          <button onClick={() => setTab("health")} style={tabStyle(tab === "health", owner.color)}>
+            État de santé{injuries[player.id]?.until > currentDay ? " · blessé" : ""}
+          </button>
         </div>
         <div style={{ padding: 16 }}>
           {tab === "scouting" ? (
             <ScoutingTab player={player} report={scoutInfo} pending={pending} currentDay={currentDay} staff={staff} extraScouts={extraScouts} benchmark={benchmark} isMine={isMine} onRequestScout={onRequestScout} onCancelScout={onCancelScout} />
+          ) : tab === "health" ? (
+            <HealthTab injury={injuries[player.id]} currentDay={currentDay} />
           ) : (<>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
             <InfoCard label="CÔTE ACTUELLE / POTENTIELLE" accent={known ? "var(--gold)" : "var(--steel)"}>
