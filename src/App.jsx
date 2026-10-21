@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, MessageCircle, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone } from "lucide-react";
+import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, MessageCircle, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone, FolderOpen, LogOut } from "lucide-react";
 import { emptyAttrs, attr20, teamOvrBenchmark, ATTR_LABELS } from "./engine/attributes";
 import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS, agentLine } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine, generateAiTradeOffer, tradePitchLine } from "./engine/trades";
@@ -150,6 +150,12 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
   const [linesByTeam, setLinesByTeam] = useState(() => savedGame?.linesByTeam ?? Object.fromEntries(teams.map((t) => [t.id, t.lines])));
   const [myTeamId, setMyTeamId] = useState(() => savedGame?.myTeamId ?? null);
   const [showCustomization, setShowCustomization] = useState(false);
+  // Écran d'accueil (Charger / Nouvelle franchise / Personnalisation), avant le choix d'équipe :
+  // affiché d'office tant qu'aucune franchise n'a encore été démarrée (franchiseStarted), ou à la
+  // demande en pleine partie via « Quitter vers le menu » (sans rien désactiver — la franchise
+  // continue de se sauvegarder automatiquement, voir engine/gameSave.js).
+  const [showMainMenu, setShowMainMenu] = useState(false);
+  const [showTeamSelect, setShowTeamSelect] = useState(false);
   // Nom, ville et couleur modifiés dans Personnalisation s'appliquent tout de suite.
   const { teamInfo } = useCustomization();
   useEffect(() => {
@@ -1837,17 +1843,32 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
     if (seasonYear - FIRST_SEASON + 1 >= FRANCHISE_YEARS) setFranchiseComplete(true);
   }
 
-  if (!myTeamId) {
+  // Trois écrans avant d'être en jeu : menu principal (Charger / Nouvelle franchise /
+  // Personnalisation), choix d'équipe (seulement après « Nouvelle franchise », ou forcé si
+  // congédié — myTeamId redevenu null en pleine franchise), personnalisation. Accessible aussi en
+  // pleine partie via « Quitter vers le menu » (showMainMenu) sans rien désactiver : la franchise
+  // continue de se sauvegarder, « Continuer cette franchise » referme simplement le menu.
+  if (!myTeamId || showMainMenu) {
+    const forcedTeamSelect = !myTeamId && franchiseStarted; // congédié : doit choisir une équipe
+    const wantsTeamSelect = forcedTeamSelect || (!myTeamId && showTeamSelect);
+    const wantsMenu = !showCustomization && !wantsTeamSelect;
     return (
       <div style={{ ...VARS, minHeight: "600px", background: "var(--navy)", color: "var(--ice)", fontFamily: "Barlow, 'Segoe UI', system-ui, sans-serif", padding: "40px 24px" }}>
         <style>{FONT_IMPORT}</style>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 13, letterSpacing: 2, color: "var(--iceMuted)", marginBottom: 6 }}>SIMULATION DE GESTION — LIGUE FICTIVE</div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 40, margin: "0 0 8px" }}>{showCustomization ? "Personnalisation" : "Choisis ton équipe"}</h1>
-            <button onClick={() => setShowCustomization((v) => !v)} style={btnStyle(showCustomization ? "var(--red)" : "var(--steel)")}><Palette size={14} /> {showCustomization ? "Retour au choix d'équipe" : "Personnalisation"}</button>
+            <h1 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 40, margin: "0 0 8px" }}>{showCustomization ? "Personnalisation" : wantsTeamSelect ? "Choisis ton équipe" : "Menu principal"}</h1>
+            <div style={{ display: "flex", gap: 8 }}>
+              {myTeamId && wantsMenu && <button onClick={() => setShowMainMenu(false)} style={btnStyle("var(--win)")}>Continuer cette franchise</button>}
+              {showCustomization && <button onClick={() => setShowCustomization(false)} style={btnStyle("var(--steel)")}><Palette size={14} /> Retour</button>}
+            </div>
           </div>
-          {showCustomization ? <div style={{ marginTop: 16 }}><CustomizationPanel teams={teams} inGame={false} onNewGame={() => { setShowCustomization(false); onNewGame?.(); }} onSwitchFranchise={(id) => { setShowCustomization(false); onSwitchFranchise?.(id); }} onExportSave={exportSave} onImportSave={importSave} /></div> : <>
+          {showCustomization ? (
+            <div style={{ marginTop: 16 }}>
+              <CustomizationPanel teams={teams} farmByTeam={farmByTeam} inGame={!!myTeamId} onNewGame={() => { setShowCustomization(false); setShowMainMenu(false); setShowTeamSelect(false); onNewGame?.(); }} onSwitchFranchise={(id) => { setShowCustomization(false); setShowMainMenu(false); onSwitchFranchise?.(id); }} onExportSave={exportSave} onImportSave={importSave} />
+            </div>
+          ) : wantsTeamSelect ? (<>
           <p style={{ color: "var(--iceMuted)", fontSize: 15, maxWidth: 520, marginBottom: 20 }}>Gère tes trios, tes paires et tes gardiens, avance le calendrier et surveille les meneurs statistiques.</p>
           {!franchiseStarted && (
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--iceMuted)", marginBottom: 20, cursor: "pointer", maxWidth: 520 }}>
@@ -1859,7 +1880,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
             {teams.map((t) => {
               const s = teamStrength(t, linesByTeam[t.id]);
               return (
-                <button key={t.id} className="team-card" onClick={() => { setFranchiseStarted(true); setMyTeamId(t.id); }} style={{ "--team": t.color, textAlign: "left", background: `linear-gradient(135deg, ${t.color}22, var(--navy2) 55%)`, border: `1px solid ${t.color}55`, borderLeft: `4px solid ${t.color}`, borderRadius: 8, padding: "14px 16px", color: "var(--ice)", cursor: "pointer", display: "flex", gap: 12, alignItems: "center" }}>
+                <button key={t.id} className="team-card" onClick={() => { setFranchiseStarted(true); setMyTeamId(t.id); setShowTeamSelect(false); setShowMainMenu(false); }} style={{ "--team": t.color, textAlign: "left", background: `linear-gradient(135deg, ${t.color}22, var(--navy2) 55%)`, border: `1px solid ${t.color}55`, borderLeft: `4px solid ${t.color}`, borderRadius: 8, padding: "14px 16px", color: "var(--ice)", cursor: "pointer", display: "flex", gap: 12, alignItems: "center" }}>
                   <TeamCrest team={t} size={38} />
                   <div>
                     <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, fontSize: 18 }}>{t.name}</div>
@@ -1869,7 +1890,13 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
               );
             })}
           </div>
-          </>}
+          </>) : (
+            <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 12, maxWidth: 420 }}>
+              <button onClick={() => setShowCustomization(true)} style={{ ...btnStyle("var(--win)"), justifyContent: "flex-start", padding: "16px 18px", fontSize: 15 }}><FolderOpen size={18} /> Charger une franchise</button>
+              <button onClick={() => (myTeamId ? onNewGame?.() : setShowTeamSelect(true))} style={{ ...btnStyle("var(--red)"), justifyContent: "flex-start", padding: "16px 18px", fontSize: 15 }}><Play size={18} /> Nouvelle franchise</button>
+              <button onClick={() => setShowCustomization(true)} style={{ ...btnStyle("var(--steel)"), justifyContent: "flex-start", padding: "16px 18px", fontSize: 15 }}><Palette size={18} /> Personnalisation</button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1956,6 +1983,9 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
             {messages.filter((m) => !m.read).length > 0 && (
               <span style={{ position: "absolute", top: -3, right: -3, background: "var(--red)", color: "#fff", borderRadius: 10, fontSize: 9, minWidth: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, padding: "0 3px" }}>{messages.filter((m) => !m.read).length}</span>
             )}
+          </button>
+          <button title="Quitter vers le menu principal (la franchise reste sauvegardée)" onClick={() => setShowMainMenu(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, padding: 0, borderRadius: 6, border: "none", background: "transparent", color: "var(--iceMuted)", cursor: "pointer", flexShrink: 0 }}>
+            <LogOut size={17} />
           </button>
         </div>
         {navItems.map(({ key, label, icon: Icon }) => {

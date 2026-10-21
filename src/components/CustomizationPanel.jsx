@@ -110,21 +110,6 @@ export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, 
       <p style={{ ...hint, marginTop: -8, marginBottom: 16 }}>Comme dans Football Manager ou Eastside Hockey Manager : charge ta propre base de données d'alignements, tes logos et ton facepack. Tout est conservé dans ce navigateur.</p>
       {status && <div style={{ ...section, borderColor: status.ok ? "var(--win)" : "var(--loss)", fontSize: 13, padding: 12 }}>{status.text}</div>}
 
-      {inGame && onExportSave && (
-        <div style={section}>
-          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Sauvegarde de partie</div>
-          <div style={{ ...hint, marginBottom: 10 }}>
-            La partie se sauvegarde <strong style={{ color: "var(--ice)" }}>automatiquement</strong> dans ce navigateur (ferme l'onglet et reviens plus tard, tu reprends exactement où tu en étais). Pour garder une copie de secours ou passer à un autre appareil, exporte-la en fichier .json et réimporte-la ici.
-          </div>
-          {saveStatus && <div style={{ ...section, borderColor: saveStatus.ok ? "var(--win)" : "var(--loss)", fontSize: 13, padding: 12 }}>{saveStatus.text}</div>}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={exportSave} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Exporter la sauvegarde</button>
-            <FileButton label="Importer une sauvegarde" accept="application/json,.json" onFiles={importSave} color="var(--red)" />
-          </div>
-          <div style={{ ...hint, marginTop: 8 }}>Importer une sauvegarde remplace la partie en cours par celle du fichier.</div>
-        </div>
-      )}
-
       <div style={section}>
         <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Mes franchises</div>
         <div style={{ ...hint, marginBottom: 10 }}>
@@ -150,6 +135,21 @@ export function CustomizationPanel({ teams, farmByTeam = {}, inGame, onNewGame, 
         </div>
         {inGame && onNewGame && <ConfirmButton label="Quitter et commencer une nouvelle franchise" confirmLabel="Confirmer : cette franchise reste sauvegardée ci-dessus" color="var(--steel)" onConfirm={onNewGame} />}
       </div>
+
+      {inGame && onExportSave && (
+        <div style={section}>
+          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Sauvegarde de partie</div>
+          <div style={{ ...hint, marginBottom: 10 }}>
+            La partie se sauvegarde <strong style={{ color: "var(--ice)" }}>automatiquement</strong> dans ce navigateur (ferme l'onglet et reviens plus tard, tu reprends exactement où tu en étais). Pour garder une copie de secours ou passer à un autre appareil, exporte-la en fichier .json et réimporte-la ici.
+          </div>
+          {saveStatus && <div style={{ ...section, borderColor: saveStatus.ok ? "var(--win)" : "var(--loss)", fontSize: 13, padding: 12 }}>{saveStatus.text}</div>}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={exportSave} style={{ ...btnStyle("var(--steel)"), fontSize: 12 }}>Exporter la sauvegarde</button>
+            <FileButton label="Importer une sauvegarde" accept="application/json,.json" onFiles={importSave} color="var(--red)" />
+          </div>
+          <div style={{ ...hint, marginTop: 8 }}>Importer une sauvegarde remplace la partie en cours par celle du fichier.</div>
+        </div>
+      )}
 
       <div style={section}>
         <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 16, marginBottom: 6 }}>Pack de personnalisation (alignements, contrats, logos, photos)</div>
