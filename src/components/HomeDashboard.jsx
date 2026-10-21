@@ -5,14 +5,12 @@ import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { MINOR_LEAGUES } from "../engine/minorLeagues";
 import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
 import { TeamCrest, PlayerLink, TeamLink, StarRating } from "./common";
-import { NewsFeed } from "./NewsFeed";
 import { TeamOfTheWeek } from "./TeamOfTheWeek";
 import { BoxscoreView } from "./match/BoxscoreView";
 
 // Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, ses 5 derniers matchs (clic
-// pour ouvrir le sommaire), le fil de nouvelles (articles — voir NewsFeed), l'équipe de la semaine,
-// les meilleurs agents libres et les meneurs au pointage de la ligue, avec des raccourcis vers les
-// onglets complets.
+// pour ouvrir le sommaire), l'équipe de la semaine, les meilleurs agents libres et les meneurs au
+// pointage de la ligue, avec des raccourcis vers les onglets complets.
 export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, linesByTeam, freeAgents = [], myTeam: myTeamFull, staff, scoutKnowledge, onSelectPlayer, onSelectTeam, onContextMenu, onGoTo }) {
   const [expandedGameId, setExpandedGameId] = useState(null);
   const myRankIdx = standings.findIndex((s) => s.id === myTeamId);
@@ -20,11 +18,10 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
   const myTeam = teamsById[myTeamId];
   const myDivision = myTeam?.division;
   const divisionRows = standings.filter((s) => teamsById[s.id]?.division === myDivision);
-  const recent = schedule
+  const last5 = schedule
     .filter((g) => g.played && (g.home === myTeamId || g.away === myTeamId))
     .sort((a, b) => gameDay(seasonYear, b) - gameDay(seasonYear, a))
-    .slice(0, 8);
-  const last5 = recent.slice(0, 5);
+    .slice(0, 5);
   const topLeaders = leaders.slice(0, 8);
   const benchmark = teamOvrBenchmark(myTeamFull || myTeam);
   const topFreeAgents = freeAgents
@@ -43,7 +40,7 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
             <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 18 }}><TeamLink team={myTeam} onSelect={onSelectTeam} /></div>
             <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>
               {myRankIdx + 1}{myRankIdx === 0 ? "er" : "e"} au classement général · {my.w}-{my.l}-{my.otl} · <strong style={{ color: "var(--ice)" }}>{my.pts} pts</strong>
-              {my.streak && ` · séquence ${my.streak}`}{recent.length > 0 && ` · 10 derniers : ${my.last10?.join("") || "—"}`}
+              {my.streak && ` · séquence ${my.streak}`}{last5.length > 0 && ` · 10 derniers : ${my.last10?.join("") || "—"}`}
             </div>
           </div>
         </div>
@@ -106,9 +103,6 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
               ))}
             </tbody>
           </table>
-
-          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, marginBottom: 8 }}>Le journal</div>
-          <NewsFeed games={recent} schedule={schedule} seasonYear={seasonYear} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} onContextMenu={onContextMenu} />
         </div>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
