@@ -2133,7 +2133,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
         {tab === "freeagents" && <FreeAgentsPanel myTeam={myTeam} myTeamId={myTeamId} staff={business.staff} scoutKnowledge={scoutKnowledge} pendingScouts={pendingScouts} onSelectPlayer={(p) => selectPlayer(p, null)} onRequestScout={requestScouting} onCancelScout={cancelScouting} onContextMenu={openPlayerContextMenu} freeAgents={freeAgents} txWindow={txWindow} />}
 
         {tab === "contracts" && <CapSummary roster={teamsById[myTeamId].roster} year={seasonYear} opts={myCapOpts} />}
-        {tab === "contracts" && <ContractsPanel myTeam={myTeam} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
+        {tab === "contracts" && <ContractsPanel myTeam={myTeam} farmRoster={myFarmView} onSelectPlayer={selectPlayer} onContextMenu={openPlayerContextMenu} seasonYear={seasonYear} buyoutOpen={["preDraft", "draft", "preFreeAgency"].includes(phase)} deadCap={deadCap} />}
 
         {tab === "staff" && <StaffCenter business={business} staffMarket={staffMarket} myTeam={myTeam} farmRoster={myFarmView} month={monthLabel(currentDay)} progressionReport={progressionReport} onOffer={offerStaff} pendingStaffOffers={pendingStaffOffers} staffNegotiations={staffNegotiations} onFire={fireStaff} onRefresh={refreshStaffMarket} onSetDelegation={setDelegation} onSelectPlayer={selectPlayer} onSelectStaff={(staff, role, isHired) => setSelectedStaff({ staff, role, isHired })} />}
 

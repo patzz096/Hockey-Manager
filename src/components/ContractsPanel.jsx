@@ -1,24 +1,36 @@
+import { useState } from "react";
 import { teamOvrBenchmark, starsFor } from "../engine/attributes";
-import { h2Style } from "../ui/theme";
+import { h2Style, selectStyle } from "../ui/theme";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, StarRating, PlayerLink } from "./common";
 import { buyoutTerms, formatMoney, payroll } from "../engine/cap";
 import { money } from "../ui/format";
 
-export function ContractsPanel({ myTeam, onSelectPlayer, onContextMenu, seasonYear, buyoutOpen = false, deadCap = [] }) {
+export function ContractsPanel({ myTeam, farmRoster = [], onSelectPlayer, onContextMenu, seasonYear, buyoutOpen = false, deadCap = [] }) {
   const [ck, cd, cToggle] = useSort("salary");
+  const [scope, setScope] = useState("active"); // "active" (alignement LNH) ou "full" (+ club-école/espoirs)
+  const [oneWayOnly, setOneWayOnly] = useState(false);
   const cAcc = (p, key) => {
     if (key === "salary") return p.contract?.salary || 0;
     if (key === "years") return p.contract?.years || 0;
     return p[key];
   };
-  const sorted = sortRows(myTeam.roster, ck, cd, cAcc);
+  const pool = scope === "full" ? [...myTeam.roster, ...farmRoster] : myTeam.roster;
+  const filtered = oneWayOnly ? pool.filter((p) => p.contract && p.contract.type !== "two") : pool;
+  const sorted = sortRows(filtered, ck, cd, cAcc);
   const totalPayroll = payroll(myTeam.roster);
   const benchmark = teamOvrBenchmark(myTeam);
   return (
     <div>
-      <h2 style={h2Style}>Contrats de l'équipe</h2>
-      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: -8, marginBottom: 6 }}>Masse salariale totale (primes de rendement maximales et primes à la signature étalées comprises) : <strong style={{ color: "var(--ice)" }}>{money(totalPayroll)} par saison</strong></p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <h2 style={{ ...h2Style, marginBottom: 0 }}>Contrats de l'équipe</h2>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <button onClick={() => setScope("active")} style={{ ...selectStyle(scope === "active"), fontSize: 12 }}>Alignement LNH ({myTeam.roster.length})</button>
+          <button onClick={() => setScope("full")} style={{ ...selectStyle(scope === "full"), fontSize: 12 }}>+ club-école et espoirs ({myTeam.roster.length + farmRoster.length})</button>
+          <button onClick={() => setOneWayOnly((v) => !v)} style={{ ...selectStyle(oneWayOnly), fontSize: 12 }}>1 volet seulement</button>
+        </div>
+      </div>
+      <p style={{ fontSize: 12, color: "var(--iceMuted)", marginTop: 8, marginBottom: 6 }}>Masse salariale totale de l'alignement LNH (primes de rendement maximales et primes à la signature étalées comprises) : <strong style={{ color: "var(--ice)" }}>{money(totalPayroll)} par saison</strong></p>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 14 }}>Clique un joueur pour ouvrir son profil : prolongation et rachat se font dans son volet « Gestion du joueur ». {buyoutOpen ? "Période de rachat ouverte (jusqu'au 1er juillet) : 2/3 du salaire restant (1/3 avant 26 ans), étalé sur le double des années." : "Les rachats sont permis entre la fin des séries et le 1er juillet."}</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
         <thead><tr>
@@ -47,6 +59,7 @@ export function ContractsPanel({ myTeam, onSelectPlayer, onContextMenu, seasonYe
               </td>
             </tr>
           ))}
+          {sorted.length === 0 && <tr><td colSpan={8} style={{ padding: 12, color: "var(--iceMuted)" }}>Aucun joueur sous contrat ne correspond à ce filtre.</td></tr>}
         </tbody>
       </table>
       {deadCap.length > 0 && (
