@@ -135,7 +135,7 @@ export function StaffCenter({ business, staffMarket, myTeam, farmRoster = [], mo
       </div>
       <p style={{ fontSize: 12, color: "var(--iceMuted)", marginBottom: 12 }}>Les jeunes joueurs progressent plus vite vers leur potentiel; les vétérans stagnent ou déclinent. Un bon dépisteur professionnel accélère le développement.</p>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-        <thead><tr>{["Joueur", "Avant", "Après", "Δ"].map((h, i) => (<th key={i} style={{ textAlign: "left", padding: "6px 10px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid #ffffff22" }}>{h}</th>))}</tr></thead>
+        <thead><tr>{["Joueur", "Avant", "Après", "Δ", "Attributs"].map((h, i) => (<th key={i} style={{ textAlign: "left", padding: "6px 10px", color: "var(--iceMuted)", fontWeight: 500, fontSize: 12, borderBottom: "1px solid #ffffff22" }}>{h}</th>))}</tr></thead>
         <tbody>
           {progressionReport.map((r) => (
             <tr key={r.id} style={{ borderBottom: "1px solid #ffffff11" }}>
@@ -146,9 +146,16 @@ export function StaffCenter({ business, staffMarket, myTeam, farmRoster = [], mo
               <td style={{ padding: "7px 10px" }}>{r.before}</td>
               <td style={{ padding: "7px 10px" }}>{r.after}</td>
               <td style={{ padding: "7px 10px", color: r.delta >= 0 ? "var(--win)" : "var(--loss)", fontWeight: 600 }}>{r.delta >= 0 ? "+" : ""}{r.delta}</td>
+              <td style={{ padding: "7px 10px", fontSize: 12, color: "var(--iceMuted)" }}>
+                {(r.attrsChanged || []).map((a) => (
+                  <span key={a.key} style={{ marginRight: 8, whiteSpace: "nowrap" }}>
+                    {a.label} <span style={{ color: a.delta >= 0 ? "var(--win)" : "var(--loss)", fontWeight: 600 }}>{a.delta >= 0 ? "+" : ""}{a.delta}</span>
+                  </span>
+                ))}
+              </td>
             </tr>
           ))}
-          {progressionReport.length === 0 && <tr><td colSpan={4} style={{ padding: 12, color: "var(--iceMuted)" }}>Aucun rapport encore — avance d'un mois pour voir l'évolution de tes joueurs.</td></tr>}
+          {progressionReport.length === 0 && <tr><td colSpan={5} style={{ padding: 12, color: "var(--iceMuted)" }}>Aucun rapport encore — avance d'un mois pour voir l'évolution de tes joueurs.</td></tr>}
         </tbody>
       </table>
     </div>

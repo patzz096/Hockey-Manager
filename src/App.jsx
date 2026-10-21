@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, MessageCircle, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone } from "lucide-react";
-import { emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
+import { emptyAttrs, attr20, teamOvrBenchmark, ATTR_LABELS } from "./engine/attributes";
 import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS, agentLine } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine, generateAiTradeOffer, tradePitchLine } from "./engine/trades";
 import { injuryLine, returnLine, recallLine, demoteLine, waiversLine, scoutCancelLine, scoutReportIntroLine, staffAcceptLine, staffRejectLine, tradeRequestLine, devReportIntroLine } from "./engine/dialogue";
@@ -1484,8 +1484,16 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
         for (let m = 0; m < months; m++) p = developPlayer(p, { devBonus, scoutBonus });
         // Les attributs peuvent bouger sans que la cote générale arrondie change (plusieurs
         // petits ajustements qui s'annulent) : seuls les changements de cote visibles comptent
-        // pour le rapport, même si les attributs mis à jour sont conservés (next).
-        if (p !== p0 && p.ovr !== p0.ovr) entries.push({ id: p.id, name: p.name, before: p0.ovr, after: p.ovr, delta: p.ovr - p0.ovr, level: levelTag });
+        // pour le rapport, même si les attributs mis à jour sont conservés (next). `attrsChanged`
+        // détaille lesquels ont vraiment bougé (ATTR_LABELS), pour que le rapport dise quoi, pas
+        // seulement de combien la cote générale a changé.
+        if (p !== p0 && p.ovr !== p0.ovr) {
+          const attrsChanged = Object.keys(p.attrs)
+            .filter((k) => p.attrs[k] !== p0.attrs[k])
+            .map((k) => ({ key: k, label: ATTR_LABELS[k] || k, before: p0.attrs[k], after: p.attrs[k], delta: p.attrs[k] - p0.attrs[k] }))
+            .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+          entries.push({ id: p.id, name: p.name, before: p0.ovr, after: p.ovr, delta: p.ovr - p0.ovr, level: levelTag, attrsChanged });
+        }
         return p;
       });
       return { next, entries };
@@ -1502,8 +1510,9 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
     let body = gainers.length === 0 && decliners.length === 0
       ? "Aucun changement notable ce mois-ci."
       : `${devReportIntroLine()}\n\n`;
-    if (gainers.length) body += "En progression:\n" + gainers.map((r) => `- ${r.name}: ${r.before} → ${r.after} (+${r.delta})`).join("\n");
-    if (decliners.length) body += (body ? "\n\n" : "") + "En baisse:\n" + decliners.map((r) => `- ${r.name}: ${r.before} → ${r.after} (${r.delta})`).join("\n");
+    const attrLine = (r) => r.attrsChanged?.length ? ` [${r.attrsChanged.map((a) => `${a.label} ${a.delta >= 0 ? "+" : ""}${a.delta}`).join(", ")}]` : "";
+    if (gainers.length) body += "En progression:\n" + gainers.map((r) => `- ${r.name}: ${r.before} → ${r.after} (+${r.delta})${attrLine(r)}`).join("\n");
+    if (decliners.length) body += (body ? "\n\n" : "") + "En baisse:\n" + decliners.map((r) => `- ${r.name}: ${r.before} → ${r.after} (${r.delta})${attrLine(r)}`).join("\n");
     addMessage({ from: coachName, subject: `Rapport de développement — ${label}`, category: "scout", playerIds: [...gainers, ...decliners].map((r) => r.id), body });
 
     const totalGain = sorted.filter((r) => r.delta > 0).reduce((a, r) => a + r.delta, 0);
