@@ -1,25 +1,40 @@
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, HeartPulse, Briefcase, Landmark, Shield, Building2, Binoculars, UserCog, DollarSign, Radio, TrendingUp } from "lucide-react";
 import { h2Style, btnStyle } from "../ui/theme";
-import { PlayerLink } from "./common";
+import { PlayerLink, PlayerFace } from "./common";
 import { formatDay } from "../engine/calendar";
 
 export const CATEGORY_COLOR = { scout: "#7A4E9E", finance: "var(--win)", transaction: "var(--red)", general: "var(--steel)" };
 
-// Initiales d'un expéditeur pour l'avatar rond (façon photo de contact) : jusqu'à 2 mots
-// significatifs (ignore "de"/"du"/"des"/"la"/"le" etc.), sinon la première lettre.
-const SKIP_WORDS = new Set(["de", "du", "des", "la", "le", "les", "l'", "et", "—"]);
-function initials(name) {
-  const words = name.replace(/—.*/, "").split(/\s+/).filter((w) => w && !SKIP_WORDS.has(w.toLowerCase()));
-  if (words.length === 0) return name[0]?.toUpperCase() || "?";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[1][0]).toUpperCase();
+// Icône générique par poste/département pour les expéditeurs qui ne sont pas des joueurs (donc
+// sans photo possible) — façon logo de service, plus parlant que de simples initiales dans une
+// messagerie où presque tout le monde est fictif. D'abord par motif de nom reconnu (un thérapeute
+// a sa propre icône même si sa catégorie est « general »), sinon une icône par défaut selon la
+// catégorie du message (voir App.jsx addMessage, CATEGORY_COLOR ci-dessus).
+const NAME_ICONS = [
+  [/^Thérapeute/, HeartPulse],
+  [/^Agent de /, Briefcase],
+  [/^Directeur général/, Landmark],
+  [/^Ligue$/, Shield],
+  [/^Directeur du club-école/, Building2],
+  [/^Service de dépistage/, Binoculars],
+  [/^Ressources humaines/, UserCog],
+  [/^Directeur des finances/, DollarSign],
+  [/^Directeur des opérations hockey/, Briefcase],
+  [/^Directeur des communications/, Radio],
+  [/^Département de développement/, TrendingUp],
+];
+const CATEGORY_ICON = { scout: Binoculars, finance: DollarSign, transaction: Briefcase, general: Building2 };
+function roleIcon(name, category) {
+  return NAME_ICONS.find(([re]) => re.test(name))?.[1] || CATEGORY_ICON[category] || Building2;
 }
 
-function Avatar({ name, color, size = 40 }) {
+function Avatar({ name, color, size = 40, category, player }) {
+  if (player) return <PlayerFace player={player} size={size} color={color} />;
+  const Icon = roleIcon(name, category);
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: size * 0.38, flexShrink: 0, fontFamily: "Oswald, sans-serif" }}>
-      {initials(name)}
+    <div style={{ width: size, height: size, borderRadius: "50%", background: color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <Icon size={size * 0.52} strokeWidth={2} />
     </div>
   );
 }
@@ -27,7 +42,7 @@ function Avatar({ name, color, size = 40 }) {
 // Regroupe les messages par expéditeur (un fil par agent de joueur, par DG adverse, par
 // dépisteur...) façon liste de contacts d'une appli de messagerie — voir App.jsx addMessage
 // (chaque "from" distinct crée naturellement son propre fil) et markThreadRead.
-function groupThreads(messages) {
+function groupThreads(messages, findPlayer) {
   const byFrom = new Map();
   messages.forEach((m) => {
     if (!byFrom.has(m.from)) byFrom.set(m.from, []);
@@ -38,7 +53,11 @@ function groupThreads(messages) {
     // à jour d'un fil sans défiler, surtout utile pour un DG qui recoupe plusieurs conversations.
     const sorted = [...msgs].sort((a, b) => (b.day ?? 0) - (a.day ?? 0) || b.id.localeCompare(a.id));
     const last = msgs[0]; // messages déjà triées du plus récent au plus vieux (voir App.jsx addMessage)
-    return { from, messages: sorted, last, unread: msgs.filter((m) => !m.read).length, category: last.category };
+    // Un joueur mécontent écrit lui-même (demande d'échange) : sa propre photo plutôt qu'une icône
+    // générique de poste — seul cas où l'expéditeur est un vrai joueur, pas du personnel fictif.
+    const senderPlayer = msgs[0].playerIds?.length === 1 ? findPlayer?.(msgs[0].playerIds[0]) : null;
+    const player = senderPlayer?.name === from ? senderPlayer : null;
+    return { from, messages: sorted, last, unread: msgs.filter((m) => !m.read).length, category: last.category, player };
   }).sort((a, b) => (b.last.day ?? 0) - (a.last.day ?? 0) || b.last.id.localeCompare(a.last.id));
 }
 
@@ -49,7 +68,7 @@ function ThreadList({ threads, onOpen }) {
       {threads.map((t) => (
         <div key={t.from} onClick={() => onOpen(t.from)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 8, cursor: "pointer", background: t.unread > 0 ? "var(--navy2)" : "transparent" }}
              onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff0a")} onMouseLeave={(e) => (e.currentTarget.style.background = t.unread > 0 ? "var(--navy2)" : "transparent")}>
-          <Avatar name={t.from} color={CATEGORY_COLOR[t.category] || "var(--steel)"} />
+          <Avatar name={t.from} color={CATEGORY_COLOR[t.category] || "var(--steel)"} category={t.category} player={t.player} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
               <span style={{ fontWeight: t.unread > 0 ? 700 : 500, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.from}</span>
@@ -91,7 +110,7 @@ function ThreadView({ thread, onBack, findPlayer, onOpenPlayer }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid #ffffff1a" }}>
         <button onClick={onBack} title="Retour" style={{ background: "none", border: "none", color: "var(--iceMuted)", cursor: "pointer", display: "flex", alignItems: "center", padding: 4 }}><ChevronLeft size={20} /></button>
-        <Avatar name={thread.from} color={color} size={34} />
+        <Avatar name={thread.from} color={color} size={34} category={thread.category} player={thread.player} />
         <span style={{ fontWeight: 600, fontSize: 15 }}>{thread.from}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column" }}>
@@ -103,7 +122,7 @@ function ThreadView({ thread, onBack, findPlayer, onOpenPlayer }) {
 
 export function InboxPanel({ messages, onMarkAllRead, onMarkThreadRead, findPlayer, onOpenPlayer }) {
   const [openFrom, setOpenFrom] = useState(null);
-  const threads = groupThreads(messages);
+  const threads = groupThreads(messages, findPlayer);
   const unread = messages.filter((m) => !m.read).length;
   const openThread = threads.find((t) => t.from === openFrom);
 
