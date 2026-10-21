@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { NATION_FLAG, NATION_NAME } from "../data/names";
-import { SKATER_CATEGORIES, GOALIE_CATEGORIES, OFFENSIVE, DEFENSIVE, ATTR_LABELS, attr20, attr10, avg, teamOvrBenchmark, starsFor } from "../engine/attributes";
+import { SKATER_CATEGORIES, GOALIE_CATEGORIES, OFFENSIVE, DEFENSIVE, GOALIE_TECH, GOALIE_PHYSICAL, ATTR_LABELS, attr20, attr10, avg, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { lineLabel } from "../engine/lines";
 import { formatDay } from "../engine/calendar";
 import { ROLES, naturalRole, roleFit, roleOf } from "../engine/roles";
@@ -47,6 +47,15 @@ const PROSPECT_TEAM = { id: null, name: "Espoir du repêchage", color: "#7A4E9E"
 
 function tabStyle(active, color) {
   return { background: "none", border: "none", borderBottom: `2px solid ${active ? color : "transparent"}`, color: active ? "var(--ice)" : "var(--iceMuted)", padding: "10px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" };
+}
+
+// Deux notes générales sur 10 résumant le profil : attaque/défense pour un patineur, technique/
+// physique pour un gardien (attaque/défense n'a pas de sens pour lui) — jamais caché, juste la
+// paire pertinente selon la position.
+function scoreGroups(pos) {
+  return pos === "G"
+    ? [{ key: "tech", label: "Technique", keys: GOALIE_TECH }, { key: "phys", label: "Physique", keys: GOALIE_PHYSICAL }]
+    : [{ key: "off", label: "Attaque", keys: OFFENSIVE }, { key: "def", label: "Défense", keys: DEFENSIVE }];
 }
 
 function Grade20({ value }) {
@@ -152,10 +161,11 @@ function ScoutingTab({ player, report, pending, currentDay, staff, extraScouts =
           </div>
           <ReportRow label="Habileté actuelle" hint="Ce qu'il apporte aujourd'hui" value={starsFor(report.estOvr, benchmark)} />
           <ReportRow label="Potentiel" hint="Projection à long terme" value={starsFor(report.estPotential, benchmark)} color="#7A9EDB" />
-          {player.pos !== "G" && report.attrs && (
+          {report.attrs && (
             <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--iceMuted)", padding: "6px 0 2px" }}>
-              <span>Attaque <strong style={{ color: "var(--ice)" }}>{attr10(avg(report.attrs, OFFENSIVE))}/10</strong></span>
-              <span>Défense <strong style={{ color: "var(--ice)" }}>{attr10(avg(report.attrs, DEFENSIVE))}/10</strong></span>
+              {scoreGroups(player.pos).map((g) => (
+                <span key={g.key}>{g.label} <strong style={{ color: "var(--ice)" }}>{attr10(avg(report.attrs, g.keys))}/10</strong></span>
+              ))}
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0 4px" }}>
@@ -303,10 +313,11 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
             </div>
           )}
 
-          {known && player.pos !== "G" && (
+          {known && (
             <div style={{ display: "flex", gap: 10, margin: "16px 0 0" }}>
-              <InfoCard label="ATTAQUE" accent="var(--gold)"><div style={{ fontSize: 15, fontWeight: 700 }}>{attr10(avg(shown.attrs, OFFENSIVE))}/10</div></InfoCard>
-              <InfoCard label="DÉFENSE" accent="var(--steel)"><div style={{ fontSize: 15, fontWeight: 700 }}>{attr10(avg(shown.attrs, DEFENSIVE))}/10</div></InfoCard>
+              {scoreGroups(player.pos).map((g, i) => (
+                <InfoCard key={g.key} label={g.label.toUpperCase()} accent={i === 0 ? "var(--gold)" : "var(--steel)"}><div style={{ fontSize: 15, fontWeight: 700 }}>{attr10(avg(shown.attrs, g.keys))}/10</div></InfoCard>
+              ))}
             </div>
           )}
 
