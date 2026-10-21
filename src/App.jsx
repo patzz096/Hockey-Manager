@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDown, ChevronUp, Layers, BarChart3, Sliders, ArrowLeftRight, DollarSign, UserCog, MessageCircle, UserPlus, FileText, Network, Palette, Award, ListOrdered, Binoculars, HeartPulse, Lock, Monitor, Smartphone, FolderOpen, LogOut } from "lucide-react";
 import { emptyAttrs, attr20, teamOvrBenchmark, ATTR_LABELS } from "./engine/attributes";
 import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS, agentLine } from "./engine/contracts";
@@ -304,7 +304,20 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
   const preseasonStats = useMemo(() => aggregateStats(preseasonGames, teamsById, everyone, teams), [preseasonGames, teamsById, everyone, teams]);
   const playoffGames = useMemo(() => (playoffs ? playoffs.rounds.flat().flatMap((x) => x.games) : []), [playoffs]);
   const playoffStats = useMemo(() => aggregateStats(playoffGames, teamsById, everyone), [playoffGames, teamsById, everyone]);
-  const [statsMode, setStatsMode] = useState(() => savedGame?.statsMode ?? "regular");
+  const [statsMode, setStatsMode] = useState(() => savedGame?.statsMode ?? (phase === "preseason" ? "preseason" : phase === "playoffs" ? "playoffs" : "regular"));
+  // Bascule automatiquement l'onglet Statistiques sur la bonne vue à l'entrée de chaque phase
+  // (présaison → cotes de présaison, séries → cotes des séries, sinon saison régulière) : sans
+  // ça, les stats de présaison restent cachées derrière un onglet qu'il faut penser à cliquer,
+  // alors que « saison régulière » reste vide tant qu'aucun match ne compte pour vrai. L'utilisateur
+  // reste libre de rebasculer manuellement ensuite — ne se redéclenche qu'au changement de phase.
+  const prevPhaseRef = useRef(phase);
+  useEffect(() => {
+    if (phase === prevPhaseRef.current) return;
+    prevPhaseRef.current = phase;
+    if (phase === "preseason") setStatsMode("preseason");
+    else if (phase === "playoffs") setStatsMode("playoffs");
+    else if (phase === "regular") setStatsMode("regular");
+  }, [phase]);
 
   const leaders = useMemo(() => leadersOf(seasonStats), [seasonStats]);
   const preseasonRatings = useMemo(() => ratingsOf(preseasonStats), [preseasonStats]);
@@ -319,7 +332,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
   const teamAdvancedTotals = useMemo(() => {
     const totals = {};
     teams.forEach((t) => (totals[t.id] = { corsiFor: 0, faceoffWins: 0, faceoffTotal: 0 }));
-    schedule.filter((g) => g.played).forEach((g) => {
+    schedule.filter((g) => g.played && !g.exhibition).forEach((g) => {
       totals[g.home].corsiFor += g.box.home.corsiFor || 0;
       totals[g.home].faceoffWins += g.box.home.faceoffsWon || 0;
       totals[g.home].faceoffTotal += g.box.home.faceoffsTotal || 0;

@@ -96,7 +96,7 @@ const FWD_POS = ["C", "LW", "RW"], D_POS = ["LD", "RD"];
 // gameDay). Retourne null tant qu'aucun match n'a été joué cette semaine-là.
 export function teamOfTheWeek(schedule, seasonYear, currentDay, teamsById, everyone) {
   const weekStart = currentDay - 6;
-  const weekGames = schedule.filter((g) => g.played && g.box && gameDay(seasonYear, g) >= weekStart && gameDay(seasonYear, g) <= currentDay);
+  const weekGames = schedule.filter((g) => g.played && g.box && !g.exhibition && gameDay(seasonYear, g) >= weekStart && gameDay(seasonYear, g) <= currentDay);
   if (weekGames.length === 0) return null;
   const stats = aggregateStats(weekGames, teamsById, everyone);
   const skaters = Object.values(stats).filter((s) => s.gp > 0 && s.player.pos !== "G");
