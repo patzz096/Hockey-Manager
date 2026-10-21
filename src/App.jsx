@@ -2008,7 +2008,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, onSwitchFran
           </div>
         </div>
 
-        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onContextMenu={openPlayerContextMenu} onGoTo={setTab} />}
+        {tab === "home" && <HomeDashboard myTeamId={myTeamId} myTeam={myTeam} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} linesByTeam={linesByTeam} freeAgents={freeAgents} staff={business.staff} scoutKnowledge={scoutKnowledge} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onContextMenu={openPlayerContextMenu} onGoTo={setTab} />}
 
         {tab === "roster" && (
           <div>

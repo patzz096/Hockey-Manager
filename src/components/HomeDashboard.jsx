@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { gameDay, formatDay } from "../engine/calendar";
-import { h2Style, btnStyle } from "../ui/theme";
-import { TeamCrest, PlayerLink, TeamLink } from "./common";
+import { teamOvrBenchmark, starsFor } from "../engine/attributes";
+import { getScoutInfo, perceivedRatings } from "../engine/scouting";
+import { MINOR_LEAGUES } from "../engine/minorLeagues";
+import { h2Style, btnStyle, scoutQualityColor } from "../ui/theme";
+import { TeamCrest, PlayerLink, TeamLink, StarRating } from "./common";
 import { NewsFeed } from "./NewsFeed";
 import { TeamOfTheWeek } from "./TeamOfTheWeek";
 import { BoxscoreView } from "./match/BoxscoreView";
 
 // Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, ses 5 derniers matchs (clic
-// pour ouvrir le sommaire), le fil de nouvelles (articles — voir NewsFeed), l'équipe de la semaine
-// et les meneurs au pointage de la ligue, avec des raccourcis vers les onglets complets.
-export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, linesByTeam, onSelectPlayer, onSelectTeam, onContextMenu, onGoTo }) {
+// pour ouvrir le sommaire), le fil de nouvelles (articles — voir NewsFeed), l'équipe de la semaine,
+// les meilleurs agents libres et les meneurs au pointage de la ligue, avec des raccourcis vers les
+// onglets complets.
+export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, linesByTeam, freeAgents = [], myTeam: myTeamFull, staff, scoutKnowledge, onSelectPlayer, onSelectTeam, onContextMenu, onGoTo }) {
   const [expandedGameId, setExpandedGameId] = useState(null);
   const myRankIdx = standings.findIndex((s) => s.id === myTeamId);
   const my = standings[myRankIdx];
@@ -22,6 +26,12 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
     .slice(0, 8);
   const last5 = recent.slice(0, 5);
   const topLeaders = leaders.slice(0, 8);
+  const benchmark = teamOvrBenchmark(myTeamFull || myTeam);
+  const topFreeAgents = freeAgents
+    .map((p) => ({ p, info: getScoutInfo(p, null, myTeamId, staff, scoutKnowledge) }))
+    .filter((r) => r.info.known)
+    .sort((a, b) => perceivedRatings(b.p, b.info).ovr - perceivedRatings(a.p, a.info).ovr)
+    .slice(0, 5);
 
   return (
     <div>
@@ -113,6 +123,20 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
               <PlayerLink player={l.player} team={l.team} onSelect={onSelectPlayer} style={{ flex: 1 }} />
               <span style={{ color: "var(--iceMuted)", fontSize: 12 }}>{l.gp} PJ</span>
               <span style={{ fontWeight: 700, width: 32, textAlign: "right" }}>{l.pts}</span>
+            </div>
+          ))}
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20, marginBottom: 8 }}>
+            <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15 }}>Meilleurs agents libres</div>
+            <button onClick={() => onGoTo("freeagents")} style={{ ...btnStyle("var(--steel)"), fontSize: 11, padding: "3px 8px" }}>Agents libres</button>
+          </div>
+          {topFreeAgents.length === 0 && <div style={{ fontSize: 12, color: "var(--iceMuted)" }}>Aucun agent libre dépisté pour l'instant.</div>}
+          {topFreeAgents.map(({ p, info }) => (
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", borderBottom: "1px solid #ffffff11", fontSize: 13 }}>
+              <span style={{ width: 24, color: "var(--iceMuted)", fontSize: 11 }}>{p.pos}</span>
+              <PlayerLink player={p} onSelect={onSelectPlayer} style={{ flex: 1 }} />
+              <span style={{ color: "var(--iceMuted)", fontSize: 11, whiteSpace: "nowrap" }}>{p.league ? `${MINOR_LEAGUES[p.league]?.short || p.league}${p.club ? ` (${p.club})` : ""}` : ""}</span>
+              <StarRating value={starsFor(perceivedRatings(p, info).ovr, benchmark)} size={12} color={scoutQualityColor(info.quality)} />
             </div>
           ))}
         </div>
