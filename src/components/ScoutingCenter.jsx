@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowUp, ArrowDown, X, GripVertical } from "lucide-react";
 import { SCOUT_REGIONS, MINOR_LEAGUES } from "../engine/minorLeagues";
-import { GRADES, DURATIONS, POSITION_FOCUS, coverageGain, reportsPerWeek, regionLabel, effectiveScout, missionWeeklyCost, missionTotalCost, missionSummary, distanceLabel } from "../engine/scoutingZones";
+import { GRADES, DURATIONS, POSITION_FOCUS, DEPTH_FOCUS, coverageGain, reportsPerWeek, regionLabel, effectiveScout, missionWeeklyCost, missionTotalCost, missionSummary, distanceLabel } from "../engine/scoutingZones";
 import { ROLES } from "../engine/roles";
 import { getScoutInfo, perceivedRatings } from "../engine/scouting";
 import { teamOvrBenchmark, starsFor, attr20 } from "../engine/attributes";
@@ -123,12 +123,15 @@ function MissionEditor({ scout, mission, onSetMission, onFire }) {
           </select>
         </label>
         <label style={field}>Recherche
-          <select value={m.focus} onChange={(e) => set({ focus: e.target.value, focusValue: e.target.value === "pos" ? "F" : e.target.value === "role" ? "sniper" : null })} style={selStyle}>
-            <option value="general">Générale (meilleurs joueurs)</option><option value="pos">Par position</option><option value="role">Par rôle</option>
+          <select value={m.focus} onChange={(e) => set({ focus: e.target.value, focusValue: e.target.value === "pos" ? "F" : e.target.value === "role" ? "sniper" : e.target.value === "depth" ? "C_TOP" : null })} style={selStyle}>
+            <option value="general">Générale (meilleurs joueurs)</option><option value="pos">Par position</option><option value="role">Par rôle</option><option value="depth">Par emplacement dans l'alignement</option>
           </select>
         </label>
         {m.focus === "pos" && <label style={field}>Position
           <select value={m.focusValue} onChange={(e) => set({ focusValue: e.target.value })} style={selStyle}>{POSITION_FOCUS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
+        </label>}
+        {m.focus === "depth" && <label style={field}>Emplacement recherché
+          <select value={m.focusValue} onChange={(e) => set({ focusValue: e.target.value })} style={selStyle}>{DEPTH_FOCUS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
         </label>}
         {m.focus === "role" && <label style={field}>Rôle recherché
           <select value={m.focusValue} onChange={(e) => set({ focusValue: e.target.value })} style={selStyle}>

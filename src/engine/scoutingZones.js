@@ -35,6 +35,39 @@ export const POSITION_FOCUS = [
 const FORWARD = ["C", "LW", "RW"], DEF = ["LD", "RD"];
 const matchesPosition = (p, id) => (id === "F" ? FORWARD.includes(p.pos) : id === "D" ? DEF.includes(p.pos) : p.pos === id);
 
+// Recherche par « emplacement dans l'alignement » (ex. centre de 3e-4e trio, défenseur de 1re
+// paire, gardien no 2 LNH) plutôt que par style de jeu (ROLES, plus haut) : bandes de cote
+// générale approximatives, calées sur le calibrage des alignements générés (engine/players.js,
+// ~60-68 de base par équipe) — un espoir est jugé sur son potentiel, pas sa cote actuelle
+// (encore loin de son plafond), un joueur professionnel sur sa cote actuelle.
+export const DEPTH_FOCUS = [
+  { id: "C_TOP", label: "Centre top 6 (1er-2e trio)" },
+  { id: "C_BOT", label: "Centre de profondeur (3e-4e trio)" },
+  { id: "W_TOP", label: "Ailier top 6 (1er-2e trio)" },
+  { id: "W_BOT", label: "Ailier de profondeur (3e-4e trio)" },
+  { id: "D_TOP", label: "Défenseur de 1re paire" },
+  { id: "D_MID", label: "Défenseur de 2e paire" },
+  { id: "D_BOT", label: "Défenseur de profondeur (3e paire)" },
+  { id: "G1", label: "Gardien no 1 LNH" },
+  { id: "G2", label: "Gardien no 2 LNH (réserviste)" },
+];
+function depthValue(p) { return p.draftProspect ? p.potential : p.ovr; }
+function matchesDepth(p, id) {
+  const v = depthValue(p);
+  switch (id) {
+    case "C_TOP": return p.pos === "C" && v >= 68;
+    case "C_BOT": return p.pos === "C" && v >= 50 && v < 68;
+    case "W_TOP": return (p.pos === "LW" || p.pos === "RW") && v >= 68;
+    case "W_BOT": return (p.pos === "LW" || p.pos === "RW") && v >= 50 && v < 68;
+    case "D_TOP": return DEF.includes(p.pos) && v >= 72;
+    case "D_MID": return DEF.includes(p.pos) && v >= 62 && v < 72;
+    case "D_BOT": return DEF.includes(p.pos) && v >= 50 && v < 62;
+    case "G1": return p.pos === "G" && v >= 72;
+    case "G2": return p.pos === "G" && v >= 58 && v < 72;
+    default: return false;
+  }
+}
+
 // Port d'attache des dépisteurs en chef : la région de l'équipe.
 const HOME_BY_TEAM = { MTL: "quebec", OTT: "ontario", TOR: "ontario", WPG: "west", CGY: "west", EDM: "west", VAN: "west", SEA: "west" };
 export const teamHomeRegion = (teamId) => HOME_BY_TEAM[teamId] || "usa";
@@ -87,6 +120,7 @@ export function reportsPerWeek(rating) { return 1 + (rating >= 60 ? 1 : 0) + (ra
 export function focusLabel(mission) {
   if (!mission || mission.focus === "general") return "Recherche générale";
   if (mission.focus === "pos") return `Par position : ${POSITION_FOCUS.find((x) => x.id === mission.focusValue)?.label || "—"}`;
+  if (mission.focus === "depth") return `Par emplacement : ${DEPTH_FOCUS.find((x) => x.id === mission.focusValue)?.label || "—"}`;
   return `Par rôle : ${ROLES[mission.focusValue]?.label || "—"}`;
 }
 export function missionSummary(mission) {
@@ -100,6 +134,7 @@ export function missionFilter(mission) {
   return (p) => {
     if (mission.league && (p.league || (p.level === "LAH" ? "AHL" : "NHL")) !== mission.league) return false;
     if (mission.focus === "pos") return matchesPosition(p, mission.focusValue);
+    if (mission.focus === "depth") return matchesDepth(p, mission.focusValue);
     if (mission.focus === "role") return p.pos !== "G" ? roleGroupOf(p) === ROLES[mission.focusValue]?.group : ROLES[mission.focusValue]?.group === "G";
     return true;
   };
