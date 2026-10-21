@@ -98,7 +98,7 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
           </table>
 
           <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, marginBottom: 8 }}>Le journal</div>
-          <NewsFeed games={recent} seasonYear={seasonYear} teamsById={teamsById} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} />
+          <NewsFeed games={recent} schedule={schedule} seasonYear={seasonYear} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} onContextMenu={onContextMenu} />
         </div>
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>

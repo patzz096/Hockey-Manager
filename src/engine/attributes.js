@@ -54,7 +54,9 @@ export function emptyAttrs(pos, val = 60) {
   const o = {}; keys.forEach((k) => (o[k] = val)); return o;
 }
 
-export function attr20(val) { return Math.max(1, Math.min(20, Math.round((val / 99) * 20))); }
+// Conversion simple sur 100 ramenée sur 20 (val/5) — les attributs vont de 1 à 99, mais l'échelle
+// affichée est bien /20 d'un /100, pas une mise à l'échelle sur le maximum réel (99).
+export function attr20(val) { return Math.max(1, Math.min(20, Math.round(val / 5))); }
 
 export function teamOvrBenchmark(team) {
   if (!team || !team.roster.length) return 65;
