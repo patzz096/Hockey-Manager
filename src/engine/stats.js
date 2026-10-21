@@ -24,13 +24,13 @@ export function seasonGoalNumber(schedule, seasonYear, game, scorerId, goalIndex
 export function aggregateStats(games, teamsById, everyone, seedTeams = []) {
   const stats = {};
   const entry = (id, team) => {
-    if (!stats[id]) stats[id] = { g: 0, a: 0, pts: 0, hits: 0, pim: 0, shots: 0, plusMinus: 0, blocks: 0, faceoffWins: 0, gp: 0, gwg: 0, w: 0, player: everyone[id]?.player || { id, name: "?", pos: "?" }, team: everyone[id]?.team || team };
+    if (!stats[id]) stats[id] = { g: 0, a: 0, pts: 0, hits: 0, pim: 0, shots: 0, plusMinus: 0, blocks: 0, faceoffWins: 0, gp: 0, gwg: 0, w: 0, toi: 0, player: everyone[id]?.player || { id, name: "?", pos: "?" }, team: everyone[id]?.team || team };
     return stats[id];
   };
   seedTeams.forEach((t) => t.roster.forEach((p) => entry(p.id, t)));
   games.filter((g) => g.played).forEach((g) => {
     [[g.box.home, teamsById[g.home]], [g.box.away, teamsById[g.away]]].forEach(([box, team]) => {
-      Object.entries(box.toiBy || {}).forEach(([id, toi]) => { if (toi > 0) entry(id, team).gp++; });
+      Object.entries(box.toiBy || {}).forEach(([id, toi]) => { if (toi > 0) { const e = entry(id, team); e.gp++; e.toi += toi; } });
       const add = (field, key) => Object.entries(box[field] || {}).forEach(([id, c]) => { entry(id, team)[key] += c; });
       add("goalsBy", "g"); add("assistsBy", "a"); add("hitsBy", "hits"); add("pimBy", "pim"); add("shotsBy", "shots");
       add("plusMinusBy", "plusMinus"); add("blocksBy", "blocks"); add("faceoffsWonBy", "faceoffWins");

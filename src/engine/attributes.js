@@ -57,6 +57,9 @@ export function emptyAttrs(pos, val = 60) {
 // Conversion simple sur 100 ramenée sur 20 (val/5) — les attributs vont de 1 à 99, mais l'échelle
 // affichée est bien /20 d'un /100, pas une mise à l'échelle sur le maximum réel (99).
 export function attr20(val) { return Math.max(1, Math.min(20, Math.round(val / 5))); }
+// Même principe, ramené sur 10 (val/10) — utilisé pour la cote attaque/défense d'un joueur dépisté
+// (PlayerModal), une seule note par groupe d'attributs plutôt que le détail attribut par attribut.
+export function attr10(val) { return Math.max(1, Math.min(10, Math.round(val / 10))); }
 
 export function teamOvrBenchmark(team) {
   if (!team || !team.roster.length) return 65;

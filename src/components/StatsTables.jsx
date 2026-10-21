@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { h2Style, inputStyle } from "../ui/theme";
+import { formatTOI } from "../ui/format";
 import { useSort, sortRows } from "../ui/useSort";
 import { SortTh, PlayerLink, TeamLink } from "./common";
 
@@ -20,6 +21,7 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
     if (key === "pim") return s.pim;
     if (key === "shots") return s.shots;
     if (key === "plusMinus") return s.plusMinus;
+    if (key === "toi") return s.gp ? s.toi / s.gp : 0;
     return 0;
   };
   const filteredLeaders = (teamFilter === "Toutes" ? leaders : leaders.filter((s) => s.team.id === teamFilter))
@@ -52,6 +54,7 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
           <SortTh label="Joueur" sortKey="name" activeKey={lk} activeDir={ld} onSort={lToggle} />
           <SortTh label="Équipe" sortKey="team" activeKey={lk} activeDir={ld} onSort={lToggle} />
           <SortTh label="PJ" sortKey="gp" activeKey={lk} activeDir={ld} onSort={lToggle} />
+          <SortTh label="TMG" sortKey="toi" activeKey={lk} activeDir={ld} onSort={lToggle} />
           <SortTh label="B" sortKey="g" activeKey={lk} activeDir={ld} onSort={lToggle} />
           <SortTh label="A" sortKey="a" activeKey={lk} activeDir={ld} onSort={lToggle} />
           <SortTh label="PTS" sortKey="pts" activeKey={lk} activeDir={ld} onSort={lToggle} />
@@ -66,6 +69,7 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
               <td style={{ padding: "7px 10px" }}><PlayerLink player={s.player} team={s.team} onSelect={onSelectPlayer} /></td>
               <td style={{ padding: "7px 10px", color: s.team.color }}><TeamLink team={s.team} onSelect={onSelectTeam} /></td>
               <td style={{ padding: "7px 10px" }}>{s.gp}</td>
+              <td style={{ padding: "7px 10px", color: "var(--iceMuted)" }}>{s.gp ? formatTOI(s.toi / s.gp) : "—"}</td>
               <td style={{ padding: "7px 10px" }}>{s.g}</td>
               <td style={{ padding: "7px 10px" }}>{s.a}</td>
               <td style={{ padding: "7px 10px" }}><strong>{s.pts}</strong></td>
@@ -75,7 +79,7 @@ export function StatsTables({ leaders, standings, teamHitTotals, teamAdvancedTot
               <td style={{ padding: "7px 10px", color: s.plusMinus > 0 ? "var(--win)" : s.plusMinus < 0 ? "var(--loss)" : "var(--iceMuted)" }}>{s.plusMinus > 0 ? "+" : ""}{s.plusMinus}</td>
             </tr>
           ))}
-          {sortedLeaders.length === 0 && <tr><td colSpan={10} style={{ padding: 12, color: "var(--iceMuted)", fontSize: 13 }}>Aucun match joué encore.</td></tr>}
+          {sortedLeaders.length === 0 && <tr><td colSpan={11} style={{ padding: 12, color: "var(--iceMuted)", fontSize: 13 }}>Aucun match joué encore.</td></tr>}
         </tbody>
       </table>
 

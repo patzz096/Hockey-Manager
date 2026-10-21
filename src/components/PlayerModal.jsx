@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { NATION_FLAG, NATION_NAME } from "../data/names";
-import { SKATER_CATEGORIES, GOALIE_CATEGORIES, ATTR_LABELS, attr20, teamOvrBenchmark, starsFor } from "../engine/attributes";
+import { SKATER_CATEGORIES, GOALIE_CATEGORIES, OFFENSIVE, DEFENSIVE, ATTR_LABELS, attr20, attr10, avg, teamOvrBenchmark, starsFor } from "../engine/attributes";
 import { lineLabel } from "../engine/lines";
 import { formatDay } from "../engine/calendar";
 import { ROLES, naturalRole, roleFit, roleOf } from "../engine/roles";
@@ -116,6 +116,12 @@ function ScoutingTab({ player, report, pending, currentDay, staff, extraScouts =
           </div>
           <ReportRow label="Habileté actuelle" hint="Ce qu'il apporte aujourd'hui" value={starsFor(report.estOvr, benchmark)} />
           <ReportRow label="Potentiel" hint="Projection à long terme" value={starsFor(report.estPotential, benchmark)} color="#7A9EDB" />
+          {player.pos !== "G" && report.attrs && (
+            <div style={{ display: "flex", gap: 16, fontSize: 12, color: "var(--iceMuted)", padding: "6px 0 2px" }}>
+              <span>Attaque <strong style={{ color: "var(--ice)" }}>{attr10(avg(report.attrs, OFFENSIVE))}/10</strong></span>
+              <span>Défense <strong style={{ color: "var(--ice)" }}>{attr10(avg(report.attrs, DEFENSIVE))}/10</strong></span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0 4px" }}>
             <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, fontWeight: 600 }}>Note générale</div>
             <StarRating value={starsFor(overallEstimate(player.age, report.estOvr, report.estPotential), benchmark)} size={20} />
@@ -253,6 +259,13 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
               <div>Taille <span style={{ color: "var(--ice)" }}>{bio.heightCm} cm</span></div>
               <div>Poids <span style={{ color: "var(--ice)" }}>{bio.weightKg} kg</span></div>
               <div>Forme <span style={{ color: "var(--win)" }}>Bonne</span></div>
+            </div>
+          )}
+
+          {known && player.pos !== "G" && (
+            <div style={{ display: "flex", gap: 10, margin: "16px 0 0" }}>
+              <InfoCard label="ATTAQUE" accent="var(--gold)"><div style={{ fontSize: 15, fontWeight: 700 }}>{attr10(avg(shown.attrs, OFFENSIVE))}/10</div></InfoCard>
+              <InfoCard label="DÉFENSE" accent="var(--steel)"><div style={{ fontSize: 15, fontWeight: 700 }}>{attr10(avg(shown.attrs, DEFENSIVE))}/10</div></InfoCard>
             </div>
           )}
 
