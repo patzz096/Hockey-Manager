@@ -41,16 +41,17 @@ export function attr20Color(v20) { return v20 >= 16 ? "var(--win)" : v20 >= 11 ?
 
 export function scoutQualityColor(quality) { return quality >= 65 ? "var(--gold)" : "var(--ice)"; }
 
-// Bouton de sélection plat (choix, onglet, filtre) : légère teinte d'accent à l'état actif, sans
-// dégradé ni lueur — même langage que la barre latérale (nav-btn dans App.jsx).
+// Bouton de sélection plat (choix, onglet, filtre) : plein d'accent à l'état actif (bien visible
+// au premier coup d'œil, même langage de couleur que le reste de l'interface), gris neutre sinon.
 export function selectStyle(active, opts = {}) {
   return {
     display: "inline-flex", alignItems: "center", gap: opts.gap ?? 6,
     padding: opts.padding ?? "7px 12px", borderRadius: opts.radius ?? 6,
     fontSize: opts.fontSize ?? 12, fontWeight: active ? 700 : 500,
     fontFamily: "inherit", cursor: "pointer",
-    color: active ? "var(--ice)" : "var(--iceMuted)",
-    background: active ? "rgba(92,200,255,0.14)" : "var(--navy2)",
+    color: active ? "#06141F" : "var(--iceMuted)",
+    background: active ? "var(--accent)" : "var(--navy2)",
     border: `1px solid ${active ? "var(--accent)" : "var(--line)"}`,
+    boxShadow: active ? "0 2px 8px rgba(92,200,255,0.35)" : "none",
   };
 }

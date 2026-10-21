@@ -281,7 +281,8 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
   }, [schedule, myTeamId, phase, mySeries, playoffs]);
   // Jours de calendrier distincts où au moins un match a lieu, triés — remplace le regroupement
   // par ronde (qui laissait croire que toute la ligue joue le même soir).
-  const gameDays = useMemo(() => [...new Set(schedule.map((g) => gameDay(seasonYear, g)))].sort((a, b) => a - b), [schedule, seasonYear]);
+  // Du plus récent au plus ancien (voir InboxPanel pour la même convention en messagerie).
+  const gameDays = useMemo(() => [...new Set(schedule.map((g) => gameDay(seasonYear, g)))].sort((a, b) => b - a), [schedule, seasonYear]);
 
   // Statistiques tirées des feuilles de match (saison régulière et séries, séparément).
   const everyone = useMemo(() => {
