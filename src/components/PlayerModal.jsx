@@ -320,14 +320,6 @@ export function PlayerModal({ player, team, myTeam, lines, editable, seasonStats
             </div>
           )}
 
-          {known && (
-            <div style={{ display: "flex", gap: 10, margin: "16px 0 0" }}>
-              {scoreGroups(player.pos).map((g, i) => (
-                <InfoCard key={g.key} label={g.label.toUpperCase()} accent={i === 0 ? "var(--gold)" : "var(--steel)"}><div style={{ fontSize: 15, fontWeight: 700 }}>{attr10(avg(shown.attrs, g.keys))}/10</div></InfoCard>
-              ))}
-            </div>
-          )}
-
           {known ? (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px", marginTop: 16 }}>
               {categories.map((cat) => (
