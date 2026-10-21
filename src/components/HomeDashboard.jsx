@@ -1,13 +1,16 @@
-import { gameDay } from "../engine/calendar";
+import { useState } from "react";
+import { gameDay, formatDay } from "../engine/calendar";
 import { h2Style, btnStyle } from "../ui/theme";
 import { TeamCrest, PlayerLink, TeamLink } from "./common";
 import { NewsFeed } from "./NewsFeed";
 import { TeamOfTheWeek } from "./TeamOfTheWeek";
+import { BoxscoreView } from "./match/BoxscoreView";
 
-// Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, le fil de nouvelles de ses
-// derniers matchs (articles — voir NewsFeed), l'équipe de la semaine et les meneurs au pointage
-// de la ligue, avec des raccourcis vers les onglets complets (Classement, Statistiques).
-export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, onSelectPlayer, onSelectTeam, onGoTo }) {
+// Page d'accueil : coup d'œil sur le dossier de l'équipe, sa division, ses 5 derniers matchs (clic
+// pour ouvrir le sommaire), le fil de nouvelles (articles — voir NewsFeed), l'équipe de la semaine
+// et les meneurs au pointage de la ligue, avec des raccourcis vers les onglets complets.
+export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedule, seasonYear, weeklyTeam, linesByTeam, onSelectPlayer, onSelectTeam, onContextMenu, onGoTo }) {
+  const [expandedGameId, setExpandedGameId] = useState(null);
   const myRankIdx = standings.findIndex((s) => s.id === myTeamId);
   const my = standings[myRankIdx];
   const myTeam = teamsById[myTeamId];
@@ -17,6 +20,7 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
     .filter((g) => g.played && (g.home === myTeamId || g.away === myTeamId))
     .sort((a, b) => gameDay(seasonYear, b) - gameDay(seasonYear, a))
     .slice(0, 8);
+  const last5 = recent.slice(0, 5);
   const topLeaders = leaders.slice(0, 8);
 
   return (
@@ -31,6 +35,33 @@ export function HomeDashboard({ myTeamId, teamsById, standings, leaders, schedul
               {myRankIdx + 1}{myRankIdx === 0 ? "er" : "e"} au classement général · {my.w}-{my.l}-{my.otl} · <strong style={{ color: "var(--ice)" }}>{my.pts} pts</strong>
               {my.streak && ` · séquence ${my.streak}`}{recent.length > 0 && ` · 10 derniers : ${my.last10?.join("") || "—"}`}
             </div>
+          </div>
+        </div>
+      )}
+      {last5.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: 15, marginBottom: 8 }}>5 derniers matchs</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {last5.map((g) => {
+              const home = g.home === myTeamId;
+              const opp = teamsById[home ? g.away : g.home];
+              const won = home ? g.homeScore > g.awayScore : g.awayScore > g.homeScore;
+              const expanded = expandedGameId === g.id;
+              return (
+                <div key={g.id}>
+                  <div onClick={() => setExpandedGameId(expanded ? null : g.id)} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--navy2)", padding: "8px 12px", borderRadius: 3, fontSize: 13, cursor: "pointer", borderLeft: `3px solid ${won ? "var(--win)" : "var(--loss)"}` }}
+                       onMouseEnter={(e) => (e.currentTarget.style.background = "#ffffff12")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--navy2)")}>
+                    <span style={{ fontSize: 11, color: "var(--iceMuted)", minWidth: 68 }}>{formatDay(gameDay(seasonYear, g))}</span>
+                    <TeamCrest team={opp} size={18} />
+                    <span style={{ flex: 1 }}>{home ? "vs" : "@"} <TeamLink team={opp} onSelect={onSelectTeam} /></span>
+                    <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, color: won ? "var(--win)" : "var(--loss)" }}>
+                      {g.homeScore}–{g.awayScore}{g.decidedIn === "OT" ? " (P)" : g.decidedIn === "SO" ? " (TB)" : ""}
+                    </span>
+                  </div>
+                  {expanded && <BoxscoreView game={g} teamsById={teamsById} linesByTeam={linesByTeam} onSelectPlayer={onSelectPlayer} onSelectTeam={onSelectTeam} onContextMenu={onContextMenu} schedule={schedule} seasonYear={seasonYear} />}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

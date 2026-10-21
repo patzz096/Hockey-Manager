@@ -1999,7 +1999,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
           </div>
         </div>
 
-        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onGoTo={setTab} />}
+        {tab === "home" && <HomeDashboard myTeamId={myTeamId} teamsById={teamsById} standings={standings} leaders={leaders} schedule={schedule} seasonYear={seasonYear} weeklyTeam={weeklyTeam} linesByTeam={linesByTeam} onSelectPlayer={selectPlayer} onSelectTeam={setViewedTeamId} onContextMenu={openPlayerContextMenu} onGoTo={setTab} />}
 
         {tab === "roster" && (
           <div>
