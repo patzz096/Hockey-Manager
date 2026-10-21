@@ -3,6 +3,7 @@ import { Home, Users, CalendarDays, Trophy, Play, FastForward, Circle, ChevronDo
 import { emptyAttrs, attr20, teamOvrBenchmark } from "./engine/attributes";
 import { evaluateOffer, lineupContext, playerHappiness, minSalaryFor, BURIAL_ALLOWANCE, earnedBonuses, bonusLabel, capHit, MAX_OFFER_ATTEMPTS, agentLine } from "./engine/contracts";
 import { evaluateTradeForCpu, tradeResponseLine, generateAiTradeOffer, tradePitchLine } from "./engine/trades";
+import { injuryLine, returnLine, recallLine, demoteLine, waiversLine, scoutCancelLine, scoutReportIntroLine, staffAcceptLine, staffRejectLine, tradeRequestLine, devReportIntroLine } from "./engine/dialogue";
 import { DEFAULT_FACILITIES, DEFAULT_TICKET_TIERS, DEFAULT_CONCESSION_ITEMS, DEFAULT_PARKING, DEFAULT_MERCH_ITEMS, DEFAULT_ENGAGEMENT, facilityUpgradeCost, autoTuneFinances, computeGameFinance, applyEngagementDelta, negotiateTvDeal } from "./engine/finance";
 import { initLeague, buildSchedule, buildPreseasonSchedule } from "./engine/league";
 import { computeStandings } from "./engine/standings";
@@ -490,7 +491,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     fresh.filter((x) => x.teamId === myTeamId).forEach((x) => {
       const p = teamsById[myTeamId].roster.find((q) => q.id === x.playerId);
       if (!p) return;
-      addMessage({ from: "Thérapeute de l'équipe", subject: `Blessure : ${p.name}`, category: "general", playerIds: [p.id], body: `${p.name} est blessé (${injuryLabel(x, x.since)}). Retour prévu vers le ${formatDay(x.until)}.\nIl est remplacé automatiquement dans les trios.${ltirEligible(x, x.since) ? "\n\nAbsence de plus de 24 jours : tu peux le placer sur la liste des blessés à long terme (LTIR) dans l'onglet Profondeur, ce qui libère sa place et permet de dépasser le plafond de son salaire." : ""}` });
+      addMessage({ from: "Thérapeute de l'équipe", subject: `Blessure : ${p.name}`, category: "general", playerIds: [p.id], body: `${injuryLine()} ${p.name} est blessé (${injuryLabel(x, x.since)}). Retour prévu vers le ${formatDay(x.until)}.\nIl est remplacé automatiquement dans les trios.${ltirEligible(x, x.since) ? "\n\nAbsence de plus de 24 jours : tu peux le placer sur la liste des blessés à long terme (LTIR) dans l'onglet Profondeur, ce qui libère sa place et permet de dépasser le plafond de son salaire." : ""}` });
     });
   }
   // Simule tous les matchs de la prochaine journée où il y en a (calendrier LNH réaliste :
@@ -1178,7 +1179,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
         const p = teamsById[myTeamId].roster.find((q) => q.id === i.playerId);
         if (!p) return;
         const st = capStatus(teamsById[myTeamId].roster, seasonYear, { ...myCapOpts, relief: myCapOpts.relief - (p.contract?.salary || 0), ltirIds: myCapOpts.ltirIds.filter((id) => id !== p.id) });
-        addMessage({ from: "Thérapeute de l'équipe", subject: `Retour au jeu : ${p.name}`, category: "general", playerIds: [p.id], body: `${p.name} est rétabli et quitte la LTIR.${st.overCap ? ` Attention : ta masse salariale dépasse maintenant le plafond de ${formatMoney(-st.space)}. Libère de l'espace (échange, renvoi au club-école, rachat en juin).` : ""}${st.rosterSize > ROSTER_MAX ? ` Ton alignement compte ${st.rosterSize} joueurs : il faut revenir à ${ROSTER_MAX}.` : ""}` });
+        addMessage({ from: "Thérapeute de l'équipe", subject: `Retour au jeu : ${p.name}`, category: "general", playerIds: [p.id], body: `${returnLine()} ${p.name} est rétabli et quitte la LTIR.${st.overCap ? ` Attention : ta masse salariale dépasse maintenant le plafond de ${formatMoney(-st.space)}. Libère de l'espace (échange, renvoi au club-école, rachat en juin).` : ""}${st.rosterSize > ROSTER_MAX ? ` Ton alignement compte ${st.rosterSize} joueurs : il faut revenir à ${ROSTER_MAX}.` : ""}` });
       });
     }
     // Mouvements d'effectif de l'ordinateur au début de chaque mois de saison régulière.
@@ -1218,12 +1219,12 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     due.forEach((m) => {
       const player = findPlayer(m.playerId);
       if (!player) {
-        addMessage({ from: m.scout.name, subject: `Dépistage annulé: ${m.playerName}`, category: "scout", body: `${m.playerName} n'est plus disponible; la mission a été annulée.` });
+        addMessage({ from: m.scout.name, subject: `Dépistage annulé: ${m.playerName}`, category: "scout", body: `${scoutCancelLine()} (${m.playerName})` });
         return;
       }
       const report = createScoutReport(player, m.scout, m.dueDay);
       reports[player.id] = report;
-      addMessage({ from: m.scout.name, subject: `Rapport de dépistage: ${player.name}`, category: "scout", playerIds: [player.id], body: `${report.text}\n\nNote du dépisteur: ${attr20(m.scout.rating)}/20. Rapport complet dans le profil du joueur (onglet Dépistage).` });
+      addMessage({ from: m.scout.name, subject: `Rapport de dépistage: ${player.name}`, category: "scout", playerIds: [player.id], body: `${scoutReportIntroLine()}\n\n${report.text}\n\nNote du dépisteur: ${attr20(m.scout.rating)}/20. Rapport complet dans le profil du joueur (onglet Dépistage).` });
     });
     setScoutKnowledge((prev) => ({ ...prev, ...reports }));
   }
@@ -1252,7 +1253,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
       setBusiness((prev) => ({ ...prev, staff: { ...prev.staff, [role]: { ...candidate, salary: offeredSalary } } }));
       setStaffMarket((prev) => prev.filter((c) => c.id !== candidateId));
       setStaffNegotiations((prev) => { const next = { ...prev }; delete next[candidateId]; return next; });
-      addMessage({ from: candidateName, subject: `${candidateName} a accepté l'offre`, category: "transaction", body: `Offre acceptée : ${money(offeredSalary)} par saison comme ${STAFF_ROLES[role]}.` });
+      addMessage({ from: candidateName, subject: `${candidateName} a accepté l'offre`, category: "transaction", body: `« ${staffAcceptLine()} »\n\nOffre acceptée : ${money(offeredSalary)} par saison comme ${STAFF_ROLES[role]}.` });
     } else {
       const newRejections = rejections + 1;
       const stonewalled = newRejections >= MAX_STAFF_OFFER_ATTEMPTS;
@@ -1260,7 +1261,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
       const closed = stonewalled ? ` J'en ai assez de tes offres : je refuse désormais toute négociation pour le reste de la saison (${newRejections} refus).` : "";
       const gap = offeredSalary / result.ask - 1;
       const reason = gap < -0.3 ? "Raison du refus : ton offre est nettement en dessous de ce que je demande." : gap < -0.1 ? "Raison du refus : ton offre est un peu courte par rapport à ce que je demande." : "Raison du refus : proche de mes attentes, mais pas encore suffisant.";
-      addMessage({ from: candidateName, subject: `${candidateName} a refusé l'offre`, category: "transaction", body: `Offre refusée : ${money(offeredSalary)} par saison (je demandais ${money(result.ask)}).\n\n${reason}\n\nMa contre-proposition : ${money(result.counterSalary)} par saison.${closed}` });
+      addMessage({ from: candidateName, subject: `${candidateName} a refusé l'offre`, category: "transaction", body: `« ${staffRejectLine()} »\n\nOffre refusée : ${money(offeredSalary)} par saison (je demandais ${money(result.ask)}).\n\n${reason}\n\nMa contre-proposition : ${money(result.counterSalary)} par saison.${closed}` });
     }
   }
   function refreshStaffMarket() {
@@ -1304,7 +1305,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     if (!fitsUnderCap(roster, seasonYear, player.contract?.salary || 0, 0, myCapOpts)) { setNotice(`Rappel impossible : le salaire de ${player.name} (${formatMoney(player.contract?.salary || 0)}) dépasse ton espace sous le plafond.`); return; }
     setFarmByTeam((prev) => ({ ...prev, [myTeamId]: prev[myTeamId].filter((p) => p.id !== player.id) }));
     setTeams((prev) => prev.map((t) => (t.id !== myTeamId ? t : { ...t, roster: [...t.roster, { ...player, level: undefined, league: undefined, club: undefined }].sort((a, b) => b.ovr - a.ovr) })));
-    addMessage({ from: "Directeur du club-école", subject: `Rappel: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.pos}) est rappelé du club-école vers l'équipe.` });
+    addMessage({ from: "Directeur du club-école", subject: `Rappel: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${recallLine()} ${player.name} (${player.pos}) est rappelé du club-école vers l'équipe.` });
   }
   function sendDownPlayer(shown) {
     const player = teamsById[myTeamId].roster.find((p) => p.id === shown.id) || shown;
@@ -1312,10 +1313,10 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     setLinesByTeam((prev) => ({ ...prev, [myTeamId]: cleanLinesOfPlayer(prev[myTeamId], player.id) }));
     if (waiverExempt(player, careerGames(player.id), seasonYear)) {
       setFarmByTeam((prev) => ({ ...prev, [myTeamId]: [...(prev[myTeamId] || []), { ...player, level: "LAH" }] }));
-      addMessage({ from: "Directeur du club-école", subject: `Rétrogradé: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} est renvoyé au club-école (exempté du ballottage).` });
+      addMessage({ from: "Directeur du club-école", subject: `Rétrogradé: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${demoteLine()} ${player.name} est renvoyé au club-école (exempté du ballottage).` });
     } else {
       setWaivers((prev) => [...prev, placeOnWaivers(player, myTeamId, currentDay)]);
-      addMessage({ from: "Directeur du club-école", subject: `Ballottage: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${player.name} (${player.age} ans, ${careerGames(player.id)} matchs LNH) n'est pas exempté : il est placé au ballottage pour 24 heures. Les autres équipes peuvent le réclamer avec son contrat (${formatMoney(player.contract?.salary || 0)}). S'il n'est pas réclamé, il rejoindra ton club-école.` });
+      addMessage({ from: "Directeur du club-école", subject: `Ballottage: ${player.name}`, category: "transaction", playerIds: [player.id], body: `${waiversLine()} ${player.name} (${player.age} ans, ${careerGames(player.id)} matchs LNH) n'est pas exempté : il est placé au ballottage pour 24 heures. Les autres équipes peuvent le réclamer avec son contrat (${formatMoney(player.contract?.salary || 0)}). S'il n'est pas réclamé, il rejoindra ton club-école.` });
     }
   }
   function placeOnLtir(playerId) {
@@ -1500,7 +1501,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     const decliners = sorted.filter((r) => r.delta < 0).slice(-5).reverse();
     let body = gainers.length === 0 && decliners.length === 0
       ? "Aucun changement notable ce mois-ci."
-      : "";
+      : `${devReportIntroLine()}\n\n`;
     if (gainers.length) body += "En progression:\n" + gainers.map((r) => `- ${r.name}: ${r.before} → ${r.after} (+${r.delta})`).join("\n");
     if (decliners.length) body += (body ? "\n\n" : "") + "En baisse:\n" + decliners.map((r) => `- ${r.name}: ${r.before} → ${r.after} (${r.delta})`).join("\n");
     addMessage({ from: coachName, subject: `Rapport de développement — ${label}`, category: "scout", playerIds: [...gainers, ...decliners].map((r) => r.id), body });
@@ -1595,7 +1596,7 @@ export default function HockeyGM({ custom = null, onNewGame = null, savedGame = 
     });
     setUnhappyMonths(nextUnhappy);
     setTradeRequested(nextRequested);
-    newRequests.forEach((p) => addMessage({ from: p.name, subject: `Demande d'échange : ${p.name}`, category: "transaction", playerIds: [p.id], body: `Mécontent depuis plusieurs mois (rôle et temps de glace, résultats de l'équipe, proximité de chez lui...), ${p.name} demande à être échangé. Rien ne t'y oblige, mais le laisser mécontent trop longtemps continue d'affecter légèrement son rendement en match.` }));
+    newRequests.forEach((p) => addMessage({ from: p.name, subject: `Demande d'échange : ${p.name}`, category: "transaction", playerIds: [p.id], body: `« ${tradeRequestLine()} »\n\nMécontent depuis plusieurs mois (rôle et temps de glace, résultats de l'équipe, proximité de chez lui...), ${p.name} demande à être échangé. Rien ne t'y oblige, mais le laisser mécontent trop longtemps continue d'affecter légèrement son rendement en match.` }));
 
     setProfitThisMonth(0);
     setWinsThisMonth(0);
